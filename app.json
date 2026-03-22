@@ -9,6 +9,7 @@
     "pages/wallet/index",
     "pages/submit/index",
     "pages/wash/index",
+    "pages/washing/index",
     "pages/service/index",
     "pages/question/index",
     "pages/pay/index",
@@ -18,9 +19,47 @@
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#fff",
-    "navigationBarTitleText": "Weixin",
+    "navigationBarTitleText": "自助洗车",
     "navigationBarTextStyle": "black",
     "navigationStyle": "custom"
+  },
+  "tabBar": {
+    "color": "#666666",
+    "selectedColor": "#f5b400",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "assets/icons/car.png",
+        "selectedIconPath": "assets/icons/car.png"
+      },
+      {
+        "pagePath": "pages/service/index",
+        "text": "门店",
+        "iconPath": "assets/icons/market.png",
+        "selectedIconPath": "assets/icons/market.png"
+      },
+      {
+        "pagePath": "pages/question/index",
+        "text": "教程",
+        "iconPath": "assets/icons/question.png",
+        "selectedIconPath": "assets/icons/question.png"
+      },
+      {
+        "pagePath": "pages/order/index",
+        "text": "订单",
+        "iconPath": "assets/icons/order.png",
+        "selectedIconPath": "assets/icons/order.png"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的",
+        "iconPath": "assets/icons/user.png",
+        "selectedIconPath": "assets/icons/user.png"
+      }
+    ]
   },
   "sitemapLocation": "sitemap.json",
   "usingComponents": {

@@ -1,16 +1,19 @@
 <view class="page">
-  <!-- 自定义导航栏 -->
-  <Navbar title="操作手册">
-  </Navbar>
-  <!-- 内容 -->
-  <view class="docs">
-  <view class="car">
-    <image mode="widthFix" src="/assets/images/car.png"></image>
-  </view>
-    <view class="item" wx:for="{{docs}}" wx:key="index">
-      <view class="title">{{item.title}}</view>
-      <view class="content">
-        {{item.content}}
+  <Navbar showBackIcon="{{false}}" title="洗车教程" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
+
+  <view class="container">
+    <view class="hero-card">
+      <view class="hero-card__title">新手也能轻松完成一次洗车</view>
+      <view class="hero-card__desc">按照以下步骤操作，即可快速完成自助洗车流程</view>
+    </view>
+
+    <view class="doc-list">
+      <view class="doc-card" wx:for="{{docs}}" wx:key="index">
+        <view class="doc-card__index">{{index + 1}}</view>
+        <view class="doc-card__body">
+          <view class="doc-card__title">{{item.title}}</view>
+          <view class="doc-card__content">{{item.content}}</view>
+        </view>
       </view>
     </view>
   </view>

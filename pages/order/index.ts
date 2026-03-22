@@ -1,41 +1,37 @@
 Page({
   data: {
-    list: [
+    list: [] as Array<{
+      id: number;
+      storeName: string;
+      createTime: string;
+      amount: string;
+      status: string;
+      statusType: string;
+    }>,
+    mockOrders: [
       {
-        status: 0,
-        createTime: '2020-06-07  15:05:54',
-        plate: '鲁B12345',
-        location:"中海国际自助洗车一号机",
-        num: '1',
-        price: '12.00',
+        id: 1,
+        storeName: '橙洗自助洗车·城南店',
+        createTime: '2026-03-21 15:20',
+        amount: '18.00',
+        status: '已完成',
+        statusType: 'done',
       },
       {
-        status: 1,
-        createTime: '2020-06-07  15:05:54',
-        plate: '鲁B12345',
-        location:"中海国际自助洗车一号机",
-        num: '1',
-        price: '12.00',
-      },
-      {
-        status: 2,
-        createTime: '2020-06-07  15:05:54',
-        plate: '鲁B12345',
-        location:"中海国际自助洗车一号机",
-        num: '1',
-        price: '12.00',
-      },
-      {
-        status: 3,
-        createTime: '2020-06-07  15:05:54',
-        plate: '鲁B12345',
-        location:"中海国际自助洗车一号机",
-        num: '1',
-        price: '12.00',
+        id: 2,
+        storeName: '橙洗自助洗车·大学城店',
+        createTime: '2026-03-19 09:30',
+        amount: '12.00',
+        status: '进行中',
+        statusType: 'doing',
       },
     ],
   },
-  onLoad() {},
-  onShow() {},
-  onReachBottom() {},
+
+  showOrderDetail() {
+    wx.showToast({
+      title: '订单详情待接入',
+      icon: 'none',
+    });
+  },
 });

@@ -1,42 +1,28 @@
 <view class="page">
-  <!-- 自定义导航栏 -->
-  <Navbar title="洗车订单">
-  </Navbar>
-  <!-- 订单列表 -->
-  <view class="list">
-    <view class="item" wx:for="{{list}}" wx:key="index">
-      <view class="header">
-        <view class="status">
-          <text class="shape">洗</text>
-          <text class="text" wx:if="{{item.status == 0}}">待支付</text>
-          <text class="text" wx:if="{{item.status == 1}}">待开始</text>
-          <text class="text" wx:if="{{item.status == 2}}">进行中</text>
-          <text class="text" wx:if="{{item.status == 3}}">已完成</text>
+  <Navbar showBackIcon="{{false}}" title="洗车订单" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
+
+  <view class="container">
+    <view class="summary-card">
+      <view class="summary-card__title">我的洗车订单</view>
+      <view class="summary-card__desc">订单记录会在这里展示，后续可直接接入真实接口数据</view>
+    </view>
+
+    <view class="order-list" wx:if="{{list.length > 0}}">
+      <view class="order-card" wx:for="{{list}}" wx:key="id">
+        <view class="order-card__header">
+          <view class="order-card__name">{{item.storeName}}</view>
+          <view class="order-card__status status-{{item.statusType}}">{{item.status}}</view>
         </view>
-        <view class="time">{{item.createTime}}</view>
-      </view>
-      <view class="content">
-        <view class="plate">
-          <view class="name">{{item.plate}}</view>
-          <view class="num">× {{item.num}}</view>
-        </view>
-        <view class="location">{{item.location}}</view>
-        <view class="price">
-          <text class="unit">￥</text>
-          <text class="text">{{item.price}}</text>
-        </view>
-      </view>
-      <view class="action">
-        <view class="btn info" wx:if="{{item.status  == 0}}">取消订单</view>
-        <view class="btn primary" wx:if="{{item.status == 0}}">去支付</view>
-        <view class="btn info" wx:if="{{item.status  == 3}}">删除订单</view>
-        <view class="btn primary" wx:if="{{item.status == 3}}">查看详情</view>
-        <view class="btn primary" wx:if="{{item.status == 1 || item.status == 2}}">进入订单</view>
+        <view class="order-card__meta">下单时间 {{item.createTime}}</view>
+        <view class="order-card__amount">实付金额 ¥{{item.amount}}</view>
+        <view class="order-card__action" bindtap="showOrderDetail">查看详情</view>
       </view>
     </view>
-  </view>
-  <!-- 空状态 -->
-  <view class="no-data">
-    <image class="image" mode="widthFix" src="/assets/images/no-order.png" wx:if="{{list.length == 0}}"></image>
+
+    <view class="empty-card" wx:else>
+      <image class="empty-card__image" mode="widthFix" src="/assets/images/no-order.png"></image>
+      <view class="empty-card__title">暂无订单</view>
+      <view class="empty-card__desc">完成洗车后，订单记录会在这里自动展示</view>
+    </view>
   </view>
 </view>

@@ -1,4 +1,27 @@
-// 解决 image 闪烁问题、
+page {
+  background: #f5f5f5;
+  color: #222222;
+  font-size: 28rpx;
+}
+
+view,
+text,
+button {
+  box-sizing: border-box;
+}
+
 image {
   height: auto;
+}
+
+button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: inherit;
+}
+
+button::after {
+  border: 0;
 }

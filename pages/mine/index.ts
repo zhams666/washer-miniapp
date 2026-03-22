@@ -1,87 +1,69 @@
-import type { IObject, LoginResponse } from 'typings/interface.d';
-import { StorageEnum } from '../../config/enums';
-import { wxLogin } from '../../utils/user';
-
 Page({
   data: {
-    // 是否登录
-    isLogin: wx.getStorageSync(StorageEnum.IS_LOGIN),
-    // 用户信息
-    userProfile: wx.getStorageSync(StorageEnum.USER_PROFILE),
-    // 用户 id
-    costomerId: wx.getStorageSync(StorageEnum.COSTOMER_ID),
-    // 钱包余额
-    walletNum: 0,
+    userInfo: {
+      nickName: '车主小王',
+      avatarUrl: '/assets/icons/user.png',
+      memberText: '普通会员，可享门店储值与优惠券服务',
+    },
+    stats: [
+      { label: '商户数', value: '3' },
+      { label: '总余额', value: '68.00' },
+      { label: '洗车次数', value: '12' },
+      { label: '卡券数', value: '4' },
+      { label: '积分', value: '286' },
+    ],
+    menus: [
+      { key: 'order', title: '洗车订单', icon: '/assets/icons/order.png' },
+      { key: 'merchant', title: '我的商户', icon: '/assets/icons/market.png' },
+      { key: 'wallet', title: '消费明细', icon: '/assets/icons/wallet.png' },
+      { key: 'car', title: '我的车辆', icon: '/assets/icons/car.png' },
+      { key: 'profile', title: '个人信息', icon: '/assets/icons/user.png' },
+      { key: 'service', title: '客服中心', icon: '/assets/icons/service.png' },
+      { key: 'coupon', title: '我的卡券', icon: '/assets/icons/discount.png' },
+    ],
   },
-  async onShow() {
-    this.setData({
-      isLogin: wx.getStorageSync(StorageEnum.IS_LOGIN),
-      userProfile: wx.getStorageSync(StorageEnum.USER_PROFILE),
-      costomerId: wx.getStorageSync(StorageEnum.COSTOMER_ID),
+
+  handleHeaderAction() {
+    wx.showToast({
+      title: '设置功能待接入',
+      icon: 'none',
     });
   },
 
-  // 登录
-  async login() {
-    if (this.data.isLogin) return;
-    const res: LoginResponse = await wxLogin();
-    if (res.status == 0) {
-      this.setData({
-        isLogin: true,
-        userProfile: res.profile as IObject,
-        costomerId: res.costomerId as string,
+  handleMenuTap(e: WechatMiniprogram.TouchEvent) {
+    const { key } = e.currentTarget.dataset;
+
+    if (key === 'order') {
+      wx.switchTab({
+        url: '/pages/order/index',
       });
+      return;
     }
-  },
 
-  // 跳转我的优惠卷
-  goDiscount() {
-    wx.navigateTo({
-      url: '/pages/discount/index',
-    });
-  },
-  // 跳转我的钱包
-  goWallet() {
-    wx.navigateTo({
-      url: '/pages/wallet/index',
-    });
-  },
+    if (key === 'wallet') {
+      wx.navigateTo({
+        url: '/pages/wallet/index',
+      });
+      return;
+    }
 
-  // 跳转订单详情
-  goOrderList() {
-    wx.navigateTo({
-      url: '/pages/order/index',
-    });
-  },
+    if (key === 'service' || key === 'merchant') {
+      wx.switchTab({
+        url: '/pages/service/index',
+      });
+      return;
+    }
 
-  // 跳转我的消息
-  goMessage() {
-    wx.navigateTo({
-      url: '/pages/message/index',
-    });
-  },
+    if (key === 'coupon') {
+      wx.navigateTo({
+        url: '/pages/discount/index',
+      });
+      return;
+    }
 
-  // 监听分享按钮触发
-  onShareAppMessage() {
-    return {
-      path:
-        '/pages/home/index?recommondId=' +
-        wx.getStorageSync(StorageEnum.COSTOMER_ID),
-      title: '自助洗车 - 邀请有礼',
-    };
-  },
-
-  // 跳转操作手册
-  goQuestion() {
-    wx.navigateTo({
-      url: '/pages/question/index',
-    });
-  },
-
-  // 跳转客服
-  goService() {
-    wx.navigateTo({
-      url: '/pages/service/index',
+    wx.showToast({
+      title: '功能待接入',
+      icon: 'none',
     });
   },
 });
