@@ -14,6 +14,26 @@
 
     <view class="section">
       <view class="section-header">
+        <view class="section-title">后端联通测试</view>
+        <view class="section-subtitle">首页加载时自动请求 /ping 接口</view>
+      </view>
+      <view class="ping-card">
+        <view class="ping-card__row">
+          <text class="ping-card__label">请求地址</text>
+          <text class="ping-card__value">GET /ping</text>
+        </view>
+        <view class="ping-card__row">
+          <text class="ping-card__label">当前状态</text>
+          <text class="ping-card__value {{pingSuccess ? 'is-success' : 'is-fail'}}">
+            {{pingLoading ? '请求中...' : pingMessage}}
+          </text>
+        </view>
+        <view class="ping-card__raw">{{pingRaw}}</view>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-header">
         <view class="section-title">快捷洗车</view>
         <view class="section-subtitle">到店后可直接开始操作</view>
       </view>

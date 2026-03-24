@@ -1,3 +1,5 @@
+import { REQUEST_URL } from '../../config/url';
+
 Page({
   data: {
     storeInfo: {
@@ -47,6 +49,49 @@ Page({
         icon: '/assets/icons/user.png',
       },
     ],
+    pingLoading: false,
+    pingSuccess: false,
+    pingMessage: '未请求',
+    pingRaw: '',
+  },
+
+  onLoad() {
+    this.loadPing();
+  },
+
+  loadPing() {
+    this.setData({
+      pingLoading: true,
+      pingSuccess: false,
+      pingMessage: '请求中...',
+      pingRaw: '',
+    });
+
+    wx.request({
+      url: `${REQUEST_URL}/ping`,
+      method: 'GET',
+      success: (res) => {
+        const responseData = (res.data || {}) as Record<string, any>;
+        const success = res.statusCode === 200 && responseData.code === 0;
+
+        this.setData({
+          pingLoading: false,
+          pingSuccess: success,
+          pingMessage: success
+            ? `请求成功：${responseData?.data?.message || 'ok'}`
+            : `请求失败：HTTP ${res.statusCode}`,
+          pingRaw: JSON.stringify(responseData, null, 2),
+        });
+      },
+      fail: (error) => {
+        this.setData({
+          pingLoading: false,
+          pingSuccess: false,
+          pingMessage: '请求失败，请检查后端地址、端口和合法域名配置',
+          pingRaw: JSON.stringify(error, null, 2),
+        });
+      },
+    });
   },
 
   startWash() {

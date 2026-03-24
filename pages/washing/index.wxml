@@ -1,11 +1,13 @@
 <view class="page">
-  <Navbar title="洗车服务" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
+  <Navbar title="Wash Service" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
 
   <view class="container">
     <view class="summary-card">
-      <view class="summary-card__tag">洗车服务中</view>
+      <view class="summary-card__tag">In service</view>
       <view class="summary-card__title">{{storeName}}</view>
-      <view class="summary-card__desc">请根据门店设备提示进行操作，暂停或结束后将自动结算本次费用</view>
+      <view class="summary-card__desc">
+        Device linked successfully. This page is currently a front-end demo for the minimal wash flow.
+      </view>
     </view>
 
     <view class="status-card">
@@ -13,32 +15,32 @@
         <Icon url="/assets/icons/car.png" size="56rpx"></Icon>
       </view>
       <view class="status-card__text">{{statusText}}</view>
-      <view class="status-card__desc">设备已连接，洗车过程正在实时计时</view>
+      <view class="status-card__desc">The timer and fee are updated locally for now.</view>
     </view>
 
     <view class="data-card">
       <view class="data-card__row">
-        <view class="data-card__label">设备编号</view>
+        <view class="data-card__label">Device No.</view>
         <view class="data-card__value">{{deviceNo}}</view>
       </view>
       <view class="data-card__row">
-        <view class="data-card__label">当前门店</view>
+        <view class="data-card__label">Store</view>
         <view class="data-card__value">{{storeName}}</view>
       </view>
       <view class="data-card__row">
-        <view class="data-card__label">开始时间</view>
+        <view class="data-card__label">Start Time</view>
         <view class="data-card__value">{{startTime}}</view>
       </view>
     </view>
 
     <view class="stats-grid">
       <view class="stats-card">
-        <view class="stats-card__label">已洗时长</view>
+        <view class="stats-card__label">Elapsed</view>
         <view class="stats-card__value">{{timeLabel}}</view>
       </view>
       <view class="stats-card">
-        <view class="stats-card__label">当前费用</view>
-        <view class="stats-card__value stats-card__value--fee">¥{{fee}}</view>
+        <view class="stats-card__label">Current Fee</view>
+        <view class="stats-card__value stats-card__value--fee">￥{{fee}}</view>
       </view>
     </view>
 
@@ -46,9 +48,9 @@
 
     <view class="action-row">
       <view class="action-btn action-btn--secondary" bindtap="togglePause">
-        {{isPaused ? '继续' : '暂停'}}
+        {{isPaused ? 'Resume' : 'Pause'}}
       </view>
-      <view class="action-btn action-btn--primary" bindtap="endWash">结束洗车</view>
+      <view class="action-btn action-btn--primary" bindtap="endWash">Finish</view>
     </view>
   </view>
 </view>

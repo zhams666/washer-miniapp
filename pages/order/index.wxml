@@ -1,10 +1,11 @@
 <view class="page">
-  <Navbar showBackIcon="{{false}}" title="洗车订单" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
+  <Navbar showBackIcon="{{false}}" title="订单" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
 
   <view class="container">
     <view class="summary-card">
       <view class="summary-card__title">我的洗车订单</view>
-      <view class="summary-card__desc">订单记录会在这里展示，后续可直接接入真实接口数据</view>
+      <view class="summary-card__desc">当前先接入最小订单闭环：创建测试订单并展示真实订单列表</view>
+      <view class="summary-card__action" bindtap="createTestOrder">创建测试订单</view>
     </view>
 
     <view class="order-list" wx:if="{{list.length > 0}}">
@@ -14,7 +15,7 @@
           <view class="order-card__status status-{{item.statusType}}">{{item.status}}</view>
         </view>
         <view class="order-card__meta">下单时间 {{item.createTime}}</view>
-        <view class="order-card__amount">实付金额 ¥{{item.amount}}</view>
+        <view class="order-card__amount">实付金额 ￥{{item.amount}}</view>
         <view class="order-card__action" bindtap="showOrderDetail">查看详情</view>
       </view>
     </view>
@@ -22,7 +23,7 @@
     <view class="empty-card" wx:else>
       <image class="empty-card__image" mode="widthFix" src="/assets/images/no-order.png"></image>
       <view class="empty-card__title">暂无订单</view>
-      <view class="empty-card__desc">完成洗车后，订单记录会在这里自动展示</view>
+      <view class="empty-card__desc">点击上方按钮可创建一笔最小测试订单</view>
     </view>
   </view>
 </view>

@@ -9,7 +9,8 @@
 
 .banner-card,
 .feature-card,
-.quick-card {
+.quick-card,
+.ping-card {
   background: #ffffff;
   border-radius: 28rpx;
   box-shadow: 0 10rpx 24rpx rgba(0, 0, 0, 0.04);
@@ -148,4 +149,47 @@
   width: calc(50% - 10rpx);
   padding: 30rpx 26rpx;
   margin-bottom: 20rpx;
+}
+
+.ping-card {
+  padding: 28rpx;
+}
+
+.ping-card__row + .ping-card__row {
+  margin-top: 16rpx;
+}
+
+.ping-card__label {
+  display: block;
+  color: #999999;
+  font-size: 24rpx;
+}
+
+.ping-card__value {
+  display: block;
+  margin-top: 8rpx;
+  color: #222222;
+  font-size: 28rpx;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.ping-card__value.is-success {
+  color: #16803c;
+}
+
+.ping-card__value.is-fail {
+  color: #c2410c;
+}
+
+.ping-card__raw {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  border-radius: 20rpx;
+  background: #f7f7f7;
+  color: #666666;
+  font-size: 22rpx;
+  line-height: 1.6;
+  word-break: break-all;
+  white-space: pre-wrap;
 }

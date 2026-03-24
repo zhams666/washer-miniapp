@@ -3,14 +3,14 @@ Page({
 
   data: {
     deviceNo: 'XC-STORE-001',
-    storeName: '橙洗自助洗车·城南店',
+    storeName: 'Self-service Car Wash',
     startTime: '',
     elapsedSeconds: 0,
     timeLabel: '00:00',
     fee: '0.00',
     isPaused: false,
-    statusText: '洗车中',
-    unitPriceText: '计费标准 0.12 元 / 秒',
+    statusText: 'Washing',
+    unitPriceText: 'Billing rule: 0.12 / second',
   },
 
   onLoad(query: Record<string, string>) {
@@ -53,9 +53,7 @@ Page({
   formatDuration(totalSeconds: number) {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    const minuteText = `${minutes}`.padStart(2, '0');
-    const secondText = `${seconds}`.padStart(2, '0');
-    return `${minuteText}:${secondText}`;
+    return `${`${minutes}`.padStart(2, '0')}:${`${seconds}`.padStart(2, '0')}`;
   },
 
   formatDateTime(date: Date) {
@@ -68,8 +66,7 @@ Page({
   },
 
   calculateFee(totalSeconds: number) {
-    const fee = totalSeconds * 0.12;
-    return fee.toFixed(2);
+    return (totalSeconds * 0.12).toFixed(2);
   },
 
   togglePause() {
@@ -77,7 +74,7 @@ Page({
       this.startTimer();
       this.setData({
         isPaused: false,
-        statusText: '洗车中',
+        statusText: 'Washing',
       });
       return;
     }
@@ -85,15 +82,15 @@ Page({
     this.clearTimer();
     this.setData({
       isPaused: true,
-      statusText: '已暂停',
+      statusText: 'Paused',
     });
   },
 
   endWash() {
     this.clearTimer();
     wx.showModal({
-      title: '洗车结束',
-      content: `本次洗车时长 ${this.data.timeLabel}，费用 ${this.data.fee} 元`,
+      title: 'Wash finished',
+      content: `Duration ${this.data.timeLabel}, fee ${this.data.fee}`,
       showCancel: false,
       success: () => {
         wx.navigateBack({
