@@ -1,1 +1,8 @@
 node_modules
+# Maven
+target/
+*.jar
+*.class
+
+# logs
+*.log
