@@ -34,7 +34,7 @@
 
 .summary-card__action {
   margin-top: 20rpx;
-  width: 200rpx;
+  width: 220rpx;
   height: 64rpx;
   border-radius: 999rpx;
   background: #f7c400;
@@ -82,6 +82,11 @@
   color: #4b8b45;
 }
 
+.status-pending {
+  background: #eef2ff;
+  color: #465fc7;
+}
+
 .status-doing {
   background: #fff4cf;
   color: #9a6700;
@@ -107,7 +112,7 @@
 
 .order-card__action {
   margin-top: 20rpx;
-  width: 160rpx;
+  width: 180rpx;
   height: 62rpx;
   border-radius: 999rpx;
   border: 1px solid #f5b400;

@@ -5,5 +5,6 @@ export interface IObject<T = any> {
 export interface ResponseData<T = any> {
   code: number;
   data: T;
-  msg: string;
+  msg?: string;
+  message?: string;
 }

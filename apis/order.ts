@@ -24,3 +24,19 @@ export const createSimpleOrder = async (_data: IObject): Promise<IObject> => {
   }
   return {};
 };
+
+export const startOrder = async (_id: number): Promise<IObject> => {
+  const { code, data } = await POST(`/api/orders/${_id}/start`, {});
+  if (code == 0) {
+    return data;
+  }
+  return {};
+};
+
+export const completeOrder = async (_id: number): Promise<IObject> => {
+  const { code, data } = await POST(`/api/orders/${_id}/complete`, {});
+  if (code == 0) {
+    return data;
+  }
+  return {};
+};

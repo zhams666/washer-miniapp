@@ -2,9 +2,10 @@ import type { IObject, ResponseData } from '../typings/interface.d';
 import { REQUEST_URL, TENCENT_MAP_URL } from '../config/url';
 import { BaseEnum } from '../config/enums';
 
-/**
- * 导出 get 请求
- */
+const getResponseMessage = (response: ResponseData<any>) => {
+  return response.msg || response.message || 'Request failed';
+};
+
 export const GET = <T>(
   _url: string,
   _data?: IObject
@@ -23,19 +24,19 @@ export const GET = <T>(
           resolve(reponseData);
         } else {
           wx.showToast({
-            title: reponseData.msg || '数据请求失败',
+            title: getResponseMessage(reponseData),
             icon: 'error',
           });
           reject(reponseData);
         }
       },
+      fail(err) {
+        reject(err);
+      },
     });
   });
 };
 
-/**
- * 导出 post 请求
- */
 export const POST = <T>(
   _url: string,
   _data: IObject
@@ -54,19 +55,19 @@ export const POST = <T>(
           resolve(reponseData);
         } else {
           wx.showToast({
-            title: reponseData.msg || '数据请求失败',
+            title: getResponseMessage(reponseData),
             icon: 'error',
           });
           reject(reponseData);
         }
       },
+      fail(err) {
+        reject(err);
+      },
     });
   });
 };
 
-/**
- * 导出文件上传请求
- */
 export const UPLOAD = <T>(
   ops: IObject
 ): Promise<ResponseData<T> | undefined | any> => {
@@ -83,6 +84,8 @@ export const UPLOAD = <T>(
         const reponseData: ResponseData<T> = (data as unknown) as ResponseData;
         if (statusCode == 200) {
           resolve(reponseData);
+        } else {
+          reject(reponseData);
         }
       },
       fail(err) {
@@ -92,9 +95,6 @@ export const UPLOAD = <T>(
   });
 };
 
-/**
- * 导出腾讯地图 get 请求
- */
 export const TENCENT_MAP_GET = <T>(
   _url: string,
   _data: IObject
@@ -113,11 +113,14 @@ export const TENCENT_MAP_GET = <T>(
           resolve(reponseData);
         } else {
           wx.showToast({
-            title: reponseData.msg || '数据请求失败',
+            title: getResponseMessage(reponseData),
             icon: 'error',
           });
           reject(reponseData);
         }
+      },
+      fail(err) {
+        reject(err);
       },
     });
   });

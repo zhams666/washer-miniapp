@@ -1,21 +1,13 @@
 package com.washer.backend.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.washer.backend.common.ApiResponse;
 import com.washer.backend.dto.order.SimpleOrderCreateRequest;
 import com.washer.backend.dto.order.SimpleOrderItem;
-import com.washer.backend.entity.Store;
 import com.washer.backend.entity.WashOrder;
-import com.washer.backend.service.StoreService;
+import com.washer.backend.entity.WashOrderStatusLog;
 import com.washer.backend.service.WashOrderService;
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,11 +23,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class WashOrderController {
 
     private final WashOrderService washOrderService;
-    private final StoreService storeService;
 
-    public WashOrderController(WashOrderService washOrderService, StoreService storeService) {
+    public WashOrderController(WashOrderService washOrderService) {
         this.washOrderService = washOrderService;
-        this.storeService = storeService;
     }
 
     @GetMapping
@@ -47,20 +37,15 @@ public class WashOrderController {
         @RequestParam(required = false) String orderStatus,
         @RequestParam(required = false) String keyword
     ) {
-        LambdaQueryWrapper<WashOrder> wrapper = new LambdaQueryWrapper<WashOrder>()
-            .eq(userId != null, WashOrder::getUserId, userId)
-            .eq(storeId != null, WashOrder::getStoreId, storeId)
-            .eq(StringUtils.hasText(orderStatus), WashOrder::getOrderStatus, orderStatus)
-            .orderByDesc(WashOrder::getId);
-
-        if (StringUtils.hasText(keyword)) {
-            wrapper.and(w -> w
-                .like(WashOrder::getOrderNo, keyword)
-                .or()
-                .like(WashOrder::getRemark, keyword));
-        }
-
-        return ApiResponse.success(washOrderService.page(new Page<>(page, size), wrapper));
+        return ApiResponse.success(
+            washOrderService.lambdaQuery()
+                .eq(userId != null, WashOrder::getUserId, userId)
+                .eq(storeId != null, WashOrder::getStoreId, storeId)
+                .eq(orderStatus != null && !orderStatus.isBlank(), WashOrder::getOrderStatus, orderStatus)
+                .and(keyword != null && !keyword.isBlank(), w -> w.like(WashOrder::getOrderNo, keyword).or().like(WashOrder::getRemark, keyword))
+                .orderByDesc(WashOrder::getId)
+                .page(new Page<>(page, size))
+        );
     }
 
     @GetMapping("/simple-list")
@@ -68,74 +53,22 @@ public class WashOrderController {
         @RequestParam(required = false) Long userId,
         @RequestParam(defaultValue = "10") long size
     ) {
-        LambdaQueryWrapper<WashOrder> wrapper = new LambdaQueryWrapper<WashOrder>()
-            .eq(userId != null, WashOrder::getUserId, userId)
-            .orderByDesc(WashOrder::getId)
-            .last("limit " + size);
-
-        List<WashOrder> orders = washOrderService.list(wrapper);
-        List<Long> storeIds = orders.stream()
-            .map(WashOrder::getStoreId)
-            .filter(id -> id != null)
-            .distinct()
-            .toList();
-
-        Map<Long, Store> storeMap = storeIds.isEmpty()
-            ? Map.of()
-            : storeService.listByIds(storeIds).stream()
-                .collect(Collectors.toMap(Store::getId, Function.identity(), (a, b) -> a));
-
-        List<SimpleOrderItem> result = orders.stream()
-            .map(order -> {
-                Store store = storeMap.get(order.getStoreId());
-                return new SimpleOrderItem(
-                    order.getId(),
-                    order.getOrderNo(),
-                    order.getUserId(),
-                    order.getStoreId(),
-                    store != null ? store.getStoreName() : "Unknown Store",
-                    order.getOrderStatus(),
-                    order.getPaymentStatus(),
-                    order.getFinalAmount(),
-                    order.getCreatedAt(),
-                    order.getRemark()
-                );
-            })
-            .toList();
-
-        return ApiResponse.success(result);
+        return ApiResponse.success(washOrderService.getSimpleOrderList(userId, size));
     }
 
     @PostMapping("/simple-create")
     public ApiResponse<WashOrder> simpleCreate(@RequestBody SimpleOrderCreateRequest request) {
-        if (request.getUserId() == null) {
-            throw new IllegalArgumentException("userId is required");
-        }
-        if (request.getStoreId() == null) {
-            throw new IllegalArgumentException("storeId is required");
-        }
+        return ApiResponse.success("created", washOrderService.createSimpleOrder(request));
+    }
 
-        WashOrder order = new WashOrder();
-        order.setOrderNo("WO" + UUID.randomUUID().toString().replace("-", "").substring(0, 18));
-        order.setUserId(request.getUserId());
-        order.setStoreId(request.getStoreId());
-        order.setDeviceId(request.getDeviceId());
-        order.setOrderSource("miniapp");
-        order.setOrderStatus("completed");
-        order.setPayMode("wallet");
-        order.setPaymentStatus("paid");
-        order.setRefundStatusSnapshot("none");
-        order.setPricingSnapshotVersion(1);
-        order.setCardDeductTimes(0);
-        order.setEstimatedAmount(request.getFinalAmount() != null ? request.getFinalAmount() : BigDecimal.ZERO);
-        order.setFinalAmount(request.getFinalAmount() != null ? request.getFinalAmount() : BigDecimal.ZERO);
-        order.setPaidAmount(request.getFinalAmount() != null ? request.getFinalAmount() : BigDecimal.ZERO);
-        order.setRefundAmount(BigDecimal.ZERO);
-        order.setIsFirstPeriodDiscountUsed(0);
-        order.setFirstPeriodDiscountAmount(BigDecimal.ZERO);
-        order.setRemark(StringUtils.hasText(request.getRemark()) ? request.getRemark() : "simple test order");
-        washOrderService.save(order);
-        return ApiResponse.success("created", order);
+    @PostMapping("/{id}/start")
+    public ApiResponse<WashOrder> start(@PathVariable Long id) {
+        return ApiResponse.success("started", washOrderService.startOrder(id));
+    }
+
+    @PostMapping("/{id}/complete")
+    public ApiResponse<WashOrder> complete(@PathVariable Long id) {
+        return ApiResponse.success("completed", washOrderService.completeOrder(id));
     }
 
     @GetMapping("/{id}")
@@ -147,58 +80,9 @@ public class WashOrderController {
         return ApiResponse.success(order);
     }
 
-    @PostMapping
-    public ApiResponse<WashOrder> create(@RequestBody WashOrder order) {
-        if (order.getUserId() == null) {
-            throw new IllegalArgumentException("userId is required");
-        }
-        if (order.getStoreId() == null) {
-            throw new IllegalArgumentException("storeId is required");
-        }
-        if (!StringUtils.hasText(order.getOrderNo())) {
-            order.setOrderNo("WO" + UUID.randomUUID().toString().replace("-", "").substring(0, 18));
-        }
-        if (!StringUtils.hasText(order.getOrderSource())) {
-            order.setOrderSource("admin");
-        }
-        if (!StringUtils.hasText(order.getOrderStatus())) {
-            order.setOrderStatus("pending");
-        }
-        if (!StringUtils.hasText(order.getPayMode())) {
-            order.setPayMode("wallet");
-        }
-        if (!StringUtils.hasText(order.getPaymentStatus())) {
-            order.setPaymentStatus("unpaid");
-        }
-        if (!StringUtils.hasText(order.getRefundStatusSnapshot())) {
-            order.setRefundStatusSnapshot("none");
-        }
-        if (order.getPricingSnapshotVersion() == null) {
-            order.setPricingSnapshotVersion(1);
-        }
-        if (order.getCardDeductTimes() == null) {
-            order.setCardDeductTimes(0);
-        }
-        if (order.getEstimatedAmount() == null) {
-            order.setEstimatedAmount(BigDecimal.ZERO);
-        }
-        if (order.getFinalAmount() == null) {
-            order.setFinalAmount(BigDecimal.ZERO);
-        }
-        if (order.getPaidAmount() == null) {
-            order.setPaidAmount(BigDecimal.ZERO);
-        }
-        if (order.getRefundAmount() == null) {
-            order.setRefundAmount(BigDecimal.ZERO);
-        }
-        if (order.getIsFirstPeriodDiscountUsed() == null) {
-            order.setIsFirstPeriodDiscountUsed(0);
-        }
-        if (order.getFirstPeriodDiscountAmount() == null) {
-            order.setFirstPeriodDiscountAmount(BigDecimal.ZERO);
-        }
-        washOrderService.save(order);
-        return ApiResponse.success("created", order);
+    @GetMapping("/{id}/status-logs")
+    public ApiResponse<List<WashOrderStatusLog>> getStatusLogs(@PathVariable Long id) {
+        return ApiResponse.success(washOrderService.getStatusLogs(id));
     }
 
     @PutMapping("/{id}")

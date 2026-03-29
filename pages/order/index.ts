@@ -1,4 +1,9 @@
-import { createSimpleOrder, getSimpleOrderList } from '../../apis/order';
+import {
+  completeOrder,
+  createSimpleOrder,
+  getSimpleOrderList,
+  startOrder,
+} from '../../apis/order';
 
 type OrderCardItem = {
   id: number;
@@ -7,6 +12,9 @@ type OrderCardItem = {
   amount: string;
   status: string;
   statusType: string;
+  orderStatus: string;
+  actionText: string;
+  actionType: string;
 };
 
 Page({
@@ -39,16 +47,17 @@ Page({
   },
 
   mapOrderItem(item: Record<string, any>): OrderCardItem {
-    const statusMap: Record<string, { text: string; type: string }> = {
-      completed: { text: 'Done', type: 'done' },
-      running: { text: 'Doing', type: 'doing' },
-      pending: { text: 'Pending', type: 'doing' },
-      cancelled: { text: 'Cancelled', type: 'cancel' },
+    const statusMap: Record<string, { text: string; type: string; actionText: string; actionType: string }> = {
+      pending: { text: 'Pending', type: 'pending', actionText: 'Start Order', actionType: 'start' },
+      running: { text: 'Running', type: 'doing', actionText: 'Finish Order', actionType: 'complete' },
+      completed: { text: 'Completed', type: 'done', actionText: 'View Detail', actionType: 'detail' },
     };
 
     const statusInfo = statusMap[item.orderStatus] || {
       text: item.orderStatus || 'Unknown',
       type: 'cancel',
+      actionText: 'View Detail',
+      actionType: 'detail',
     };
 
     return {
@@ -58,6 +67,9 @@ Page({
       amount: Number(item.finalAmount || 0).toFixed(2),
       status: statusInfo.text,
       statusType: statusInfo.type,
+      orderStatus: item.orderStatus || 'pending',
+      actionText: statusInfo.actionText,
+      actionType: statusInfo.actionType,
     };
   },
 
@@ -89,6 +101,40 @@ Page({
         icon: 'none',
       });
       console.error('createTestOrder error:', error);
+    }
+  },
+
+  async handleOrderAction(e: WechatMiniprogram.TouchEvent) {
+    const { id, action } = e.currentTarget.dataset as { id: number; action: string };
+
+    try {
+      if (action === 'start') {
+        await startOrder(Number(id));
+        wx.showToast({
+          title: 'Started',
+          icon: 'success',
+        });
+        this.loadOrders();
+        return;
+      }
+
+      if (action === 'complete') {
+        await completeOrder(Number(id));
+        wx.showToast({
+          title: 'Completed',
+          icon: 'success',
+        });
+        this.loadOrders();
+        return;
+      }
+
+      this.showOrderDetail();
+    } catch (error) {
+      wx.showToast({
+        title: 'Action failed',
+        icon: 'none',
+      });
+      console.error('handleOrderAction error:', error);
     }
   },
 
