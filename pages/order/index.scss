@@ -45,6 +45,24 @@
   font-weight: 600;
 }
 
+.summary-card__picker-label {
+  margin-top: 20rpx;
+  color: #666666;
+  font-size: 24rpx;
+}
+
+.summary-card__picker {
+  margin-top: 12rpx;
+  min-height: 64rpx;
+  padding: 0 24rpx;
+  border: 1px solid #e7e7e7;
+  border-radius: 18rpx;
+  background: #fafafa;
+  color: #333333;
+  font-size: 24rpx;
+  line-height: 64rpx;
+}
+
 .order-list {
   margin-top: 24rpx;
 }

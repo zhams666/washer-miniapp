@@ -7,22 +7,31 @@
       <view class="summary-card__desc">
         Minimal order flow: create order, start order, complete order, and view real status changes.
       </view>
+
+      <view class="summary-card__picker-label">Device</view>
+      <picker range="{{devicePickerRange}}" value="{{selectedDeviceIndex}}" bindchange="onDeviceChange">
+        <view class="summary-card__picker">
+          <text wx:if="{{devicePickerRange.length > 0}}">{{devicePickerRange[selectedDeviceIndex]}}</text>
+          <text wx:else>No device available</text>
+        </view>
+      </picker>
+
       <view class="summary-card__action" bindtap="createTestOrder">Create Test Order</view>
     </view>
 
     <view class="order-list" wx:if="{{list.length > 0}}">
-      <view class="order-card" wx:for="{{list}}" wx:key="id">
+      <view class="order-card" wx:for="{{list}}" wx:key="id" bindtap="handleViewDetail" data-id="{{item.id}}">
         <view class="order-card__header">
           <view class="order-card__name">{{item.storeName}}</view>
           <view class="order-card__status status-{{item.statusType}}">{{item.status}}</view>
         </view>
         <view class="order-card__meta">Create Time {{item.createTime}}</view>
-        <view class="order-card__amount">Amount ￥{{item.amount}}</view>
+        <view class="order-card__amount">Amount CNY {{item.amount}}</view>
         <view
           class="order-card__action"
           data-id="{{item.id}}"
           data-action="{{item.actionType}}"
-          bindtap="handleOrderAction"
+          catchtap="handleOrderAction"
         >
           {{item.actionText}}
         </view>

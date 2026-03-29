@@ -40,3 +40,19 @@ export const completeOrder = async (_id: number): Promise<IObject> => {
   }
   return {};
 };
+
+export const getOrderDetail = async (_id: number): Promise<IObject> => {
+  const { code, data } = await GET(`/api/orders/${_id}`);
+  if (code == 0) {
+    return data;
+  }
+  return {};
+};
+
+export const getOrderStatusLogs = async (_id: number): Promise<IObject[]> => {
+  const { code, data } = await GET(`/api/orders/${_id}/status-logs`);
+  if (code == 0 && Array.isArray(data)) {
+    return data;
+  }
+  return [];
+};

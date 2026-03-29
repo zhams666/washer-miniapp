@@ -1,3 +1,4 @@
+import { getDeviceList } from '../../apis/device';
 import {
   completeOrder,
   createSimpleOrder,
@@ -17,14 +18,25 @@ type OrderCardItem = {
   actionType: string;
 };
 
+type DeviceOption = {
+  id: number;
+  label: string;
+};
+
 Page({
   data: {
     list: [] as OrderCardItem[],
     loading: false,
+    storeId: 1,
+    deviceOptions: [] as DeviceOption[],
+    devicePickerRange: [] as string[],
+    selectedDeviceIndex: 0,
+    selectedDeviceId: 0,
   },
 
   onLoad() {
     this.loadOrders();
+    this.loadDevices();
   },
 
   async loadOrders() {
@@ -44,6 +56,47 @@ Page({
       });
       console.error('loadOrders error:', error);
     }
+  },
+
+  async loadDevices() {
+    try {
+      const devices = await getDeviceList(this.data.storeId);
+      const deviceOptions = devices.map((item: Record<string, any>) => ({
+        id: Number(item.id || 0),
+        label: this.getDeviceLabel(item),
+      }));
+
+      this.setData({
+        deviceOptions: deviceOptions,
+        devicePickerRange: deviceOptions.map((item: DeviceOption) => item.label),
+        selectedDeviceIndex: 0,
+        selectedDeviceId: deviceOptions.length > 0 ? deviceOptions[0].id : 0,
+      });
+    } catch (error) {
+      wx.showToast({
+        title: 'Load devices failed',
+        icon: 'none',
+      });
+      console.error('loadDevices error:', error);
+    }
+  },
+
+  getDeviceLabel(item: Record<string, any>) {
+    const code = item.deviceCode || 'NoCode';
+    const name = item.deviceName || 'Unnamed Device';
+    const status = item.status || 'unknown';
+    return `${name} (${code}) - ${status}`;
+  },
+
+  onDeviceChange(e: WechatMiniprogram.PickerChange) {
+    const index = Number(e.detail.value || 0);
+    const deviceOptions = this.data.deviceOptions as DeviceOption[];
+    const selectedDevice = deviceOptions[index];
+
+    this.setData({
+      selectedDeviceIndex: index,
+      selectedDeviceId: selectedDevice ? selectedDevice.id : 0,
+    });
   },
 
   mapOrderItem(item: Record<string, any>): OrderCardItem {
@@ -84,7 +137,9 @@ Page({
     try {
       await createSimpleOrder({
         userId: 1,
-        storeId: 1,
+        storeId: this.data.storeId,
+        deviceId: this.data.selectedDeviceId || null,
+        payMode: 'wallet',
         finalAmount: 18,
         remark: 'miniapp test order',
       });
@@ -128,7 +183,7 @@ Page({
         return;
       }
 
-      this.showOrderDetail();
+      this.showOrderDetail(Number(id));
     } catch (error) {
       wx.showToast({
         title: 'Action failed',
@@ -138,10 +193,22 @@ Page({
     }
   },
 
-  showOrderDetail() {
-    wx.showToast({
-      title: 'Detail pending',
-      icon: 'none',
+  handleViewDetail(e: WechatMiniprogram.TouchEvent) {
+    const { id } = e.currentTarget.dataset as { id: number };
+    this.showOrderDetail(Number(id));
+  },
+
+  showOrderDetail(id: number) {
+    if (!id) {
+      wx.showToast({
+        title: 'Invalid order',
+        icon: 'none',
+      });
+      return;
+    }
+
+    wx.navigateTo({
+      url: `/pages/detail/index?id=${id}`,
     });
   },
 });

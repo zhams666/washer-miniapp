@@ -1,2 +1,29 @@
-<!--pages/detail/index.wxml-->
-<text>pages/detail/index.wxml</text>
+<view class="page">
+  <Navbar showBackIcon="{{true}}" title="Order Detail" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
+
+  <view class="container">
+    <view class="section-card">
+      <view class="section-card__title">Order Main Info</view>
+      <view class="field-list">
+        <view class="field-row" wx:for="{{detailFields}}" wx:key="label">
+          <view class="field-row__label">{{item.label}}</view>
+          <view class="field-row__value">{{item.value}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card section-card--logs">
+      <view class="section-card__title">Status Logs</view>
+
+      <view wx:if="{{statusLogs.length > 0}}">
+        <view class="log-card" wx:for="{{statusLogs}}" wx:key="id">
+          <view class="log-card__line">Status: {{item.fromStatus}} -> {{item.toStatus}}</view>
+          <view class="log-card__line">Action: {{item.actionType}}</view>
+          <view class="log-card__time">{{item.createdAt}}</view>
+        </view>
+      </view>
+
+      <view class="empty-text" wx:else>No status logs yet.</view>
+    </view>
+  </view>
+</view>

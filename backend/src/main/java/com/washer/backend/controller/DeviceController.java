@@ -1,10 +1,10 @@
 package com.washer.backend.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.washer.backend.common.ApiResponse;
+import com.washer.backend.dto.device.DeviceSimpleItem;
 import com.washer.backend.entity.Device;
 import com.washer.backend.service.DeviceService;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,35 +28,18 @@ public class DeviceController {
     }
 
     @GetMapping
-    public ApiResponse<Page<Device>> page(
-        @RequestParam(defaultValue = "1") long page,
-        @RequestParam(defaultValue = "10") long size,
+    public ApiResponse<List<DeviceSimpleItem>> list(
         @RequestParam(required = false) Long storeId,
-        @RequestParam(required = false) Long bayId,
-        @RequestParam(required = false) String deviceStatus,
         @RequestParam(required = false) String keyword
     ) {
-        LambdaQueryWrapper<Device> wrapper = new LambdaQueryWrapper<Device>()
-            .eq(storeId != null, Device::getStoreId, storeId)
-            .eq(bayId != null, Device::getBayId, bayId)
-            .eq(StringUtils.hasText(deviceStatus), Device::getDeviceStatus, deviceStatus)
-            .orderByDesc(Device::getId);
-
-        if (StringUtils.hasText(keyword)) {
-            wrapper.and(w -> w
-                .like(Device::getDeviceCode, keyword)
-                .or()
-                .like(Device::getDeviceName, keyword));
-        }
-
-        return ApiResponse.success(deviceService.page(new Page<>(page, size), wrapper));
+        return ApiResponse.success(deviceService.getSimpleDevices(storeId, keyword));
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<Device> getById(@PathVariable Long id) {
-        Device device = deviceService.getById(id);
+    public ApiResponse<DeviceSimpleItem> getById(@PathVariable Long id) {
+        DeviceSimpleItem device = deviceService.getSimpleDeviceById(id);
         if (device == null) {
-            throw new IllegalArgumentException("设备不存在");
+            throw new IllegalArgumentException("device not found");
         }
         return ApiResponse.success(device);
     }
@@ -67,7 +50,7 @@ public class DeviceController {
             device.setDeviceCode("D" + UUID.randomUUID().toString().replace("-", "").substring(0, 16));
         }
         if (device.getStoreId() == null) {
-            throw new IllegalArgumentException("storeId 不能为空");
+            throw new IllegalArgumentException("storeId is required");
         }
         if (!StringUtils.hasText(device.getDeviceType())) {
             device.setDeviceType("washer");
@@ -79,7 +62,7 @@ public class DeviceController {
             device.setDeviceStatus("offline");
         }
         deviceService.save(device);
-        return ApiResponse.success("创建成功", device);
+        return ApiResponse.success("created", device);
     }
 
     @PutMapping("/{id}")
@@ -87,17 +70,17 @@ public class DeviceController {
         device.setId(id);
         boolean updated = deviceService.updateById(device);
         if (!updated) {
-            throw new IllegalArgumentException("设备不存在或更新失败");
+            throw new IllegalArgumentException("device update failed");
         }
-        return ApiResponse.success("更新成功", deviceService.getById(id));
+        return ApiResponse.success("updated", deviceService.getById(id));
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Boolean> delete(@PathVariable Long id) {
         boolean removed = deviceService.removeById(id);
         if (!removed) {
-            throw new IllegalArgumentException("设备不存在或删除失败");
+            throw new IllegalArgumentException("device delete failed");
         }
-        return ApiResponse.success("删除成功", true);
+        return ApiResponse.success("deleted", true);
     }
 }

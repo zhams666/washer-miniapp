@@ -9,6 +9,7 @@ public class SimpleOrderCreateRequest {
     private Long userId;
     private Long storeId;
     private Long deviceId;
+    private String payMode;
     private BigDecimal finalAmount;
     private String remark;
 }
