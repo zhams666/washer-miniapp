@@ -16,6 +16,7 @@ public class SimpleOrderItem {
     private String storeName;
     private String orderStatus;
     private String paymentStatus;
+    private BigDecimal estimatedAmount;
     private BigDecimal finalAmount;
     private LocalDateTime createdAt;
     private String remark;

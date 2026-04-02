@@ -1,0 +1,243 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --page-bg: #eef3f7;
+  --sidebar-bg: linear-gradient(180deg, #11283d 0%, #183e55 100%);
+  --panel-bg: rgba(255, 255, 255, 0.88);
+  --panel-border: rgba(17, 40, 61, 0.08);
+  --text-main: #1d2939;
+  --text-secondary: #526071;
+  --accent: #0b8f77;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(11, 143, 119, 0.14), transparent 28%),
+    linear-gradient(180deg, #f4f7fa 0%, #e8eef4 100%);
+  color: var(--text-main);
+}
+
+a {
+  text-decoration: none;
+}
+
+.admin-shell {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+}
+
+.admin-shell__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 20px;
+  background: var(--sidebar-bg);
+  color: #fff;
+}
+
+.brand-card {
+  padding: 22px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.brand-card h1,
+.page-header h2,
+.hero-panel h3,
+.detail-card h3 {
+  margin: 0;
+}
+
+.brand-card span,
+.page-header__eyebrow,
+.hero-panel__eyebrow,
+.brand-card__eyebrow {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.brand-card span {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.nav-link {
+  display: block;
+  padding: 14px 16px;
+  border-radius: 16px;
+  color: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.06);
+  transition: all 0.2s ease;
+}
+
+.nav-link.is-active,
+.nav-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.admin-shell__content {
+  padding: 28px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-header__eyebrow,
+.hero-panel__eyebrow {
+  margin-bottom: 8px;
+  color: var(--accent);
+}
+
+.page-header__desc {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+}
+
+.page-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.hero-panel,
+.filter-bar,
+.table-card,
+.detail-card {
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
+  background: var(--panel-bg);
+  box-shadow: 0 12px 40px rgba(31, 41, 55, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.hero-panel {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
+}
+
+.hero-panel span {
+  color: var(--text-secondary);
+}
+
+.hero-panel__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.hero-panel__metrics div {
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(11, 143, 119, 0.08);
+}
+
+.hero-panel__metrics strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 28px;
+}
+
+.hero-panel__metrics span {
+  font-size: 13px;
+}
+
+.filter-bar {
+  padding: 22px 24px 6px;
+}
+
+.filter-form .el-form-item {
+  margin-bottom: 16px;
+}
+
+.table-card {
+  padding: 18px;
+  overflow: hidden;
+}
+
+.pagination-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 18px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.detail-card {
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.detail-card dl {
+  margin: 16px 0 0;
+}
+
+.detail-card dl div {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(17, 40, 61, 0.06);
+}
+
+.detail-card dt {
+  color: var(--text-secondary);
+}
+
+.detail-card dd {
+  margin: 0;
+}
+
+@media (max-width: 960px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-shell__sidebar {
+    padding-bottom: 12px;
+  }
+
+  .hero-panel,
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-panel {
+    flex-direction: column;
+  }
+
+  .admin-shell__content {
+    padding: 16px;
+  }
+}

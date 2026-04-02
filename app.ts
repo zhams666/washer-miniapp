@@ -1,8 +1,8 @@
-import { wxLogin } from "./utils/user";
+import { ensureLoginStorage } from './utils/user';
 
 App<IAppOption>({
   globalData: {},
   onLaunch() {
-    wxLogin();
+    ensureLoginStorage();
   },
 });

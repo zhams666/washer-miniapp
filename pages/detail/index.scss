@@ -18,6 +18,10 @@
   margin-top: 24rpx;
 }
 
+.section-card + .section-card {
+  margin-top: 24rpx;
+}
+
 .section-card__title {
   color: #222222;
   font-size: 30rpx;

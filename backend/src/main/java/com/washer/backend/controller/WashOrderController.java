@@ -5,6 +5,7 @@ import com.washer.backend.common.ApiResponse;
 import com.washer.backend.dto.order.SimpleOrderCreateRequest;
 import com.washer.backend.dto.order.SimpleOrderItem;
 import com.washer.backend.entity.WashOrder;
+import com.washer.backend.entity.WashOrderPaymentDetail;
 import com.washer.backend.entity.WashOrderStatusLog;
 import com.washer.backend.service.WashOrderService;
 import java.util.List;
@@ -83,6 +84,11 @@ public class WashOrderController {
     @GetMapping("/{id}/status-logs")
     public ApiResponse<List<WashOrderStatusLog>> getStatusLogs(@PathVariable Long id) {
         return ApiResponse.success(washOrderService.getStatusLogs(id));
+    }
+
+    @GetMapping("/{id}/payment-details")
+    public ApiResponse<List<WashOrderPaymentDetail>> getPaymentDetails(@PathVariable Long id) {
+        return ApiResponse.success(washOrderService.getPaymentDetails(id));
     }
 
     @PutMapping("/{id}")

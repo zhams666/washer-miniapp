@@ -13,6 +13,24 @@
     </view>
 
     <view class="section-card section-card--logs">
+      <view class="section-card__title">Payment Details</view>
+
+      <view wx:if="{{paymentDetails.length > 0}}">
+        <view class="log-card" wx:for="{{paymentDetails}}" wx:key="id">
+          <view class="log-card__line">Source: {{item.sourceType}}</view>
+          <view class="log-card__line">Amount Type: {{item.amountType}}</view>
+          <view class="log-card__line">Amount: {{item.amount}}</view>
+          <view class="log-card__line">Deduct Times: {{item.deductTimes}}</view>
+          <view class="log-card__line">Settle Stage: {{item.settleStage}}</view>
+          <view class="log-card__line">Allocation: {{item.allocationStrategy}}</view>
+          <view class="log-card__time">{{item.createdAt}}</view>
+        </view>
+      </view>
+
+      <view class="empty-text" wx:else>No payment details yet.</view>
+    </view>
+
+    <view class="section-card section-card--logs">
       <view class="section-card__title">Status Logs</view>
 
       <view wx:if="{{statusLogs.length > 0}}">

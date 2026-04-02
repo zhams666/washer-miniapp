@@ -56,3 +56,11 @@ export const getOrderStatusLogs = async (_id: number): Promise<IObject[]> => {
   }
   return [];
 };
+
+export const getOrderPaymentDetails = async (_id: number): Promise<IObject[]> => {
+  const { code, data } = await GET(`/api/orders/${_id}/payment-details`);
+  if (code == 0 && Array.isArray(data)) {
+    return data;
+  }
+  return [];
+};

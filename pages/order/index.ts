@@ -1,4 +1,5 @@
 import { getDeviceList } from '../../apis/device';
+import { getStoreList } from '../../apis/store';
 import {
   completeOrder,
   createSimpleOrder,
@@ -23,20 +24,40 @@ type DeviceOption = {
   label: string;
 };
 
+type StoreOption = {
+  id: number;
+  label: string;
+};
+
+type PayModeOption = {
+  value: string;
+  label: string;
+};
+
 Page({
   data: {
     list: [] as OrderCardItem[],
     loading: false,
-    storeId: 1,
+    storeOptions: [] as StoreOption[],
+    storePickerRange: [] as string[],
+    selectedStoreIndex: 0,
+    storeId: 0,
     deviceOptions: [] as DeviceOption[],
     devicePickerRange: [] as string[],
     selectedDeviceIndex: 0,
     selectedDeviceId: 0,
+    payModeOptions: [
+      { value: 'wallet', label: 'Wallet' },
+      { value: 'card', label: 'Card' },
+    ] as PayModeOption[],
+    payModePickerRange: ['Wallet', 'Card'],
+    selectedPayModeIndex: 0,
+    selectedPayMode: 'wallet',
   },
 
   onLoad() {
     this.loadOrders();
-    this.loadDevices();
+    this.loadStores();
   },
 
   async loadOrders() {
@@ -59,6 +80,16 @@ Page({
   },
 
   async loadDevices() {
+    if (!this.data.storeId) {
+      this.setData({
+        deviceOptions: [],
+        devicePickerRange: [],
+        selectedDeviceIndex: 0,
+        selectedDeviceId: 0,
+      });
+      return;
+    }
+
     try {
       const devices = await getDeviceList(this.data.storeId);
       const deviceOptions = devices.map((item: Record<string, any>) => ({
@@ -81,11 +112,55 @@ Page({
     }
   },
 
+  async loadStores() {
+    try {
+      const pageData = await getStoreList(1, 100);
+      const records = Array.isArray(pageData.records) ? pageData.records : [];
+      const storeOptions = records.map((item: Record<string, any>) => ({
+        id: Number(item.id || 0),
+        label: item.storeName || `Store ${item.id || ''}`,
+      }));
+      const firstStoreId = storeOptions.length > 0 ? storeOptions[0].id : 0;
+
+      this.setData({
+        storeOptions: storeOptions,
+        storePickerRange: storeOptions.map((item: StoreOption) => item.label),
+        selectedStoreIndex: 0,
+        storeId: firstStoreId,
+      });
+
+      this.loadDevices();
+    } catch (error) {
+      wx.showToast({
+        title: 'Load stores failed',
+        icon: 'none',
+      });
+      console.error('loadStores error:', error);
+    }
+  },
+
   getDeviceLabel(item: Record<string, any>) {
     const code = item.deviceCode || 'NoCode';
     const name = item.deviceName || 'Unnamed Device';
     const status = item.status || 'unknown';
     return `${name} (${code}) - ${status}`;
+  },
+
+  onStoreChange(e: WechatMiniprogram.PickerChange) {
+    const index = Number(e.detail.value || 0);
+    const storeOptions = this.data.storeOptions as StoreOption[];
+    const selectedStore = storeOptions[index];
+
+    this.setData({
+      selectedStoreIndex: index,
+      storeId: selectedStore ? selectedStore.id : 0,
+      selectedDeviceIndex: 0,
+      selectedDeviceId: 0,
+      deviceOptions: [],
+      devicePickerRange: [],
+    });
+
+    this.loadDevices();
   },
 
   onDeviceChange(e: WechatMiniprogram.PickerChange) {
@@ -96,6 +171,17 @@ Page({
     this.setData({
       selectedDeviceIndex: index,
       selectedDeviceId: selectedDevice ? selectedDevice.id : 0,
+    });
+  },
+
+  onPayModeChange(e: WechatMiniprogram.PickerChange) {
+    const index = Number(e.detail.value || 0);
+    const payModeOptions = this.data.payModeOptions as PayModeOption[];
+    const selectedPayMode = payModeOptions[index];
+
+    this.setData({
+      selectedPayModeIndex: index,
+      selectedPayMode: selectedPayMode ? selectedPayMode.value : 'wallet',
     });
   },
 
@@ -117,7 +203,7 @@ Page({
       id: Number(item.id || 0),
       storeName: item.storeName || 'Unknown Store',
       createTime: this.formatTime(item.createdAt),
-      amount: Number(item.finalAmount || 0).toFixed(2),
+      amount: this.resolveOrderAmount(item),
       status: statusInfo.text,
       statusType: statusInfo.type,
       orderStatus: item.orderStatus || 'pending',
@@ -133,13 +219,44 @@ Page({
     return value.replace('T', ' ').slice(0, 16);
   },
 
+  resolveOrderAmount(item: Record<string, any>) {
+    const finalAmount = Number(item.finalAmount || 0);
+    if (!Number.isNaN(finalAmount) && finalAmount > 0) {
+      return finalAmount.toFixed(2);
+    }
+
+    const estimatedAmount = Number(item.estimatedAmount || 0);
+    if (!Number.isNaN(estimatedAmount) && estimatedAmount > 0) {
+      return estimatedAmount.toFixed(2);
+    }
+
+    return '0.00';
+  },
+
   async createTestOrder() {
+    if (!this.data.storeId) {
+      wx.showToast({
+        title: 'Select store first',
+        icon: 'none',
+      });
+      return;
+    }
+
+    if (!this.data.selectedDeviceId) {
+      wx.showToast({
+        title: 'Select device first',
+        icon: 'none',
+      });
+      return;
+    }
+
     try {
       await createSimpleOrder({
         userId: 1,
         storeId: this.data.storeId,
-        deviceId: this.data.selectedDeviceId || null,
-        payMode: 'wallet',
+        deviceId: this.data.selectedDeviceId,
+        payMode: this.data.selectedPayMode,
+        estimatedAmount: 18,
         finalAmount: 18,
         remark: 'miniapp test order',
       });

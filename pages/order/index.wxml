@@ -8,11 +8,26 @@
         Minimal order flow: create order, start order, complete order, and view real status changes.
       </view>
 
+      <view class="summary-card__picker-label">Store</view>
+      <picker range="{{storePickerRange}}" value="{{selectedStoreIndex}}" bindchange="onStoreChange">
+        <view class="summary-card__picker">
+          <text wx:if="{{storePickerRange.length > 0}}">{{storePickerRange[selectedStoreIndex]}}</text>
+          <text wx:else>No store available</text>
+        </view>
+      </picker>
+
       <view class="summary-card__picker-label">Device</view>
       <picker range="{{devicePickerRange}}" value="{{selectedDeviceIndex}}" bindchange="onDeviceChange">
         <view class="summary-card__picker">
           <text wx:if="{{devicePickerRange.length > 0}}">{{devicePickerRange[selectedDeviceIndex]}}</text>
           <text wx:else>No device available</text>
+        </view>
+      </picker>
+
+      <view class="summary-card__picker-label">Pay Mode</view>
+      <picker range="{{payModePickerRange}}" value="{{selectedPayModeIndex}}" bindchange="onPayModeChange">
+        <view class="summary-card__picker">
+          <text>{{payModePickerRange[selectedPayModeIndex]}}</text>
         </view>
       </picker>
 

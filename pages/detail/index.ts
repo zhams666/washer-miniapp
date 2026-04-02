@@ -1,11 +1,40 @@
-import { getOrderDetail, getOrderStatusLogs } from '../../apis/order';
+import {
+  getOrderDetail,
+  getOrderPaymentDetails,
+  getOrderStatusLogs,
+} from '../../apis/order';
+
+type FieldItem = {
+  label: string;
+  value: string;
+};
+
+type StatusLogItem = {
+  id: number;
+  fromStatus: string;
+  toStatus: string;
+  actionType: string;
+  createdAt: string;
+};
+
+type PaymentDetailItem = {
+  id: number;
+  sourceType: string;
+  amountType: string;
+  amount: string;
+  deductTimes: string;
+  settleStage: string;
+  allocationStrategy: string;
+  createdAt: string;
+};
 
 Page({
   data: {
     orderId: 0,
     loading: false,
-    detailFields: [],
-    statusLogs: [],
+    detailFields: [] as FieldItem[],
+    statusLogs: [] as StatusLogItem[],
+    paymentDetails: [] as PaymentDetailItem[],
   },
 
   onLoad(options: Record<string, string>) {
@@ -29,15 +58,18 @@ Page({
       const result = await Promise.all([
         getOrderDetail(orderId),
         getOrderStatusLogs(orderId),
+        getOrderPaymentDetails(orderId),
       ]);
 
       const detail = result[0] || {};
       const logs = result[1] || [];
+      const paymentDetails = result[2] || [];
 
       this.setData({
         loading: false,
         detailFields: this.mapDetailFields(detail),
         statusLogs: this.mapStatusLogs(logs),
+        paymentDetails: this.mapPaymentDetails(paymentDetails),
       });
     } catch (error) {
       this.setData({ loading: false });
@@ -55,9 +87,19 @@ Page({
       { label: 'User ID', value: this.formatValue(detail.userId) },
       { label: 'Store ID', value: this.formatValue(detail.storeId) },
       { label: 'Device ID', value: this.formatValue(detail.deviceId) },
+      { label: 'Estimated Amount', value: this.formatAmount(detail.estimatedAmount) },
+      {
+        label: 'First Period Discount Used',
+        value: Number(detail.isFirstPeriodDiscountUsed || 0) === 1 ? 'Yes' : 'No',
+      },
+      { label: 'First Period Discount Amount', value: this.formatAmount(detail.firstPeriodDiscountAmount) },
       { label: 'Order Status', value: this.formatValue(detail.orderStatus) },
+      { label: 'Pay Mode', value: this.formatValue(detail.payMode) },
       { label: 'Payment Status', value: this.formatValue(detail.paymentStatus) },
-      { label: 'Final Amount', value: this.formatAmount(detail.finalAmount) },
+      { label: 'Paid Amount', value: this.formatAmount(detail.paidAmount) },
+      { label: 'Final Amount', value: this.formatAmount(this.resolveFinalAmount(detail)) },
+      { label: 'Card Usage ID', value: this.formatValue(detail.cardUsageId) },
+      { label: 'Card Deduct Times', value: this.formatValue(detail.cardDeductTimes) },
       { label: 'Start Time', value: this.formatTime(detail.startTime) },
       { label: 'End Time', value: this.formatTime(detail.endTime) },
       { label: 'Settle Time', value: this.formatTime(detail.settleTime) },
@@ -80,6 +122,23 @@ Page({
     }));
   },
 
+  mapPaymentDetails(details: Record<string, any>[]) {
+    if (!Array.isArray(details)) {
+      return [];
+    }
+
+    return details.map((item: Record<string, any>) => ({
+      id: Number(item.id || 0),
+      sourceType: this.formatValue(item.sourceType),
+      amountType: this.formatValue(item.amountType),
+      amount: this.formatAmount(item.amount),
+      deductTimes: this.formatValue(item.deductTimes),
+      settleStage: this.formatValue(item.settleStage),
+      allocationStrategy: this.formatValue(item.allocationStrategy),
+      createdAt: this.formatTime(item.createdAt),
+    }));
+  },
+
   formatValue(value: unknown) {
     if (value === null || value === undefined || value === '') {
       return 'N/A';
@@ -98,6 +157,20 @@ Page({
     }
 
     return amount.toFixed(2);
+  },
+
+  resolveFinalAmount(detail: Record<string, any>) {
+    const finalAmount = Number(detail.finalAmount || 0);
+    if (!Number.isNaN(finalAmount) && finalAmount > 0) {
+      return finalAmount;
+    }
+
+    const estimatedAmount = Number(detail.estimatedAmount || 0);
+    if (!Number.isNaN(estimatedAmount) && estimatedAmount > 0) {
+      return estimatedAmount;
+    }
+
+    return detail.finalAmount;
   },
 
   formatTime(value: unknown) {
