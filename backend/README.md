@@ -97,18 +97,21 @@ WASHER_POINT_MALL_FULFILLMENT_MODE=provider
 
 `backend/` 已包含用于 CloudBase Run 的 `Dockerfile`。该镜像会使用 Java 17 构建 Spring Boot 服务，默认启用 `cloudbase` profile，并监听 `8080`；如果云托管注入 `PORT`，会优先监听该端口。
 
-部署前，在云托管服务的环境变量中配置以下值：
+当前 CloudBase 测试环境使用 PostgreSQL。请先在 CloudBase PostgreSQL 的 SQL 控制台执行一次仓库中的 `sql/postgresql/001_cloudbase_init.sql`，再部署云托管服务。这个脚本只用于空的新测试环境；它会创建完整表结构、索引、演示数据和 `updated_at` 触发器。
+
+在云托管服务的环境变量中配置以下值：
 
 ```text
-WASHER_DB_URL=jdbc:mysql://<host>:3306/washer?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=true
-WASHER_DB_USERNAME=<test database user>
-WASHER_DB_PASSWORD=<test database password>
+WASHER_PG_URL=jdbc:postgresql://<CloudBase PostgreSQL host>:<port>/<database>?sslmode=require
+WASHER_PG_USERNAME=<CloudBase PostgreSQL username>
+WASHER_PG_PASSWORD=<CloudBase PostgreSQL password>
 WECHAT_MINIAPP_APP_ID=wxb83ca5cce97b3680
-WECHAT_MINIAPP_SECRET=<mini program secret>
 WECHAT_MINIAPP_MOCK_LOGIN_ENABLED=false
 WECHAT_PAY_ENABLED=false
 ```
 
-在微信开发者工具的“云开发 -> 云托管”中创建测试服务后，选择“本地代码部署”，上传 `backend/` 目录，Dockerfile 路径填写 `Dockerfile`，服务端口填写 `8080`。部署完成后，通过服务 HTTPS 地址访问 `/ping`；返回 `code=0` 后，再将该 HTTPS 地址加入小程序 request 合法域名并配置到 `config/url.ts` 的测试环境。
+`WECHAT_MINIAPP_SECRET` 可在管理员有空时再补；缺少它时，`/ping` 可用，但微信登录换取 `openid` 的功能不可用。
+
+在微信开发者工具的“云开发 -> 云托管”中创建测试服务后，选择 Git 平台部署，目标目录填写 `backend`，Dockerfile 路径填写 `Dockerfile`，服务端口填写 `8080`。部署完成后，通过服务 HTTPS 地址访问 `/ping`；返回 `code=0` 后，再将该 HTTPS 地址加入小程序 request 合法域名并配置到 `config/url.ts` 的测试环境。
 
 云开发免费环境只用于测试。不要在其中保存唯一的生产数据库、生产支付密钥或正式用户资金；到期前必须导出测试数据库和部署配置。

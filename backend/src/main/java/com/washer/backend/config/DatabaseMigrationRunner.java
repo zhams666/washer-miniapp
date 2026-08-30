@@ -3,9 +3,11 @@ package com.washer.backend.config;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("!cloudbase")
 public class DatabaseMigrationRunner implements ApplicationRunner {
 
     private final JdbcTemplate jdbcTemplate;

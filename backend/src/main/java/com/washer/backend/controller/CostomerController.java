@@ -18,6 +18,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -567,14 +569,14 @@ public class CostomerController {
 
         jdbcTemplate.update(
             """
-                UPDATE `user_info`
-                SET `openid` = NULL,
-                    `unionid` = NULL,
-                    `mobile` = NULL,
-                    `user_status` = 0,
-                    `remark` = ?,
-                    `updated_at` = NOW()
-                WHERE `id` = ?
+                UPDATE user_info
+                SET openid = NULL,
+                    unionid = NULL,
+                    mobile = NULL,
+                    user_status = 0,
+                    remark = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
                 """,
             "手机号登录合并至用户 " + targetUserId,
             sourceUserId
@@ -583,6 +585,11 @@ public class CostomerController {
 
     private void mergeWallets(Long sourceUserId, Long targetUserId) {
         if (!tableExists("user_store_wallet")) {
+            return;
+        }
+
+        if (isPostgresql()) {
+            mergePostgresqlWallets(sourceUserId, targetUserId);
             return;
         }
 
@@ -624,7 +631,53 @@ public class CostomerController {
             sourceUserId
         );
         jdbcTemplate.update(
-            "UPDATE `user_store_wallet` SET `user_id` = ?, `updated_at` = NOW() WHERE `user_id` = ?",
+            "UPDATE user_store_wallet SET user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+            targetUserId,
+            sourceUserId
+        );
+    }
+
+    private void mergePostgresqlWallets(Long sourceUserId, Long targetUserId) {
+        jdbcTemplate.update(
+            """
+                UPDATE user_store_wallet AS target
+                SET principal_balance = COALESCE(target.principal_balance, 0) + COALESCE(source.principal_balance, 0),
+                    available_principal_balance = COALESCE(target.available_principal_balance, 0) + COALESCE(source.available_principal_balance, 0),
+                    frozen_principal_balance = COALESCE(target.frozen_principal_balance, 0) + COALESCE(source.frozen_principal_balance, 0),
+                    gift_balance = COALESCE(target.gift_balance, 0) + COALESCE(source.gift_balance, 0),
+                    available_gift_balance = COALESCE(target.available_gift_balance, 0) + COALESCE(source.available_gift_balance, 0),
+                    frozen_gift_balance = COALESCE(target.frozen_gift_balance, 0) + COALESCE(source.frozen_gift_balance, 0),
+                    total_recharge_principal = COALESCE(target.total_recharge_principal, 0) + COALESCE(source.total_recharge_principal, 0),
+                    total_recharge_gift = COALESCE(target.total_recharge_gift, 0) + COALESCE(source.total_recharge_gift, 0),
+                    total_consume_principal = COALESCE(target.total_consume_principal, 0) + COALESCE(source.total_consume_principal, 0),
+                    total_refund_principal = COALESCE(target.total_refund_principal, 0) + COALESCE(source.total_refund_principal, 0),
+                    status = CASE
+                        WHEN COALESCE(target.status, 1) = 1 OR COALESCE(source.status, 1) = 1 THEN 1
+                        ELSE target.status
+                    END,
+                    version = COALESCE(target.version, 0) + 1,
+                    updated_at = CURRENT_TIMESTAMP
+                FROM user_store_wallet AS source
+                WHERE source.user_id = ?
+                  AND target.user_id = ?
+                  AND target.store_id = source.store_id
+                """,
+            sourceUserId,
+            targetUserId
+        );
+        jdbcTemplate.update(
+            """
+                DELETE FROM user_store_wallet AS source
+                USING user_store_wallet AS target
+                WHERE target.user_id = ?
+                  AND target.store_id = source.store_id
+                  AND source.user_id = ?
+                """,
+            targetUserId,
+            sourceUserId
+        );
+        jdbcTemplate.update(
+            "UPDATE user_store_wallet SET user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
             targetUserId,
             sourceUserId
         );
@@ -632,6 +685,28 @@ public class CostomerController {
 
     private void mergeDailyDiscountRecords(Long sourceUserId, Long targetUserId) {
         if (!tableExists("user_daily_discount_record")) {
+            return;
+        }
+        if (isPostgresql()) {
+            jdbcTemplate.update(
+                """
+                    DELETE FROM user_daily_discount_record AS source
+                    USING user_daily_discount_record AS target
+                    WHERE target.user_id = ?
+                      AND target.discount_date = source.discount_date
+                      AND target.discount_type = source.discount_type
+                      AND COALESCE(target.discount_scope, '') = COALESCE(source.discount_scope, '')
+                      AND COALESCE(target.scope_store_id, 0) = COALESCE(source.scope_store_id, 0)
+                      AND source.user_id = ?
+                    """,
+                targetUserId,
+                sourceUserId
+            );
+            jdbcTemplate.update(
+                "UPDATE user_daily_discount_record SET user_id = ? WHERE user_id = ?",
+                targetUserId,
+                sourceUserId
+            );
             return;
         }
         jdbcTemplate.update(
@@ -650,7 +725,7 @@ public class CostomerController {
             sourceUserId
         );
         jdbcTemplate.update(
-            "UPDATE `user_daily_discount_record` SET `user_id` = ? WHERE `user_id` = ?",
+            "UPDATE user_daily_discount_record SET user_id = ? WHERE user_id = ?",
             targetUserId,
             sourceUserId
         );
@@ -661,24 +736,33 @@ public class CostomerController {
             return;
         }
         jdbcTemplate.update(
-            "UPDATE `" + tableName + "` SET `user_id` = ? WHERE `user_id` = ?",
+            "UPDATE " + tableName + " SET user_id = ? WHERE user_id = ?",
             targetUserId,
             sourceUserId
         );
     }
 
     private boolean tableExists(String tableName) {
+        String schemaExpression = isPostgresql() ? "current_schema()" : "DATABASE()";
         Integer count = jdbcTemplate.queryForObject(
             """
                 SELECT COUNT(*)
                 FROM information_schema.TABLES
-                WHERE TABLE_SCHEMA = DATABASE()
+                WHERE TABLE_SCHEMA = %s
                   AND TABLE_NAME = ?
-                """,
+                """.formatted(schemaExpression),
             Integer.class,
             tableName
         );
         return count != null && count > 0;
+    }
+
+    private boolean isPostgresql() {
+        try (Connection connection = jdbcTemplate.getDataSource().getConnection()) {
+            return connection.getMetaData().getDatabaseProductName().toLowerCase().contains("postgresql");
+        } catch (SQLException ex) {
+            throw new IllegalStateException("无法读取数据库类型", ex);
+        }
     }
 
     private void ensureRechargeMember(UserInfo user) {

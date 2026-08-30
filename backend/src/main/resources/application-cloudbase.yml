@@ -4,6 +4,11 @@ server:
   shutdown: graceful
 
 spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${WASHER_PG_URL}
+    username: ${WASHER_PG_USERNAME}
+    password: ${WASHER_PG_PASSWORD}
   lifecycle:
     timeout-per-shutdown-phase: 20s
 
@@ -14,3 +19,6 @@ mybatis-plus:
 logging:
   level:
     com.washer.backend: info
+
+washer:
+  database-type: postgresql
