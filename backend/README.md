@@ -97,21 +97,27 @@ WASHER_POINT_MALL_FULFILLMENT_MODE=provider
 
 `backend/` 已包含用于 CloudBase Run 的 `Dockerfile`。该镜像会使用 Java 17 构建 Spring Boot 服务，默认启用 `cloudbase` profile，并监听 `8080`；如果云托管注入 `PORT`，会优先监听该端口。
 
-当前 CloudBase 测试环境使用 PostgreSQL。请先在 CloudBase PostgreSQL 的 SQL 控制台执行一次仓库中的 `sql/postgresql/001_cloudbase_init.sql`，再部署云托管服务。这个脚本只用于空的新测试环境；它会创建完整表结构、索引、演示数据和 `updated_at` 触发器。
+当前 CloudBase 测试环境使用 PostgreSQL，但免费共享实例不提供给云托管的 JDBC 直连信息。后端在 `cloudbase` profile 下会通过 CloudBase PostgreSQL 的 HTTPS REST/RPC API 访问数据库，因此不需要开放公网 IPv4、不需要安全组，也不需要 `WASHER_PG_*` 变量。
+
+请先在 CloudBase PostgreSQL 的 SQL 控制台依次执行：
+
+1. `sql/postgresql/001_cloudbase_init.sql`：空测试环境的完整表结构、索引、演示数据和 `updated_at` 触发器。
+2. `sql/postgresql/002_cloudbase_http_rpc.sql`：用户合并与积分兑换所需的原子 RPC。
 
 在云托管服务的环境变量中配置以下值：
 
 ```text
-WASHER_PG_URL=jdbc:postgresql://<CloudBase PostgreSQL host>:<port>/<database>?sslmode=require
-WASHER_PG_USERNAME=<CloudBase PostgreSQL username>
-WASHER_PG_PASSWORD=<CloudBase PostgreSQL password>
+CLOUDBASE_ENV_ID=<云开发环境 ID，不是显示名称>
+CLOUDBASE_API_KEY=<云开发 API Key，仅服务端保存>
 WECHAT_MINIAPP_APP_ID=wxb83ca5cce97b3680
 WECHAT_MINIAPP_MOCK_LOGIN_ENABLED=false
 WECHAT_PAY_ENABLED=false
 ```
 
-`WECHAT_MINIAPP_SECRET` 可在管理员有空时再补；缺少它时，`/ping` 可用，但微信登录换取 `openid` 的功能不可用。
+`CLOUDBASE_API_KEY` 是云开发控制台生成的服务端密钥，不能写入小程序代码、Git 仓库或截图。`WECHAT_MINIAPP_SECRET` 可在管理员有空时再补；缺少它时，`/ping` 可用，但微信登录换取 `openid` 的功能不可用。已在截图中出现过的 AppSecret 应立即在微信公众平台重置，然后只填入云托管环境变量。
 
-在微信开发者工具的“云开发 -> 云托管”中创建测试服务后，选择 Git 平台部署，目标目录填写 `backend`，Dockerfile 路径填写 `Dockerfile`，服务端口填写 `8080`。部署完成后，通过服务 HTTPS 地址访问 `/ping`；返回 `code=0` 后，再将该 HTTPS 地址加入小程序 request 合法域名并配置到 `config/url.ts` 的测试环境。
+云开发 HTTP profile 会默认关闭依赖数据库行锁的“订单超时自动完成”定时任务，避免在免费环境中执行非原子资金操作。测试期间不要打开微信支付；付款、退款、卡支付和设备正式控制仍应在对应 RPC 完成后再启用。
+
+在微信开发者工具的“云开发 -> 云托管”中创建测试服务后，选择 Git 平台部署，目标目录填写 `backend`，Dockerfile 路径填写 `Dockerfile`，服务端口填写 `8080`。首次联调建议关闭自动部署，待 `/ping`、登录和积分兑换验证完成后再开启。部署完成后，通过服务 HTTPS 地址访问 `/ping`；返回 `code=0` 后，再将该 HTTPS 地址加入小程序 request 合法域名并配置到 `config/url.ts` 的测试环境。
 
 云开发免费环境只用于测试。不要在其中保存唯一的生产数据库、生产支付密钥或正式用户资金；到期前必须导出测试数据库和部署配置。

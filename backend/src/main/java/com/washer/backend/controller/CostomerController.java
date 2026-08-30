@@ -3,6 +3,7 @@ package com.washer.backend.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.washer.backend.common.ApiResponse;
+import com.washer.backend.cloudbase.CloudBasePgClient;
 import com.washer.backend.dto.costomer.CostomerPhoneLoginRequest;
 import com.washer.backend.dto.costomer.CostomerPhoneLoginResponse;
 import com.washer.backend.entity.UserInfo;
@@ -29,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -54,19 +56,22 @@ public class CostomerController {
     private final WechatMiniappAuthService wechatMiniappAuthService;
     private final WalletTransactionMapper walletTransactionMapper;
     private final JdbcTemplate jdbcTemplate;
+    private final ObjectProvider<CloudBasePgClient> cloudBasePgClientProvider;
     private final MembershipService membershipService;
 
     public CostomerController(
         UserInfoService userInfoService,
         WechatMiniappAuthService wechatMiniappAuthService,
         WalletTransactionMapper walletTransactionMapper,
-        JdbcTemplate jdbcTemplate,
+        ObjectProvider<JdbcTemplate> jdbcTemplateProvider,
+        ObjectProvider<CloudBasePgClient> cloudBasePgClientProvider,
         MembershipService membershipService
     ) {
         this.userInfoService = userInfoService;
         this.wechatMiniappAuthService = wechatMiniappAuthService;
         this.walletTransactionMapper = walletTransactionMapper;
-        this.jdbcTemplate = jdbcTemplate;
+        this.jdbcTemplate = jdbcTemplateProvider.getIfAvailable();
+        this.cloudBasePgClientProvider = cloudBasePgClientProvider;
         this.membershipService = membershipService;
     }
 
@@ -546,6 +551,18 @@ public class CostomerController {
     private void mergeUserInto(Long sourceUserId, Long targetUserId) {
         if (sourceUserId == null || targetUserId == null || sourceUserId.equals(targetUserId)) {
             return;
+        }
+
+        CloudBasePgClient cloudBasePgClient = cloudBasePgClientProvider.getIfAvailable();
+        if (cloudBasePgClient != null) {
+            cloudBasePgClient.rpc("merge_user_account", Map.of(
+                "p_source_user_id", sourceUserId,
+                "p_target_user_id", targetUserId
+            ));
+            return;
+        }
+        if (jdbcTemplate == null) {
+            throw new IllegalStateException("database access is not configured");
         }
 
         mergeWallets(sourceUserId, targetUserId);

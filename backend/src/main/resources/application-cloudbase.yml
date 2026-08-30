@@ -4,21 +4,23 @@ server:
   shutdown: graceful
 
 spring:
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: ${WASHER_PG_URL}
-    username: ${WASHER_PG_USERNAME}
-    password: ${WASHER_PG_PASSWORD}
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration
   lifecycle:
     timeout-per-shutdown-phase: 20s
-
-mybatis-plus:
-  configuration:
-    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
 
 logging:
   level:
     com.washer.backend: info
 
+cloudbase:
+  pg:
+    env-id: ${CLOUDBASE_ENV_ID:${TCB_ENV_ID:}}
+    api-key: ${CLOUDBASE_API_KEY:${CLOUDBASE_APIKEY:${TCB_API_KEY:}}}
+
+# Timeout completion currently relies on SQL row locks; keep it off until its RPC replacement is deployed.
 washer:
-  database-type: postgresql
+  scheduling:
+    enabled: false
