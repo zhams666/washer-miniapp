@@ -1,0 +1,151 @@
+@import "../../styles/theme";
+
+.page {
+  @include page-shell;
+}
+
+.container {
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.filter-card,
+.order-card {
+  @include card;
+}
+
+.filter-card {
+  padding: 24rpx;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.filter-item {
+  padding: 20rpx;
+  border-radius: $radius-control;
+  background: $color-primary-soft;
+}
+
+.filter-item text {
+  display: block;
+  overflow: hidden;
+  color: $color-text-primary;
+  font-size: $font-caption;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-item label {
+  display: block;
+  margin-top: 8rpx;
+  color: $color-primary;
+  font-size: $font-micro;
+}
+
+.search-row,
+.order-card__top,
+.order-card__bottom {
+  display: flex;
+  align-items: center;
+}
+
+.search-row {
+  margin-top: 18rpx;
+  gap: 14rpx;
+}
+
+.search-row input {
+  flex: 1;
+  height: 76rpx;
+  padding: 0 22rpx;
+  border-radius: $radius-control;
+  background: $color-surface;
+  color: $color-text-primary;
+  font-size: $font-caption;
+  box-sizing: border-box;
+}
+
+.search-button,
+.load-more {
+  @include cta-button;
+}
+
+.search-button {
+  width: 132rpx;
+  height: 76rpx;
+  font-size: $font-caption;
+}
+
+.order-list {
+  margin-top: 22rpx;
+}
+
+.order-card {
+  margin-bottom: 18rpx;
+  padding: 24rpx;
+}
+
+.order-card__top {
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.order-card__no {
+  color: $color-text-primary;
+  font-size: $font-body;
+  font-weight: 800;
+}
+
+.order-card__meta {
+  margin-top: 8rpx;
+  color: $color-text-secondary;
+  font-size: $font-micro;
+}
+
+.order-card__amount {
+  color: $color-primary;
+  font-size: 32rpx;
+  font-weight: 800;
+}
+
+.order-card__bottom {
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 22rpx;
+  color: $color-text-tertiary;
+  font-size: $font-micro;
+}
+
+.status-pill {
+  @include pill;
+  height: 42rpx;
+  padding: 0 16rpx;
+  color: $color-primary;
+  background: $color-primary-light;
+  font-size: $font-micro;
+  font-weight: 800;
+}
+
+.status-pill--pay {
+  color: $color-success;
+  background: $color-success-soft;
+}
+
+.load-more {
+  width: 260rpx;
+  height: 72rpx;
+  margin: 26rpx auto 0;
+  font-size: $font-caption;
+}
+
+.empty-text {
+  padding: 40rpx 0;
+  color: $color-text-tertiary;
+  font-size: $font-caption;
+  text-align: center;
+}

@@ -1,0 +1,119 @@
+@import "../../styles/theme";
+
+.page {
+  @include page-shell;
+}
+
+.container {
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.filter-card,
+.finance-card,
+.activity-item {
+  @include card;
+}
+
+.filter-card {
+  padding: 24rpx;
+}
+
+.picker-row,
+.activity-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.picker-row {
+  padding: 20rpx 22rpx;
+  border-radius: $radius-control;
+  background: $color-primary-soft;
+}
+
+.picker-row text {
+  color: $color-text-primary;
+  font-size: $font-body;
+  font-weight: 800;
+}
+
+.picker-row label {
+  color: $color-primary;
+  font-size: $font-micro;
+}
+
+.finance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+  margin-top: 22rpx;
+}
+
+.finance-card {
+  min-height: 156rpx;
+  padding: 24rpx;
+}
+
+.finance-card__title,
+.finance-card__desc,
+.activity-item__meta {
+  color: $color-text-secondary;
+  font-size: $font-micro;
+}
+
+.finance-card__value {
+  margin-top: 16rpx;
+  color: $color-text-primary;
+  font-size: 36rpx;
+  font-weight: 800;
+}
+
+.finance-card__value text {
+  margin-left: 6rpx;
+  font-size: $font-micro;
+}
+
+.finance-card__desc {
+  margin-top: 10rpx;
+}
+
+.section {
+  margin-top: 28rpx;
+}
+
+.section-title {
+  color: $color-text-primary;
+  font-size: $font-section-title;
+  font-weight: 800;
+}
+
+.activity-list {
+  margin-top: 18rpx;
+}
+
+.activity-item {
+  min-height: 96rpx;
+  margin-bottom: 14rpx;
+  padding: 20rpx 22rpx;
+}
+
+.activity-item__title {
+  color: $color-text-primary;
+  font-size: $font-body;
+  font-weight: 800;
+}
+
+.activity-item__amount {
+  margin-left: 16rpx;
+  color: $color-primary;
+  font-size: $font-body;
+  font-weight: 800;
+}
+
+.empty-text {
+  padding: 40rpx 0;
+  color: $color-text-tertiary;
+  font-size: $font-caption;
+  text-align: center;
+}

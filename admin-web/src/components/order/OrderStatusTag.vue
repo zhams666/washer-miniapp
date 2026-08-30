@@ -29,6 +29,9 @@ const tagType = computed(() => {
     if (props.value === 'unpaid') {
       return 'warning';
     }
+    if (props.value === 'refunded') {
+      return 'info';
+    }
     return 'info';
   }
 

@@ -17,6 +17,7 @@ export interface StoreItem {
   contactName?: string;
   contactPhone?: string;
   businessHours?: string;
+  featureTags?: string;
   remark?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -37,8 +38,11 @@ export interface StoreFormPayload {
   city?: string;
   district?: string;
   address?: string;
+  longitude?: number | null;
+  latitude?: number | null;
   contactName?: string;
   contactPhone?: string;
   businessHours?: string;
+  featureTags?: string;
   remark?: string;
 }

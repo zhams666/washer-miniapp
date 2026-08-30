@@ -127,8 +127,17 @@
           <el-descriptions-item :label="t('stores.form.address')" :span="2">
             {{ detailData.address || t('common.noData') }}
           </el-descriptions-item>
+          <el-descriptions-item :label="t('stores.form.longitude')">
+            {{ detailData.longitude ?? t('common.noData') }}
+          </el-descriptions-item>
+          <el-descriptions-item :label="t('stores.form.latitude')">
+            {{ detailData.latitude ?? t('common.noData') }}
+          </el-descriptions-item>
           <el-descriptions-item :label="t('stores.form.businessHours')">
             {{ detailData.businessHours || t('common.noData') }}
+          </el-descriptions-item>
+          <el-descriptions-item label="特色标签" :span="2">
+            {{ detailData.featureTags || t('common.noData') }}
           </el-descriptions-item>
           <el-descriptions-item :label="t('stores.form.remark')">
             {{ detailData.remark || t('common.noData') }}
@@ -170,6 +179,12 @@
           <el-form-item :label="t('stores.form.businessHours')">
             <el-input v-model="storeForm.businessHours" />
           </el-form-item>
+          <el-form-item label="特色标签" class="form-grid__wide">
+            <el-input
+              v-model="storeForm.featureTags"
+              placeholder="多个标签用逗号分隔，如：地下车库, 避开烈日, 风扇降温, 停车免费, 24小时"
+            />
+          </el-form-item>
           <el-form-item :label="t('stores.form.province')">
             <el-input v-model="storeForm.province" />
           </el-form-item>
@@ -181,6 +196,26 @@
           </el-form-item>
           <el-form-item :label="t('stores.form.address')" class="form-grid__wide">
             <el-input v-model="storeForm.address" />
+          </el-form-item>
+          <el-form-item :label="t('stores.form.longitude')">
+            <el-input-number
+              v-model="storeForm.longitude"
+              :precision="6"
+              :step="0.000001"
+              :controls="false"
+              style="width: 100%"
+              placeholder="110.199890"
+            />
+          </el-form-item>
+          <el-form-item :label="t('stores.form.latitude')">
+            <el-input-number
+              v-model="storeForm.latitude"
+              :precision="6"
+              :step="0.000001"
+              :controls="false"
+              style="width: 100%"
+              placeholder="20.044220"
+            />
           </el-form-item>
           <el-form-item :label="t('stores.form.remark')" class="form-grid__wide">
             <el-input v-model="storeForm.remark" type="textarea" :rows="3" />
@@ -237,9 +272,12 @@ const createEmptyStoreForm = (): StoreFormPayload => ({
   city: '',
   district: '',
   address: '',
+  longitude: null,
+  latitude: null,
   contactName: '',
   contactPhone: '',
   businessHours: '',
+  featureTags: '',
   remark: '',
 });
 

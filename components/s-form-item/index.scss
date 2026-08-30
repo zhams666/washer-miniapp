@@ -7,7 +7,7 @@
     display: flex;
     align-items: center;
     .form-item-label-required {
-      color: #ff7733;
+      color: #a66f1f;
       margin-right: 8rpx;
     }
     .form-item-label-text {
@@ -27,9 +27,9 @@
     button {
       width: 220rpx !important;
       background: linear-gradient(
-        135deg,
-        rgba(77, 151, 255, 1) 0%,
-        rgba(51, 119, 255, 1) 100%
+        180deg,
+        rgba(47, 154, 165, 1) 0%,
+        rgba(35, 123, 132, 1) 100%
       );
       color: #ffffff;
       font-size: 26rpx;

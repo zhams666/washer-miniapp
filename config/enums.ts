@@ -1,17 +1,20 @@
 /**
- * 导出基础枚举
+ * Base constants.
  */
 export const BaseEnum = {
-  APP_ID: 'wxf932a51fd29cf006',
+  APP_ID: 'wxb83ca5cce97b3680',
 };
 
 /**
- * 导出缓存 key 枚举
+ * Storage key constants.
  */
 export const StorageEnum = {
   OPEN_ID: 'open-id',
   IS_LOGIN: 'is-login',
   COSTOMER_ID: 'costomer-id',
   USER_PROFILE: 'user-profile',
+  LOGIN_MOBILES: 'login-mobiles',
   LOCATION_DATA: 'location-data',
+  ADMIN_TOKEN: 'admin-token',
+  ADMIN_PROFILE: 'admin-profile',
 };

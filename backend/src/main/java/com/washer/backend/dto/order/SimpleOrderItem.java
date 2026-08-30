@@ -20,4 +20,7 @@ public class SimpleOrderItem {
     private BigDecimal finalAmount;
     private LocalDateTime createdAt;
     private String remark;
+    private String payMode;
+    private Integer cardDeductTimes;
+    private Integer cardLimitMinutes;
 }

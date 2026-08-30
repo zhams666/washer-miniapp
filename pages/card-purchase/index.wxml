@@ -1,0 +1,78 @@
+<view class="page">
+  <Navbar title="次卡与月卡" borderBottom="{{false}}" bottomShadow="{{false}}"></Navbar>
+
+  <view class="header">
+    <view class="header-main">
+      <view class="eyebrow">STORE PASS</view>
+      <view class="store-name">{{storeName || '门店权益'}}</view>
+      <view class="store-desc">VIP月卡享本店洗车 VIP 分时价，购买次卡同步优惠；次卡按张发放，每张抵扣 1 次。</view>
+    </view>
+    <view class="header-badge">VIP</view>
+  </view>
+
+  <view class="section" wx:if="{{monthlyProducts.length > 0}}">
+    <view class="section-title">VIP月卡</view>
+    <view class="section-desc">开通后 30 天内，本店洗车走 VIP 分时价，次卡套餐享专属优惠。</view>
+
+    <view class="product-list">
+      <view class="product-card {{item.cardClass}}" wx:for="{{monthlyProducts}}" wx:key="productId">
+        <view class="product-main">
+          <view class="product-tag">{{item.tag || 'VIP'}}</view>
+          <view class="product-title">{{item.title}}</view>
+          <view class="product-desc">{{item.desc}}</view>
+          <view class="product-limit" wx:if="{{item.showLimitText}}">{{item.limitDisplayText}}</view>
+          <view class="product-times">{{item.unitText}}</view>
+        </view>
+
+        <view class="product-side">
+          <view class="price-box">
+            <view class="product-price">¥{{item.salePrice}}</view>
+            <view class="original-price" wx:if="{{item.showOriginalPrice}}">¥{{item.originalSalePrice}}</view>
+          </view>
+          <view
+            class="buy-btn {{item.buttonClass}}"
+            data-product-id="{{item.productId}}"
+            bindtap="handleBuyCard"
+          >
+            {{buyingProductId == item.productId ? '购买中' : item.buttonText}}
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">本店次卡</view>
+    <view class="section-desc">购买后立即生效，按商品次数发放对应数量的单次卡。</view>
+
+    <view class="product-list" wx:if="{{cardProducts.length > 0}}">
+      <view class="product-card {{item.cardClass}}" wx:for="{{cardProducts}}" wx:key="productId">
+        <view class="product-main">
+          <view class="product-tag">{{item.tag}}</view>
+          <view class="product-title">{{item.title}}</view>
+          <view class="product-desc">{{item.desc}}</view>
+          <view class="product-limit" wx:if="{{item.showLimitText}}">{{item.limitDisplayText}}</view>
+          <view class="product-times">{{item.unitText}}</view>
+        </view>
+
+        <view class="product-side">
+          <view class="price-box">
+            <view class="product-price">¥{{item.salePrice}}</view>
+            <view class="original-price" wx:if="{{item.showOriginalPrice}}">¥{{item.originalSalePrice}}</view>
+          </view>
+          <view
+            class="buy-btn {{item.buttonClass}}"
+            data-product-id="{{item.productId}}"
+            bindtap="handleBuyCard"
+          >
+            {{buyingProductId == item.productId ? '购买中' : item.buttonText}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-panel" wx:if="{{cardProducts.length == 0 && !loading}}">
+      暂无可购买套餐
+    </view>
+  </view>
+</view>

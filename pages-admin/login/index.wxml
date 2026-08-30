@@ -1,0 +1,49 @@
+<view class="page">
+  <Navbar
+    showBackIcon="{{false}}"
+    title="商家管理"
+    titleColor="#1F2933"
+    backgroundColor="#FFFFFF"
+    borderBottom="{{false}}"
+    bottomShadow="{{false}}"
+  ></Navbar>
+
+  <view class="container">
+    <view class="login-card">
+      <view class="login-card__eyebrow">商家管理端</view>
+      <view class="login-card__title">门店移动工作台</view>
+      <view class="login-card__desc">总部、加盟老板和门店店长共用入口，登录后按角色展示对应数据范围。</view>
+
+      <button class="login-button" loading="{{loading}}" disabled="{{loading}}" bindtap="handleLogin">
+        微信登录
+      </button>
+
+      <button class="exit-button" disabled="{{loading}}" bindtap="handleExitAdmin">
+        退出商家管理端
+      </button>
+
+      <view class="dev-login">
+        <view class="dev-login__title">本地演示身份</view>
+        <view class="dev-login__grid">
+          <view
+            wx:for="{{devRoles}}"
+            wx:key="key"
+            class="dev-login__item"
+            data-role="{{item.key}}"
+            bindtap="handleDevLogin"
+          >
+            <view class="dev-login__item-title">{{item.title}}</view>
+            <view class="dev-login__item-desc">{{item.desc}}</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="bind-panel" wx:if="{{message}}">
+        <view class="bind-panel__title">{{message}}</view>
+        <view class="bind-panel__desc">如果下方显示 OpenID，请提供给总部或加盟商管理员完成员工绑定。</view>
+        <view class="bind-panel__code" wx:if="{{openId}}">{{openId}}</view>
+        <view class="bind-panel__debug" wx:if="{{debugMessage}}">{{debugMessage}}</view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,249 @@
+@import "../../styles/theme";
+
+.page {
+  @include page-shell;
+}
+
+.container {
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.filter-card,
+.user-card,
+.asset-card,
+.operation-card,
+.card-item {
+  @include card;
+}
+
+.filter-card,
+.asset-card,
+.operation-card {
+  padding: 24rpx;
+}
+
+.picker-row,
+.section-head,
+.user-card,
+.card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.picker-row {
+  min-height: 78rpx;
+  padding: 0 20rpx;
+  border-radius: $radius-control;
+  background: $color-surface;
+  color: $color-text-primary;
+  font-size: $font-body;
+  font-weight: 800;
+}
+
+.picker-row label {
+  color: $color-primary;
+  font-size: $font-micro;
+}
+
+.picker-row--inner {
+  margin-top: 18rpx;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  margin-top: 18rpx;
+}
+
+input,
+textarea {
+  width: 100%;
+  border-radius: $radius-control;
+  background: $color-surface;
+  color: $color-text-primary;
+  font-size: $font-body;
+  box-sizing: border-box;
+}
+
+input {
+  height: 78rpx;
+  padding: 0 20rpx;
+}
+
+textarea {
+  min-height: 132rpx;
+  margin-top: 18rpx;
+  padding: 20rpx;
+  line-height: 1.5;
+}
+
+.search-row input {
+  flex: 1;
+}
+
+.search-button {
+  width: 124rpx;
+  height: 78rpx;
+  border-radius: $radius-control;
+  background: $color-primary;
+  color: $color-text-inverse;
+  font-size: $font-body;
+  font-weight: 800;
+  line-height: 78rpx;
+  text-align: center;
+}
+
+.user-list,
+.asset-card,
+.operation-card,
+.card-list {
+  margin-top: 22rpx;
+}
+
+.user-card {
+  min-height: 112rpx;
+  margin-bottom: 14rpx;
+  padding: 20rpx 22rpx;
+  border-color: transparent;
+}
+
+.user-card.is-active {
+  border-color: $color-primary;
+}
+
+.user-card__name,
+.section-title,
+.card-item__title {
+  color: $color-text-primary;
+  font-size: $font-body;
+  font-weight: 900;
+}
+
+.user-card__meta,
+.section-subtitle,
+.card-item__meta {
+  margin-top: 8rpx;
+  color: $color-text-secondary;
+  font-size: $font-micro;
+}
+
+.user-card__asset {
+  margin-left: 16rpx;
+  text-align: right;
+  color: $color-primary;
+  font-size: $font-caption;
+  font-weight: 900;
+}
+
+.user-card__asset label {
+  display: block;
+  margin-top: 8rpx;
+  color: $color-text-secondary;
+  font-size: $font-micro;
+}
+
+.asset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14rpx;
+  margin-top: 22rpx;
+}
+
+.asset-grid view {
+  padding: 20rpx 14rpx;
+  border-radius: $radius-control;
+  background: $color-surface;
+  text-align: center;
+}
+
+.asset-grid text {
+  display: block;
+  color: $color-text-primary;
+  font-size: 34rpx;
+  font-weight: 900;
+}
+
+.asset-grid label {
+  display: block;
+  margin-top: 8rpx;
+  color: $color-text-secondary;
+  font-size: $font-micro;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+  margin-top: 18rpx;
+  padding: 8rpx;
+  border-radius: $radius-control;
+  background: $color-surface;
+}
+
+.segmented view {
+  height: 66rpx;
+  border-radius: $radius-control;
+  color: $color-text-secondary;
+  font-size: $font-caption;
+  font-weight: 900;
+  line-height: 66rpx;
+  text-align: center;
+}
+
+.segmented .is-active {
+  background: $color-card;
+  color: $color-primary;
+  box-shadow: $shadow-card;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14rpx;
+  margin-top: 18rpx;
+}
+
+.submit-button {
+  @include cta-button;
+  width: 100%;
+  height: 82rpx;
+  margin-top: 20rpx;
+  border: 0;
+  font-size: $font-body;
+}
+
+.submit-button::after {
+  border: 0;
+}
+
+.submit-button--warning {
+  background: #b45309;
+  box-shadow: 0 12rpx 24rpx rgba(180, 83, 9, 0.22);
+}
+
+.operation-card--fine {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.card-item {
+  min-height: 96rpx;
+  margin-top: 14rpx;
+  padding: 18rpx 22rpx;
+}
+
+.card-item__times {
+  color: $color-primary;
+  font-size: $font-body;
+  font-weight: 900;
+}
+
+.empty-text {
+  padding: 36rpx 0;
+  color: $color-text-tertiary;
+  font-size: $font-caption;
+  text-align: center;
+}

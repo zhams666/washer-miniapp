@@ -1,5 +1,38 @@
-import { GET } from '../utils/request';
+import { REQUEST_URL } from '../config/url';
+import { BaseEnum } from '../config/enums';
 import type { IObject } from 'typings/interface.d';
+
+const silentGet = (_url: string, _data?: IObject): Promise<IObject> => {
+  return new Promise((resolve, reject) => {
+    const requestData = Object.keys(_data || {}).reduce((acc: IObject, key) => {
+      const value = (_data || {})[key];
+      if (value !== undefined && value !== null) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+
+    wx.request({
+      url: REQUEST_URL + _url,
+      data: { ...requestData, wxAppId: BaseEnum.APP_ID },
+      header: {
+        'content-type': 'application/json',
+      },
+      method: 'GET',
+      success({ statusCode, data }) {
+        const response = (data || {}) as Record<string, any>;
+        if (statusCode === 200 && response.code === 0) {
+          resolve((response.data || {}) as IObject);
+          return;
+        }
+        reject(response);
+      },
+      fail(err) {
+        reject(err);
+      },
+    });
+  });
+};
 
 /**
  * 获取门店分页列表
@@ -9,15 +42,57 @@ export const getStoreList = async (
   _size = 10,
   _keyword = ''
 ): Promise<IObject> => {
-  const { code, data } = await GET('/api/stores', {
+  return silentGet('/api/stores', {
     page: _page,
     size: _size,
     keyword: _keyword,
   });
+};
 
-  if (code == 0) {
-    return data;
-  }
+export const getStoreDetail = async (_id: number): Promise<IObject> => {
+  return silentGet(`/api/stores/${_id}`);
+};
 
-  return {};
+/**
+ * 小程序门店列表
+ */
+export const getMiniStoreList = async (
+  _page = 1,
+  _size = 10,
+  _userId?: number,
+  _userLat?: number,
+  _userLng?: number
+): Promise<IObject> => {
+  return silentGet('/api/stores/miniapp-list', {
+    page: _page,
+    size: _size,
+    userId: _userId,
+    userLat: _userLat,
+    userLng: _userLng,
+  });
+};
+
+/**
+ * 小程序门店详情
+ */
+export const getMiniStoreDetail = async (
+  _id: number,
+  _userId?: number,
+  _userLat?: number,
+  _userLng?: number
+): Promise<IObject> => {
+  return silentGet(`/api/stores/${_id}/miniapp-detail`, {
+    userId: _userId,
+    userLat: _userLat,
+    userLng: _userLng,
+  });
+};
+
+/**
+ * 小程序门店工位状态
+ */
+export const getStoreBayStatus = async (_storeId?: number | string): Promise<any> => {
+  return silentGet('/api/stores/bay-status', {
+    storeId: _storeId,
+  });
 };

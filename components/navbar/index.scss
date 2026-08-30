@@ -1,27 +1,35 @@
+@import "../../styles/theme";
+
 .navbar {
   .navbar-fixed {
     position: fixed;
     top: 0;
     left: 0;
     z-index: 99;
-    background-color: #ffffff;
+    width: 100vw;
+    background-color: $color-card;
+    box-sizing: border-box;
 
     &.border-bottom {
-      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      border-bottom: 1rpx solid $color-border-light;
     }
 
     &.bottom-shadow {
-      box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.04);
+      box-shadow: 0 6rpx 20rpx rgba(31, 41, 51, 0.05);
     }
 
     .navbar-inner {
       position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
       .left {
         position: absolute;
+        top: 0;
+        left: 0;
         min-width: 50rpx;
         height: 100%;
-        transform: translate(0%, -50%);
         display: flex;
         align-items: center;
         padding-right: 20rpx;
@@ -30,7 +38,7 @@
         .text {
           font-size: 28rpx;
           font-weight: 500;
-          color: #666666;
+          color: $color-text-secondary;
         }
       }
 
@@ -41,9 +49,9 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 32rpx;
+        font-size: $font-page-title;
         font-weight: 600;
-        color: #222222;
+        color: $color-text-primary;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;

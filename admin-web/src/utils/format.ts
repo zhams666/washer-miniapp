@@ -31,6 +31,7 @@ export const formatPaymentStatus = (value?: string) => {
   const map: Record<string, string> = {
     paid: t('status.paid'),
     unpaid: t('status.unpaid'),
+    refunded: t('status.refunded'),
   };
 
   return value ? (map[value] || value) : t('common.noData');
@@ -175,6 +176,7 @@ export const formatWalletStatus = (value?: number | null) => {
 export const formatCardStatus = (value?: string) => {
   const map: Record<string, string> = {
     active: t('cardStatus.active'),
+    locked: t('cardStatus.locked'),
     used_up: t('cardStatus.used_up'),
     expired: t('cardStatus.expired'),
     cancelled: t('cardStatus.cancelled'),
@@ -187,6 +189,7 @@ export const formatWalletBizType = (value?: string) => {
   const map: Record<string, string> = {
     recharge: t('walletBizType.recharge'),
     consume: t('walletBizType.consume'),
+    fine: t('walletBizType.fine'),
     refund: t('walletBizType.refund'),
     adjust: t('walletBizType.adjust'),
     clear_gift: t('walletBizType.clear_gift'),

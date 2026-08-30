@@ -1,11 +1,10 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "types": ["miniprogram-api-typings"],
     "strictNullChecks": true,
     "noImplicitAny": true,
     "module": "CommonJS",
-    "target": "ES2020",
+    "target": "ES2018",
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -26,6 +25,7 @@
     "apis/**/*.ts",
     "components/**/*.ts",
     "config/**/*.ts",
+    "pages-admin/**/*.ts",
     "pages/**/*.ts",
     "typings/**/*.d.ts",
     "utils/**/*.ts"

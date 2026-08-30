@@ -1,13 +1,11 @@
 <view class="page">
-  <Navbar title="Wash Service" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
+  <Navbar title="订单进行中" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
 
   <view class="container">
     <view class="summary-card">
-      <view class="summary-card__tag">In service</view>
-      <view class="summary-card__title">{{storeName}}</view>
-      <view class="summary-card__desc">
-        Device linked successfully. This page is currently a front-end demo for the minimal wash flow.
-      </view>
+      <view class="summary-card__tag">{{statusText}}</view>
+      <view class="summary-card__title">{{summaryTitle}}</view>
+      <view class="summary-card__desc">{{summaryDesc}}</view>
     </view>
 
     <view class="status-card">
@@ -15,42 +13,68 @@
         <Icon url="/assets/icons/car.png" size="56rpx"></Icon>
       </view>
       <view class="status-card__text">{{statusText}}</view>
-      <view class="status-card__desc">The timer and fee are updated locally for now.</view>
+      <view class="status-card__desc">{{loading ? '正在同步订单详情...' : statusDesc}}</view>
     </view>
 
     <view class="data-card">
       <view class="data-card__row">
-        <view class="data-card__label">Device No.</view>
-        <view class="data-card__value">{{deviceNo}}</view>
+        <view class="data-card__label">订单 ID</view>
+        <view class="data-card__value">{{orderId}}</view>
       </view>
-      <view class="data-card__row">
-        <view class="data-card__label">Store</view>
+      <view class="data-card__row" wx:if="{{orderNo}}">
+        <view class="data-card__label">订单号</view>
+        <view class="data-card__value">{{orderNo}}</view>
+      </view>
+      <view class="data-card__row" wx:if="{{storeName}}">
+        <view class="data-card__label">门店</view>
         <view class="data-card__value">{{storeName}}</view>
       </view>
-      <view class="data-card__row">
-        <view class="data-card__label">Start Time</view>
+      <view class="data-card__row" wx:if="{{deviceLabel}}">
+        <view class="data-card__label">设备</view>
+        <view class="data-card__value">{{deviceLabel}}</view>
+      </view>
+      <view class="data-card__row" wx:if="{{bayLabel}}">
+        <view class="data-card__label">工位</view>
+        <view class="data-card__value">{{bayLabel}}</view>
+      </view>
+      <view class="data-card__row" wx:if="{{startTime}}">
+        <view class="data-card__label">开始时间</view>
         <view class="data-card__value">{{startTime}}</view>
+      </view>
+      <view class="data-card__row" wx:if="{{endTime}}">
+        <view class="data-card__label">结束时间</view>
+        <view class="data-card__value">{{endTime}}</view>
+      </view>
+      <view class="data-card__row" wx:if="{{lastSyncTime}}">
+        <view class="data-card__label">最近同步</view>
+        <view class="data-card__value">{{lastSyncTime}}</view>
       </view>
     </view>
 
     <view class="stats-grid">
       <view class="stats-card">
-        <view class="stats-card__label">Elapsed</view>
+        <view class="stats-card__label">{{timeStatLabel}}</view>
         <view class="stats-card__value">{{timeLabel}}</view>
       </view>
       <view class="stats-card">
-        <view class="stats-card__label">Current Fee</view>
-        <view class="stats-card__value stats-card__value--fee">￥{{fee}}</view>
+        <view class="stats-card__label">{{amountLabel}}</view>
+        <view class="stats-card__value stats-card__value--{{amountValueClass}}">
+          {{amountValuePrefix}}{{amount}}
+        </view>
       </view>
     </view>
 
-    <view class="tips-card">{{unitPriceText}}</view>
+    <view class="tips-card">
+      {{tipsText}}
+    </view>
 
     <view class="action-row">
-      <view class="action-btn action-btn--secondary" bindtap="togglePause">
-        {{isPaused ? 'Resume' : 'Pause'}}
+      <view class="action-btn action-btn--secondary" bindtap="refreshOrder">
+        {{loading ? '同步中...' : '刷新订单'}}
       </view>
-      <view class="action-btn action-btn--primary" bindtap="endWash">Finish</view>
+      <view class="action-btn action-btn--primary" bindtap="handlePrimaryAction">
+        {{canComplete ? (completing ? '结束中...' : primaryActionText) : '查看详情'}}
+      </view>
     </view>
   </view>
 </view>

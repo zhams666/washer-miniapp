@@ -1,42 +1,86 @@
-<view class="page">
+﻿<view class="page">
   <Navbar
     fixed="{{false}}"
     titleColor="#fff"
     backgroundColor="rgba(0,0,0,0)"
     borderBottom="{{false}}"
     backIcon="../../assets/icons/back-white.png"
-    title="Wallet"
+    title="钱包"
     backIconHeight="54rpx"
     backIconWidth="54rpx"
   ></Navbar>
 
   <image class="bg" mode="widthFix" src="/assets/images/wallet-bg.png"></image>
 
-  <view class="wallet">
-    <view class="title">Wallet Balance</view>
+  <view class="wallet" bindtap="openBalanceDetail">
+    <view class="title">总余额</view>
     <view class="num">{{walletNum}}</view>
+    <view class="hint">点击查看通用余额与门店赠送余额</view>
   </view>
 
   <view class="history">
     <view class="inner">
       <view class="navs">
-        <view class="nav {{currentNav == 0 ? 'active' : ''}}" bindtap="changeType">Recharge</view>
-        <view class="nav {{currentNav == 1 ? 'active' : ''}}" bindtap="changeType">Consume</view>
+        <view class="nav {{currentNav == 0 ? 'active' : ''}}" bindtap="changeType">充值</view>
+        <view class="nav {{currentNav == 1 ? 'active' : ''}}" bindtap="changeType">消费</view>
       </view>
       <view class="list">
         <view class="item" wx:for="{{list}}" wx:key="index">
-          <view class="info">
-            <view class="label">{{currentNav == 0 ? 'Recharge' : 'Wash'}}</view>
-            <view class="time">{{item.createTime}}</view>
+          <view class="item-head">
+            <view class="info">
+              <view class="label">{{item.title}}</view>
+              <view class="subtitle">{{item.subtitle}}</view>
+            </view>
+            <view class="pay-badge {{item.payBadgeClass}}">{{item.payBadgeText}}</view>
           </view>
-          <view class="num">{{currentNav == 0 ? '+' : '-'}}{{item.num}}</view>
+          <view class="item-main">
+            <view class="time" wx:if="{{item.createTime}}">{{item.createTime}}</view>
+            <view class="num {{item.amountClass}}">{{item.amountPrefix}}{{item.amountText}}</view>
+          </view>
+          <view class="tag-row" wx:if="{{item.tags.length > 0}}">
+            <view
+              class="tag {{tag.style}}"
+              wx:for="{{item.tags}}"
+              wx:for-item="tag"
+              wx:key="text"
+            >
+              {{tag.text}}
+            </view>
+          </view>
+          <view class="detail-lines" wx:if="{{item.detailLines.length > 0}}">
+            <view
+              class="detail-line"
+              wx:for="{{item.detailLines}}"
+              wx:for-item="line"
+              wx:key="index"
+            >
+              {{line}}
+            </view>
+          </view>
         </view>
-        <view class="no-data" wx:if="{{list.length == 0}}">No records</view>
+        <view class="no-data" wx:if="{{list.length == 0}}">暂无记录</view>
       </view>
     </view>
   </view>
 
   <view class="btn" bindtap="goPay">
-    <text class="text">Go Recharge</text>
+    <text class="text">去充值</text>
+  </view>
+
+  <view class="mask" wx:if="{{showBalanceDetail}}" bindtap="closeBalanceDetail">
+    <view class="modal" catchtap="noop">
+      <view class="modal-title">余额明细</view>
+      <view class="modal-row">
+        <text class="label">通用余额</text>
+        <text class="value">{{principalBalance}}</text>
+      </view>
+      <view class="modal-subtitle">门店赠送余额</view>
+      <view class="store-row" wx:for="{{giftBalances}}" wx:key="storeId">
+        <text class="label">{{item.storeName}}</text>
+        <text class="value">{{item.giftBalance}}</text>
+      </view>
+      <view class="empty" wx:if="{{giftBalances.length == 0}}">暂无赠送余额</view>
+      <view class="modal-btn" bindtap="closeBalanceDetail">我知道了</view>
+    </view>
   </view>
 </view>

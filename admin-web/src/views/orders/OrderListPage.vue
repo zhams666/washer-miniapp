@@ -27,6 +27,7 @@
 
     <div class="table-card">
       <el-table v-loading="loading" :data="tableData" border>
+        <el-table-column prop="id" :label="t('orders.table.id')" min-width="90" />
         <el-table-column prop="orderNo" :label="t('orders.table.orderNo')" min-width="220" />
         <el-table-column prop="storeName" :label="t('orders.table.store')" min-width="160" />
         <el-table-column prop="deviceName" :label="t('orders.table.device')" min-width="160">

@@ -4,6 +4,7 @@ import com.washer.backend.common.ApiResponse;
 import com.washer.backend.dto.device.DeviceSimpleItem;
 import com.washer.backend.entity.Device;
 import com.washer.backend.service.DeviceService;
+import com.washer.backend.service.WashOrderService;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.util.StringUtils;
@@ -22,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class DeviceController {
 
     private final DeviceService deviceService;
+    private final WashOrderService washOrderService;
 
-    public DeviceController(DeviceService deviceService) {
+    public DeviceController(DeviceService deviceService, WashOrderService washOrderService) {
         this.deviceService = deviceService;
+        this.washOrderService = washOrderService;
     }
 
     @GetMapping
@@ -65,14 +68,36 @@ public class DeviceController {
         return ApiResponse.success("created", device);
     }
 
+    @PostMapping({"/{id}/start", "/{id}/mock-start"})
+    public ApiResponse<DeviceSimpleItem> mockStart(@PathVariable Long id) {
+        return ApiResponse.success("started", deviceService.mockStartDevice(id));
+    }
+
+    @PostMapping({"/{id}/stop", "/{id}/mock-stop"})
+    public ApiResponse<DeviceSimpleItem> mockStop(@PathVariable Long id) {
+        washOrderService.cancelRunningOrdersForDevice(id, "管理员模拟停止设备");
+        return ApiResponse.success("stopped", deviceService.mockStopDevice(id));
+    }
+
     @PutMapping("/{id}")
     public ApiResponse<Device> update(@PathVariable Long id, @RequestBody Device device) {
         device.setId(id);
+        if (shouldStopRunningOrders(device.getDeviceStatus())) {
+            washOrderService.cancelRunningOrdersForDevice(id, "管理员更新设备状态");
+        }
         boolean updated = deviceService.updateById(device);
         if (!updated) {
             throw new IllegalArgumentException("device update failed");
         }
         return ApiResponse.success("updated", deviceService.getById(id));
+    }
+
+    private boolean shouldStopRunningOrders(String deviceStatus) {
+        if (!StringUtils.hasText(deviceStatus)) {
+            return false;
+        }
+        String normalizedStatus = deviceStatus.trim().toLowerCase();
+        return !"running".equals(normalizedStatus) && !"online".equals(normalizedStatus);
     }
 
     @DeleteMapping("/{id}")

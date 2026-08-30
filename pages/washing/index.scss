@@ -1,10 +1,11 @@
+@import "../../styles/theme";
+
 .page {
-  min-height: 100vh;
-  background: #f5f5f5;
+  @include page-shell;
 }
 
 .container {
-  padding: 24rpx 24rpx calc(140rpx + env(safe-area-inset-bottom));
+  @include page-container;
 }
 
 .summary-card,
@@ -19,7 +20,7 @@
 
 .summary-card {
   padding: 30rpx;
-  background: linear-gradient(135deg, #fff8e3 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #e8f7f8 0%, #ffffff 100%);
 }
 
 .summary-card__tag {
@@ -28,8 +29,8 @@
   height: 46rpx;
   padding: 0 18rpx;
   border-radius: 999rpx;
-  background: #fff0bd;
-  color: #9a6700;
+  background: #e8f7f8;
+  color: #237b84;
   font-size: 22rpx;
   text-align: center;
   line-height: 46rpx;
@@ -60,7 +61,7 @@
   height: 104rpx;
   margin: 0 auto;
   border-radius: 28rpx;
-  background: #fff7db;
+  background: #e8f7f8;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -135,7 +136,12 @@
 }
 
 .stats-card__value--fee {
-  color: #d37a27;
+  color: #237b84;
+}
+
+.stats-card__value--card {
+  color: #237b84;
+  font-size: 34rpx;
 }
 
 .tips-card {
@@ -164,13 +170,13 @@
 
 .action-btn--secondary {
   background: #ffffff;
-  border: 1px solid #e7dcc2;
-  color: #8a6b2d;
+  border: 1px solid #98d5da;
+  color: #237b84;
   box-shadow: 0 10rpx 24rpx rgba(0, 0, 0, 0.04);
 }
 
 .action-btn--primary {
-  background: linear-gradient(180deg, #f7c400 0%, #f5b400 100%);
-  color: #2c2200;
-  box-shadow: 0 12rpx 24rpx rgba(245, 180, 0, 0.2);
+  background: linear-gradient(180deg, #2f9aa5 0%, #237b84 100%);
+  color: #ffffff;
+  box-shadow: 0 10rpx 22rpx rgba(35, 123, 132, 0.18);
 }

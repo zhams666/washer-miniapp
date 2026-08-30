@@ -1,0 +1,50 @@
+<view class="page">
+  <Navbar
+    title="积分商城"
+    titleColor="#241d16"
+    backgroundColor="#fff8ea"
+    borderBottom="{{false}}"
+    bottomShadow="{{false}}"
+  ></Navbar>
+
+  <view class="content">
+    <view class="hero-card">
+      <view>
+        <view class="hero-kicker">我的积分</view>
+        <view class="hero-points">{{points}}</view>
+        <view class="hero-desc">积分可用于兑换门店权益。</view>
+      </view>
+      <view class="hero-coin">积</view>
+    </view>
+
+    <view class="section-title">可兑换商品</view>
+    <view class="product-list" wx:if="{{products.length > 0}}">
+      <view class="product-card" wx:for="{{products}}" wx:key="id">
+        <image
+          wx:if="{{item.coverImage}}"
+          class="product-cover"
+          src="{{item.coverImage}}"
+          mode="aspectFill"
+        ></image>
+        <view wx:else class="product-cover product-cover--placeholder">积</view>
+        <view class="product-main">
+          <view class="product-tag">{{item.tag}}</view>
+          <view class="product-title">{{item.title}}</view>
+          <view class="product-desc">{{item.desc}}</view>
+        </view>
+        <view class="product-side">
+          <view class="product-points">{{item.points}} 积分</view>
+          <button
+            class="product-btn"
+            data-id="{{item.id}}"
+            data-points="{{item.points}}"
+            loading="{{redeemingProductId === item.id}}"
+            disabled="{{redeemingProductId !== 0 || points < item.points}}"
+            bindtap="handleRedeem"
+          >兑换</button>
+        </view>
+      </view>
+    </view>
+    <view class="product-empty" wx:else>当前没有可兑换商品</view>
+  </view>
+</view>

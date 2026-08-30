@@ -1,0 +1,142 @@
+<view class="page">
+  <view class="admin-return" bindtap="returnToMiniHome">
+    <image class="admin-return__icon" mode="aspectFit" src="/assets/icons/admin-return-home.png"></image>
+    <text>返回洗车首页</text>
+  </view>
+
+  <Navbar
+    showBackIcon="{{false}}"
+    title="{{workspace.headline}}"
+    titleColor="#1F2933"
+    backgroundColor="#FFFFFF"
+    borderBottom="{{false}}"
+    bottomShadow="{{false}}"
+  ></Navbar>
+
+  <view class="container">
+    <view class="hero-card hero-card--{{workspace.tierCode}}">
+      <view class="hero-card__top">
+        <view>
+          <view class="hero-card__eyebrow">{{workspace.tierName}}</view>
+          <view class="hero-card__title">{{workspace.headline}}</view>
+          <view class="hero-card__desc">{{workspace.description}}</view>
+        </view>
+        <view class="hero-actions">
+          <view class="refresh-button" bindtap="refresh">刷新</view>
+          <view class="switch-button" bindtap="handleSwitchIdentity">切换</view>
+        </view>
+      </view>
+      <view class="scope-line">
+        <text>当前范围</text>
+        <text>{{workspace.scopeName || '全部'}}</text>
+      </view>
+      <picker mode="selector" range="{{storePickerOptions}}" value="{{selectedStoreIndex}}" bindchange="handleStoreChange">
+        <view class="store-picker">
+          <text>{{storePickerOptions[selectedStoreIndex]}}</text>
+          <text class="store-picker__arrow">切换</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="scope-grid">
+      <view wx:for="{{scopeSummaryCards}}" wx:key="key" class="scope-card">
+        <view class="scope-card__title">{{item.title}}</view>
+        <view class="scope-card__value">{{item.value}}<text>{{item.unit}}</text></view>
+        <view class="scope-card__desc">{{item.desc}}</view>
+      </view>
+    </view>
+
+    <view class="metric-grid">
+      <view wx:for="{{metricCards}}" wx:key="key" class="metric-card">
+        <view class="metric-card__title">{{item.title}}</view>
+        <view class="metric-card__value">{{item.value}}<text>{{item.unit}}</text></view>
+        <view class="metric-card__desc">{{item.desc}}</view>
+      </view>
+    </view>
+
+    <view class="device-card">
+      <view class="section-head">
+        <view>
+          <view class="section-title">设备状态</view>
+          <view class="section-subtitle">当前权限范围内设备</view>
+        </view>
+        <view class="device-card__badge {{deviceStatus.abnormalCount > 0 ? 'is-warning' : 'is-ok'}}">
+          {{deviceStatus.abnormalCount > 0 ? deviceStatus.abnormalCount + ' 台异常' : '正常'}}
+        </view>
+      </view>
+      <view class="device-stats">
+        <view><text>{{deviceStatus.totalCount || 0}}</text><label>总数</label></view>
+        <view><text>{{deviceStatus.runningCount || 0}}</text><label>运行</label></view>
+        <view><text>{{deviceStatus.idleCount || 0}}</text><label>空闲</label></view>
+        <view><text>{{deviceStatus.faultCount || 0}}</text><label>故障</label></view>
+      </view>
+      <view class="alert-list" wx:if="{{alerts.length}}">
+        <view wx:for="{{alerts}}" wx:key="deviceId" class="alert-item">
+          <view>
+            <view class="alert-item__title">{{item.deviceName || item.deviceCode || '未命名设备'}}</view>
+            <view class="alert-item__meta">{{item.storeName}} / {{item.status}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section" wx:if="{{storeRankings.length}}">
+      <view class="section-head">
+        <view>
+          <view class="section-title">门店排行</view>
+          <view class="section-subtitle">按今日消费和洗车次数排序</view>
+        </view>
+      </view>
+      <view class="ranking-list">
+        <view wx:for="{{storeRankings}}" wx:key="storeId" class="ranking-item">
+          <view class="ranking-item__index">{{item.rank}}</view>
+          <view class="ranking-item__main">
+            <view class="ranking-item__title">{{item.storeName || '未命名门店'}}</view>
+            <view class="ranking-item__meta">{{item.franchiseeName || '直营'}} / {{item.deviceText}}台设备 / 异常{{item.abnormalText}}台</view>
+          </view>
+          <view class="ranking-item__side">
+            <view class="ranking-item__amount">¥{{item.consumeAmountText}}</view>
+            <view class="ranking-item__count">{{item.washCountText}}单</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-head">
+        <view>
+          <view class="section-title">快捷入口</view>
+          <view class="section-subtitle">当前角色高频操作</view>
+        </view>
+      </view>
+      <view class="quick-grid">
+        <view wx:for="{{quickActions}}" wx:key="key" class="quick-card" data-key="{{item.key}}" bindtap="handleQuickTap">
+          <view class="quick-card__icon">
+            <Icon url="{{item.icon}}" size="40rpx"></Icon>
+          </view>
+          <view class="quick-card__title">{{item.title}}</view>
+          <view class="quick-card__desc">{{item.desc}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-head">
+        <view>
+          <view class="section-title">最近动态</view>
+          <view class="section-subtitle">订单和钱包流水</view>
+        </view>
+      </view>
+      <view class="activity-list">
+        <view wx:for="{{recentActivities}}" wx:key="referenceNo" class="activity-item">
+          <view>
+            <view class="activity-item__title">{{item.title}}</view>
+            <view class="activity-item__meta">{{item.storeName}} / {{item.referenceNo || '--'}}</view>
+          </view>
+          <view class="activity-item__amount">¥{{item.amountText}}</view>
+        </view>
+        <view wx:if="{{!recentActivities.length && !loading}}" class="empty-text">暂无动态</view>
+      </view>
+    </view>
+  </view>
+</view>

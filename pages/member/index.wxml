@@ -1,0 +1,40 @@
+<view class="page">
+  <Navbar title="会员中心" showBackIcon="{{true}}"></Navbar>
+
+  <view class="content" wx:if="{{!loading}}">
+    <view class="member-hero">
+      <view class="hero-label">当前权益</view>
+      <view class="hero-title">{{user.isMember ? (user.memberLevel == 'yearly' ? '年会员' : '月会员') : '普通用户'}}</view>
+      <view class="hero-meta" wx:if="{{user.memberExpireTime}}">有效期至 {{user.memberExpireTime}}</view>
+      <view class="hero-meta" wx:else>开通会员后享受会员日专属优惠</view>
+      <view class="hero-points">当前积分 {{user.points}}</view>
+    </view>
+
+    <view class="benefit-section">
+      <view class="section-title">会员日福利</view>
+      <view class="benefit-card">
+        <view class="benefit-name">会员日专属洗车优惠</view>
+        <view class="benefit-time">{{memberDayText}}</view>
+        <view class="benefit-desc">{{settings.benefitText || '会员日享受首段洗车优惠，具体规则以门店实际配置为准'}}</view>
+      </view>
+    </view>
+
+    <view class="plan-section">
+      <view class="section-title">选择会员方案</view>
+      <view class="plan-card" wx:for="{{plans}}" wx:key="id">
+        <view class="plan-main">
+          <view class="plan-title">{{item.planName}}</view>
+          <view class="plan-duration">有效 {{item.durationMonths}} 个月</view>
+          <view class="plan-benefit">{{item.benefitText}}</view>
+        </view>
+        <view class="plan-action">
+          <view class="plan-price">¥{{item.price}}</view>
+          <button class="buy-button" data-plan-id="{{item.id}}" bindtap="handleBuy" loading="{{submitting}}">立即开通</button>
+        </view>
+      </view>
+      <view class="empty" wx:if="{{plans.length == 0}}">暂无可用会员方案</view>
+    </view>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">加载中...</view>
+</view>

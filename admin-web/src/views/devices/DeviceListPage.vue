@@ -92,13 +92,31 @@
             {{ formatDateTime(row.updatedAt) }}
           </template>
         </el-table-column>
-        <el-table-column :label="t('devices.table.actions')" fixed="right" width="180">
+        <el-table-column :label="t('devices.table.actions')" fixed="right" width="300">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row.id)">
               {{ t('common.view') }}
             </el-button>
             <el-button link type="primary" @click="openEdit(row.id)">
               {{ t('common.edit') }}
+            </el-button>
+            <el-button
+              link
+              type="success"
+              :disabled="getDeviceStatus(row) === 'running'"
+              :loading="mockingDeviceId === row.id"
+              @click="handleMockStart(row.id)"
+            >
+              {{ t('devices.actions.mockStart') }}
+            </el-button>
+            <el-button
+              link
+              type="warning"
+              :disabled="getDeviceStatus(row) !== 'running'"
+              :loading="mockingDeviceId === row.id"
+              @click="handleMockStop(row.id)"
+            >
+              {{ t('devices.actions.mockStop') }}
             </el-button>
           </template>
         </el-table-column>
@@ -215,7 +233,14 @@
 import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
 import { computed, onMounted, reactive, ref } from 'vue';
-import { createDevice, fetchDeviceDetail, fetchDeviceList, updateDevice } from '@/api/device';
+import {
+  createDevice,
+  fetchDeviceDetail,
+  fetchDeviceList,
+  mockStartDevice,
+  mockStopDevice,
+  updateDevice,
+} from '@/api/device';
 import { fetchAdminStoreOptions } from '@/api/store';
 import { t } from '@/i18n';
 import type { DeviceFormPayload, DeviceItem } from '@/types/device';
@@ -230,6 +255,7 @@ const formVisible = ref(false);
 const detailData = ref<DeviceItem | null>(null);
 const storeOptions = ref<StoreOption[]>([]);
 const editingId = ref<number | null>(null);
+const mockingDeviceId = ref<number | null>(null);
 const formMode = ref<'create' | 'edit'>('create');
 const formRef = ref<FormInstance>();
 
@@ -304,6 +330,10 @@ const getDeviceTagType = (status?: string) => {
     return 'danger';
   }
   return 'info';
+};
+
+const getDeviceStatus = (device: DeviceItem) => {
+  return String(device.deviceStatus || device.status || '').trim().toLowerCase();
 };
 
 const loadStoreOptions = async () => {
@@ -394,6 +424,40 @@ const handleSubmit = async () => {
     ElMessage.error(t('devices.messages.saveFailed'));
   } finally {
     submitting.value = false;
+  }
+};
+
+const handleMockStart = async (id: number) => {
+  if (!id || mockingDeviceId.value) {
+    return;
+  }
+
+  mockingDeviceId.value = id;
+  try {
+    await mockStartDevice(id);
+    ElMessage.success(t('devices.messages.mockStartSuccess'));
+    await loadDevices();
+  } catch (error) {
+    ElMessage.error(t('devices.messages.mockActionFailed'));
+  } finally {
+    mockingDeviceId.value = null;
+  }
+};
+
+const handleMockStop = async (id: number) => {
+  if (!id || mockingDeviceId.value) {
+    return;
+  }
+
+  mockingDeviceId.value = id;
+  try {
+    await mockStopDevice(id);
+    ElMessage.success(t('devices.messages.mockStopSuccess'));
+    await loadDevices();
+  } catch (error) {
+    ElMessage.error(t('devices.messages.mockActionFailed'));
+  } finally {
+    mockingDeviceId.value = null;
   }
 };
 

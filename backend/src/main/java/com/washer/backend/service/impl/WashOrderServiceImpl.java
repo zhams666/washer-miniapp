@@ -8,17 +8,21 @@ import com.washer.backend.dto.admin.AdminOrderDetail;
 import com.washer.backend.dto.admin.AdminOrderListItem;
 import com.washer.backend.dto.order.SimpleOrderCreateRequest;
 import com.washer.backend.dto.order.SimpleOrderItem;
+import com.washer.backend.dto.pricing.WashPricingSnapshot;
 import com.washer.backend.entity.CardUsageRecord;
 import com.washer.backend.entity.Device;
 import com.washer.backend.entity.Store;
+import com.washer.backend.entity.StoreSettlementDetail;
 import com.washer.backend.entity.UserCard;
 import com.washer.backend.entity.UserDailyDiscountRecord;
+import com.washer.backend.entity.UserInfo;
 import com.washer.backend.entity.UserStoreWallet;
 import com.washer.backend.entity.WashOrder;
 import com.washer.backend.entity.WashOrderPaymentDetail;
 import com.washer.backend.entity.WashOrderStatusLog;
 import com.washer.backend.entity.WalletTransaction;
 import com.washer.backend.mapper.CardUsageRecordMapper;
+import com.washer.backend.mapper.StoreSettlementDetailMapper;
 import com.washer.backend.mapper.UserCardMapper;
 import com.washer.backend.mapper.UserDailyDiscountRecordMapper;
 import com.washer.backend.mapper.UserStoreWalletMapper;
@@ -28,17 +32,24 @@ import com.washer.backend.mapper.WashOrderStatusLogMapper;
 import com.washer.backend.mapper.WalletTransactionMapper;
 import com.washer.backend.service.DeviceService;
 import com.washer.backend.service.StoreService;
+import com.washer.backend.service.UserInfoService;
+import com.washer.backend.service.WashPricingService;
 import com.washer.backend.service.WashOrderService;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -49,11 +60,18 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
     private static final String STATUS_PENDING = "pending";
     private static final String STATUS_RUNNING = "running";
     private static final String STATUS_COMPLETED = "completed";
+    private static final String STATUS_CANCELLED = "cancelled";
+    private static final String STATUS_CLOSED = "closed";
+    private static final String STATUS_ABNORMAL = "abnormal";
     private static final String PAY_MODE_WALLET = "wallet";
     private static final String PAY_MODE_CARD = "card";
+    private static final String MONTHLY_CARD_TYPE = "monthly";
     private static final String DISCOUNT_TYPE_FIRST_PERIOD = "first_period_discount";
     private static final String DISCOUNT_SCOPE_USER_STORE_DAY = "user_store_day";
     private static final BigDecimal DEFAULT_FIRST_PERIOD_DISCOUNT_AMOUNT = new BigDecimal("5.00");
+    private static final String AUTO_STOP_BALANCE_NOT_ENOUGH = "余额不足自动停止";
+    private static final int CARD_ORDER_LIMIT_MINUTES = 30;
+    private static final String CARD_AUTO_STOP_REMARK = "次卡30分钟到期自动停止";
 
     private final StoreService storeService;
     private final DeviceService deviceService;
@@ -64,6 +82,9 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
     private final UserStoreWalletMapper userStoreWalletMapper;
     private final WalletTransactionMapper walletTransactionMapper;
     private final WashOrderPaymentDetailMapper washOrderPaymentDetailMapper;
+    private final StoreSettlementDetailMapper storeSettlementDetailMapper;
+    private final WashPricingService washPricingService;
+    private final UserInfoService userInfoService;
 
     public WashOrderServiceImpl(
         StoreService storeService,
@@ -74,7 +95,10 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         UserDailyDiscountRecordMapper userDailyDiscountRecordMapper,
         UserStoreWalletMapper userStoreWalletMapper,
         WalletTransactionMapper walletTransactionMapper,
-        WashOrderPaymentDetailMapper washOrderPaymentDetailMapper
+        WashOrderPaymentDetailMapper washOrderPaymentDetailMapper,
+        StoreSettlementDetailMapper storeSettlementDetailMapper,
+        WashPricingService washPricingService,
+        UserInfoService userInfoService
     ) {
         this.storeService = storeService;
         this.deviceService = deviceService;
@@ -85,9 +109,13 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         this.userStoreWalletMapper = userStoreWalletMapper;
         this.walletTransactionMapper = walletTransactionMapper;
         this.washOrderPaymentDetailMapper = washOrderPaymentDetailMapper;
+        this.storeSettlementDetailMapper = storeSettlementDetailMapper;
+        this.washPricingService = washPricingService;
+        this.userInfoService = userInfoService;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public List<SimpleOrderItem> getSimpleOrderList(Long userId, long size) {
         LambdaQueryWrapper<WashOrder> wrapper = new LambdaQueryWrapper<WashOrder>()
             .eq(userId != null, WashOrder::getUserId, userId)
@@ -95,6 +123,9 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
             .last("limit " + size);
 
         List<WashOrder> orders = this.list(wrapper);
+        orders = orders.stream()
+            .map(this::refreshRunningOrderForDisplay)
+            .toList();
         List<Long> storeIds = orders.stream()
             .map(WashOrder::getStoreId)
             .filter(id -> id != null)
@@ -120,7 +151,10 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
                     order.getEstimatedAmount(),
                     resolveSimpleListAmount(order),
                     order.getCreatedAt(),
-                    order.getRemark()
+                    order.getRemark(),
+                    order.getPayMode(),
+                    order.getCardDeductTimes(),
+                    CARD_ORDER_LIMIT_MINUTES
                 );
             })
             .toList();
@@ -135,23 +169,37 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         if (request.getStoreId() == null) {
             throw new IllegalArgumentException("storeId is required");
         }
+        normalizeOrderTarget(request);
 
-        BigDecimal baseAmount = resolveRequestedBaseAmount(request);
+        WashPricingSnapshot pricingSnapshot = resolvePricingSnapshotForStart(
+            request.getUserId(),
+            request.getStoreId(),
+            LocalDateTime.now()
+        );
+        BigDecimal baseAmount = washPricingService.getBasePrice(pricingSnapshot);
+        String payMode = resolvePayModeForCreate(request.getUserId(), request.getStoreId(), request.getPayMode());
+        if (PAY_MODE_WALLET.equals(payMode)) {
+            ensureWalletCanCoverBaseAmount(request.getUserId(), request.getStoreId(), baseAmount);
+        }
+        BigDecimal orderAmount = PAY_MODE_CARD.equals(payMode) ? BigDecimal.ZERO : baseAmount;
 
         WashOrder order = new WashOrder();
         order.setOrderNo("WO" + UUID.randomUUID().toString().replace("-", "").substring(0, 18));
         order.setUserId(request.getUserId());
         order.setStoreId(request.getStoreId());
+        order.setBayId(request.getBayId());
         order.setDeviceId(request.getDeviceId());
         order.setOrderSource("miniapp");
         order.setOrderStatus(STATUS_PENDING);
-        order.setPayMode(StringUtils.hasText(request.getPayMode()) ? request.getPayMode() : PAY_MODE_WALLET);
+        order.setPayMode(payMode);
         order.setPaymentStatus("unpaid");
         order.setRefundStatusSnapshot("none");
-        order.setPricingSnapshotVersion(1);
+        order.setPricingRuleId(pricingSnapshot.pricingRuleId());
+        order.setPricingSnapshot(washPricingService.serializeSnapshot(pricingSnapshot));
+        order.setPricingSnapshotVersion(pricingSnapshot.ruleVersion());
         order.setCardDeductTimes(0);
-        order.setEstimatedAmount(baseAmount);
-        order.setFinalAmount(baseAmount);
+        order.setEstimatedAmount(orderAmount);
+        order.setFinalAmount(orderAmount);
         order.setPaidAmount(BigDecimal.ZERO);
         order.setRefundAmount(BigDecimal.ZERO);
         order.setIsFirstPeriodDiscountUsed(0);
@@ -165,39 +213,80 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public WashOrder createAndStartWashOrder(SimpleOrderCreateRequest request) {
+        WashOrder order = createSimpleOrder(request);
+        return startOrder(order.getId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public WashOrder startOrder(Long id) {
-        WashOrder order = getRequiredOrder(id);
+        WashOrder order = getRequiredOrderForUpdate(id);
         if (STATUS_RUNNING.equals(order.getOrderStatus())) {
             return order;
         }
-        if (STATUS_COMPLETED.equals(order.getOrderStatus())) {
-            throw new IllegalArgumentException("completed order cannot be started");
-        }
+        ensureOrderCanStart(order);
+
+        Device device = lockRequiredDeviceForStart(order);
+        ensureBayIsIdle(order);
 
         String fromStatus = order.getOrderStatus();
-        FirstPeriodDiscountResult discountResult = applyFirstPeriodDiscountOnStart(order);
+        LocalDateTime startTime = order.getStartTime() != null ? order.getStartTime() : LocalDateTime.now();
+        WashPricingSnapshot pricingSnapshot = resolvePricingSnapshotForStart(order.getUserId(), order.getStoreId(), startTime);
+        BigDecimal startAmount = washPricingService.calculateAmount(pricingSnapshot, startTime, startTime);
+        BigDecimal orderAmount = PAY_MODE_CARD.equals(order.getPayMode()) ? BigDecimal.ZERO : startAmount;
+        UserCard lockedCard = null;
+        if (PAY_MODE_WALLET.equals(order.getPayMode())) {
+            ensureWalletCanCoverBaseAmount(order.getUserId(), order.getStoreId(), startAmount);
+        } else if (PAY_MODE_CARD.equals(order.getPayMode())) {
+            lockedCard = lockAvailableCardForOrder(order);
+        } else {
+            throw new IllegalArgumentException("unsupported pay_mode");
+        }
         LambdaUpdateWrapper<WashOrder> wrapper = new LambdaUpdateWrapper<WashOrder>()
             .eq(WashOrder::getId, order.getId())
+            .eq(WashOrder::getOrderStatus, STATUS_PENDING)
             .set(WashOrder::getOrderStatus, STATUS_RUNNING)
-            .set(WashOrder::getStartTime, order.getStartTime() != null ? order.getStartTime() : LocalDateTime.now())
+            .set(WashOrder::getStartTime, startTime)
             .set(WashOrder::getPaymentStatus, "unpaid")
-            .set(WashOrder::getIsFirstPeriodDiscountUsed, discountResult.used() ? 1 : 0)
-            .set(WashOrder::getFirstPeriodDiscountAmount, discountResult.discountAmount())
-            .set(WashOrder::getFinalAmount, discountResult.finalAmount());
-        this.update(wrapper);
+            .set(WashOrder::getDeviceStatusSnapshot, device.getDeviceStatus())
+            .set(WashOrder::getStartCommandNo, buildCommandNo("START", order))
+            .set(WashOrder::getIsFirstPeriodDiscountUsed, 0)
+            .set(WashOrder::getFirstPeriodDiscountAmount, BigDecimal.ZERO)
+            .set(WashOrder::getEstimatedAmount, orderAmount)
+            .set(WashOrder::getFinalAmount, orderAmount)
+            .set(WashOrder::getPricingRuleId, pricingSnapshot.pricingRuleId())
+            .set(WashOrder::getPricingSnapshot, washPricingService.serializeSnapshot(pricingSnapshot))
+            .set(WashOrder::getPricingSnapshotVersion, pricingSnapshot.ruleVersion());
+        if (lockedCard != null) {
+            wrapper
+                .set(WashOrder::getCardUsageId, lockedCard.getId())
+                .set(WashOrder::getCardDeductTimes, 1);
+        }
+        boolean updated = this.update(wrapper);
+        if (!updated) {
+            WashOrder latest = getRequiredOrderForUpdate(id);
+            if (STATUS_RUNNING.equals(latest.getOrderStatus())) {
+                return latest;
+            }
+            throw new IllegalStateException("order status changed while starting");
+        }
+        markDeviceStatus(device, STATUS_RUNNING);
 
         WashOrder updatedOrder = getRequiredOrder(id);
-        insertStatusLog(updatedOrder, fromStatus, STATUS_RUNNING, "start", "user", updatedOrder.getUserId(), discountResult.logRemark());
+        insertStatusLog(updatedOrder, fromStatus, STATUS_RUNNING, "start", "user", updatedOrder.getUserId(), "开始洗车，按时长计费");
         return updatedOrder;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WashOrder completeOrder(Long id) {
-        WashOrder order = repairDiscountFieldsBeforeSettle(getRequiredOrder(id));
+        WashOrder order = getRequiredOrderForUpdate(id);
         if (STATUS_COMPLETED.equals(order.getOrderStatus())) {
             return order;
         }
+        ensureOrderCanComplete(order);
+        lockDeviceForOrder(order);
 
         if (PAY_MODE_WALLET.equals(order.getPayMode())) {
             return completeWalletOrder(order);
@@ -210,10 +299,165 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         throw new IllegalArgumentException("unsupported pay_mode");
     }
 
-    private WashOrder completeWalletOrder(WashOrder order) {
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public WashOrder cancelOrder(Long id) {
+        return cancelOrder(id, "取消订单");
+    }
+
+    private WashOrder cancelOrder(Long id, String cancelRemark) {
+        WashOrder order = getRequiredOrderForUpdate(id);
+        if (STATUS_CANCELLED.equals(order.getOrderStatus())) {
+            return order;
+        }
+        if (STATUS_COMPLETED.equals(order.getOrderStatus())) {
+            return order;
+        }
+        if (STATUS_CLOSED.equals(order.getOrderStatus())) {
+            return order;
+        }
+
         String fromStatus = order.getOrderStatus();
-        BigDecimal finalAmount = normalizeAmount(order.getFinalAmount());
-        WalletAllocation allocation = buildWalletAllocation(order, finalAmount);
+        Device device = null;
+        if (STATUS_RUNNING.equals(fromStatus)) {
+            device = lockDeviceForOrder(order);
+        }
+
+        LocalDateTime cancelTime = LocalDateTime.now();
+        LambdaUpdateWrapper<WashOrder> wrapper = new LambdaUpdateWrapper<WashOrder>()
+            .eq(WashOrder::getId, order.getId())
+            .ne(WashOrder::getOrderStatus, STATUS_COMPLETED)
+            .set(WashOrder::getOrderStatus, STATUS_CANCELLED)
+            .set(WashOrder::getCancelTime, cancelTime)
+            .set(WashOrder::getPaymentStatus, "unpaid")
+            .set(WashOrder::getCancelCommandNo, buildCommandNo("CANCEL", order));
+        if (PAY_MODE_CARD.equals(order.getPayMode())) {
+            releaseLockedCard(order);
+            wrapper
+                .set(WashOrder::getCardUsageId, null)
+                .set(WashOrder::getCardDeductTimes, 0);
+        }
+        this.update(wrapper);
+
+        if (device != null) {
+            markDeviceStatus(device, "idle");
+        }
+
+        WashOrder updatedOrder = getRequiredOrder(order.getId());
+        insertStatusLog(
+            updatedOrder,
+            fromStatus,
+            STATUS_CANCELLED,
+            "cancel",
+            "user",
+            updatedOrder.getUserId(),
+            StringUtils.hasText(cancelRemark) ? cancelRemark : "取消订单"
+        );
+        return updatedOrder;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int cancelRunningOrdersForDevice(Long deviceId, String remark) {
+        if (deviceId == null) {
+            return 0;
+        }
+
+        Device device = deviceService.lambdaQuery()
+            .eq(Device::getId, deviceId)
+            .last("limit 1 for update")
+            .one();
+        if (device == null || device.getStoreId() == null) {
+            return 0;
+        }
+
+        Long bayId = resolveBayId(device);
+        LambdaQueryWrapper<WashOrder> wrapper = new LambdaQueryWrapper<WashOrder>()
+            .eq(WashOrder::getStoreId, device.getStoreId())
+            .eq(WashOrder::getOrderStatus, STATUS_RUNNING);
+        wrapper.and(w -> {
+            w.eq(WashOrder::getDeviceId, deviceId);
+            if (bayId != null) {
+                w.or().eq(WashOrder::getBayId, bayId);
+            }
+        });
+
+        List<WashOrder> runningOrders = this.list(wrapper);
+        for (WashOrder order : runningOrders) {
+            cancelOrder(order.getId(), remark);
+        }
+        return runningOrders.size();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public WashOrder checkAndAutoStopOrder(Long id) {
+        WashOrder order = getRequiredOrder(id);
+        if (!STATUS_RUNNING.equals(order.getOrderStatus())) {
+            return order;
+        }
+        if (!PAY_MODE_WALLET.equals(order.getPayMode())) {
+            if (PAY_MODE_CARD.equals(order.getPayMode())) {
+                if (shouldAutoStopCardOrder(order, LocalDateTime.now())) {
+                    return completeCardOrder(order, CARD_AUTO_STOP_REMARK);
+                }
+                order.setEstimatedAmount(BigDecimal.ZERO);
+                order.setFinalAmount(BigDecimal.ZERO);
+                order.setPaidAmount(BigDecimal.ZERO);
+            }
+            return order;
+        }
+
+        BigDecimal currentAmount = calculateWashOrderAmount(order, LocalDateTime.now());
+        BigDecimal walletAvailable = calculateWalletAvailableForOrder(order);
+        if (walletAvailable.compareTo(BigDecimal.ZERO) <= 0 || currentAmount.compareTo(walletAvailable) >= 0) {
+            return completeWalletOrder(order, true, AUTO_STOP_BALANCE_NOT_ENOUGH);
+        }
+        order.setEstimatedAmount(currentAmount);
+        order.setFinalAmount(currentAmount);
+        return order;
+    }
+
+    @Scheduled(fixedDelay = 30000)
+    @Transactional(rollbackFor = Exception.class)
+    public void autoCompleteExpiredCardOrders() {
+        LocalDateTime now = LocalDateTime.now();
+        List<WashOrder> expiredOrders = this.list(
+            new LambdaQueryWrapper<WashOrder>()
+                .eq(WashOrder::getOrderStatus, STATUS_RUNNING)
+                .eq(WashOrder::getPayMode, PAY_MODE_CARD)
+                .le(WashOrder::getStartTime, now.minusMinutes(CARD_ORDER_LIMIT_MINUTES))
+                .orderByAsc(WashOrder::getId)
+                .last("limit 20")
+        );
+        for (WashOrder order : expiredOrders) {
+            WashOrder lockedOrder = getRequiredOrderForUpdate(order.getId());
+            if (STATUS_RUNNING.equals(lockedOrder.getOrderStatus())
+                && shouldAutoStopCardOrder(lockedOrder, now)) {
+                completeCardOrder(lockedOrder, CARD_AUTO_STOP_REMARK);
+            }
+        }
+    }
+
+    private WashOrder completeWalletOrder(WashOrder order) {
+        return completeWalletOrder(order, false, "finish order");
+    }
+
+    private WashOrder completeWalletOrder(WashOrder order, boolean capByWalletBalance, String finishRemark) {
+        String fromStatus = order.getOrderStatus();
+        LocalDateTime finishTime = LocalDateTime.now();
+        BigDecimal calculatedAmount = calculateWashOrderAmount(order, finishTime);
+        BigDecimal walletAvailable = calculateWalletAvailableForOrder(order);
+        boolean shouldCapByBalance = capByWalletBalance
+            || walletAvailable.compareTo(BigDecimal.ZERO) <= 0
+            || calculatedAmount.compareTo(walletAvailable) >= 0;
+        if (shouldCapByBalance) {
+            finishRemark = AUTO_STOP_BALANCE_NOT_ENOUGH;
+        }
+        BigDecimal chargeAmount = shouldCapByBalance ? calculatedAmount.min(walletAvailable) : calculatedAmount;
+        chargeAmount = normalizeAmount(chargeAmount).setScale(2, RoundingMode.HALF_UP);
+
+        WalletAllocation allocation = buildWalletAllocation(order, chargeAmount);
         if (allocation.totalAmount().compareTo(BigDecimal.ZERO) > 0) {
             String bizActionNo = "ORDER_PAY_" + order.getOrderNo();
             int paymentSeq = 1;
@@ -226,17 +470,23 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         String paymentStatusDesc = allocation.totalAmount().compareTo(BigDecimal.ZERO) <= 0
             ? "wallet paid"
             : (allocation.hasGift() ? "wallet principal + gift paid" : "wallet principal paid");
-        updateOrderAsPaid(order, allocation.totalAmount(), paymentStatusDesc, null, 0);
+        String abnormalReason = shouldCapByBalance ? AUTO_STOP_BALANCE_NOT_ENOUGH : null;
+        updateOrderAsPaid(order, chargeAmount, allocation.totalAmount(), paymentStatusDesc, null, 0, finishTime, abnormalReason);
+        generateSettlementDetails(order);
 
         WashOrder updatedOrder = getRequiredOrder(order.getId());
-        insertStatusLog(updatedOrder, fromStatus, STATUS_COMPLETED, "finish", "user", updatedOrder.getUserId(), "完成订单");
+        insertStatusLog(updatedOrder, fromStatus, STATUS_COMPLETED, "finish", "user", updatedOrder.getUserId(), finishRemark);
         return updatedOrder;
     }
 
     private WashOrder completeCardOrder(WashOrder order) {
+        return completeCardOrder(order, "完成次卡订单");
+    }
+
+    private WashOrder completeCardOrder(WashOrder order, String finishRemark) {
         String fromStatus = order.getOrderStatus();
-        BigDecimal finalAmount = order.getFinalAmount() != null ? order.getFinalAmount() : BigDecimal.ZERO;
-        UserCard userCard = getRequiredAvailableCard(order.getUserId(), order.getStoreId());
+        BigDecimal finalAmount = BigDecimal.ZERO;
+        UserCard userCard = getRequiredLockedCard(order);
         Integer remainingTimes = userCard.getRemainingTimes() != null ? userCard.getRemainingTimes() : 0;
         if (remainingTimes < 1) {
             throw new IllegalArgumentException("user card remaining times is not enough");
@@ -248,42 +498,63 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
 
         LambdaUpdateWrapper<UserCard> cardWrapper = new LambdaUpdateWrapper<UserCard>()
             .eq(UserCard::getId, userCard.getId())
+            .eq(UserCard::getStatus, "locked")
+            .gt(UserCard::getRemainingTimes, 0)
             .set(UserCard::getUsedTimes, usedTimes + 1)
             .set(UserCard::getRemainingTimes, newRemainingTimes)
             .set(UserCard::getStatus, newStatus);
-        userCardMapper.update(null, cardWrapper);
+        int updatedCardRows = userCardMapper.update(null, cardWrapper);
+        if (updatedCardRows <= 0) {
+            throw new IllegalStateException("locked user card changed while completing order");
+        }
 
         CardUsageRecord usageRecord = insertCardUsageRecord(order, userCard);
         String bizActionNo = "ORDER_PAY_" + order.getOrderNo();
         insertCardPaymentDetail(order, finalAmount, bizActionNo, userCard.getId());
 
-        updateOrderAsPaid(order, finalAmount, "card paid", usageRecord.getId(), 1);
+        updateOrderAsPaid(order, finalAmount, BigDecimal.ZERO, "card paid", usageRecord.getId(), 1, LocalDateTime.now(), null);
 
         WashOrder updatedOrder = getRequiredOrder(order.getId());
-        insertStatusLog(updatedOrder, fromStatus, STATUS_COMPLETED, "finish", "user", updatedOrder.getUserId(), "完成订单");
+        insertStatusLog(updatedOrder, fromStatus, STATUS_COMPLETED, "finish", "user", updatedOrder.getUserId(), finishRemark);
         return updatedOrder;
     }
 
     private void updateOrderAsPaid(
         WashOrder order,
+        BigDecimal finalAmount,
         BigDecimal paidAmount,
         String paymentStatusDesc,
         Long cardUsageId,
-        Integer cardDeductTimes
+        Integer cardDeductTimes,
+        LocalDateTime settleTime,
+        String abnormalReason
     ) {
+        order.setOrderStatus(STATUS_COMPLETED);
+        order.setEndTime(settleTime);
+        order.setSettleTime(settleTime);
+        order.setPaymentStatus("paid");
+        order.setPaymentStatusDesc(paymentStatusDesc);
+        order.setEstimatedAmount(finalAmount);
+        order.setFinalAmount(finalAmount);
+        order.setPaidAmount(paidAmount);
+        order.setAbnormalReason(abnormalReason);
         LambdaUpdateWrapper<WashOrder> wrapper = new LambdaUpdateWrapper<WashOrder>()
             .eq(WashOrder::getId, order.getId())
             .set(WashOrder::getOrderStatus, STATUS_COMPLETED)
-            .set(WashOrder::getEndTime, LocalDateTime.now())
-            .set(WashOrder::getSettleTime, LocalDateTime.now())
+            .set(WashOrder::getEndTime, settleTime)
+            .set(WashOrder::getSettleTime, settleTime)
             .set(WashOrder::getPaymentStatus, "paid")
             .set(WashOrder::getPaymentStatusDesc, paymentStatusDesc)
-            .set(WashOrder::getPaidAmount, paidAmount);
+            .set(WashOrder::getEstimatedAmount, finalAmount)
+            .set(WashOrder::getFinalAmount, finalAmount)
+            .set(WashOrder::getPaidAmount, paidAmount)
+            .set(WashOrder::getAbnormalReason, abnormalReason);
         if (cardUsageId != null) {
             wrapper.set(WashOrder::getCardUsageId, cardUsageId);
         }
         wrapper.set(WashOrder::getCardDeductTimes, cardDeductTimes);
         this.update(wrapper);
+        markOrderDeviceIdle(order);
     }
 
     @Override
@@ -302,6 +573,75 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
                 .eq(WashOrderPaymentDetail::getOrderId, orderId)
                 .orderByAsc(WashOrderPaymentDetail::getId)
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getDurationRanking(String scope, Long userId, int limit) {
+        String resolvedScope = resolveRankingScope(scope);
+        int rowLimit = Math.max(1, Math.min(limit, 50));
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime fromTime = resolveRankingStartTime(resolvedScope, now);
+
+        LambdaQueryWrapper<WashOrder> wrapper = new LambdaQueryWrapper<WashOrder>()
+            .eq(WashOrder::getOrderStatus, STATUS_COMPLETED)
+            .isNotNull(WashOrder::getUserId)
+            .isNotNull(WashOrder::getStartTime)
+            .isNotNull(WashOrder::getEndTime)
+            .ge(fromTime != null, WashOrder::getEndTime, fromTime)
+            .le(WashOrder::getEndTime, now)
+            .orderByDesc(WashOrder::getEndTime);
+
+        List<WashOrder> orders = this.list(wrapper);
+        Map<Long, DurationRankAggregate> aggregateMap = new HashMap<>();
+        for (WashOrder order : orders) {
+            Long orderUserId = order.getUserId();
+            long seconds = calculateOrderDurationSeconds(order);
+            if (orderUserId == null || seconds <= 0) {
+                continue;
+            }
+
+            DurationRankAggregate aggregate = aggregateMap.computeIfAbsent(
+                orderUserId,
+                DurationRankAggregate::new
+            );
+            aggregate.totalSeconds += seconds;
+            aggregate.orderCount += 1;
+            if (aggregate.latestEndTime == null || order.getEndTime().isAfter(aggregate.latestEndTime)) {
+                aggregate.latestEndTime = order.getEndTime();
+            }
+        }
+
+        List<DurationRankAggregate> sortedAggregates = aggregateMap.values().stream()
+            .sorted(
+                Comparator.comparingLong(DurationRankAggregate::getTotalSeconds).reversed()
+                    .thenComparing(DurationRankAggregate::getLatestEndTime, Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(DurationRankAggregate::getUserId)
+            )
+            .toList();
+
+        Map<Long, UserInfo> userMap = buildRankingUserMap(sortedAggregates);
+        List<Map<String, Object>> rows = new ArrayList<>();
+        Map<String, Object> myRank = null;
+        int rank = 1;
+        for (DurationRankAggregate aggregate : sortedAggregates) {
+            UserInfo user = userMap.get(aggregate.userId);
+            Map<String, Object> item = toDurationRankItem(rank, aggregate, user);
+            if (rank <= rowLimit) {
+                rows.add(item);
+            }
+            if (userId != null && userId.equals(aggregate.userId)) {
+                myRank = item;
+            }
+            rank++;
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("scope", resolvedScope);
+        result.put("generatedAt", now);
+        result.put("rows", rows);
+        result.put("myRank", myRank);
+        return result;
     }
 
     @Override
@@ -523,11 +863,105 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         return normalizeAmount(order.getEstimatedAmount());
     }
 
-    private BigDecimal resolveRequestedBaseAmount(SimpleOrderCreateRequest request) {
-        if (request.getEstimatedAmount() != null) {
-            return normalizeAmount(request.getEstimatedAmount());
+    private WashPricingSnapshot resolvePricingSnapshotForStart(Long userId, Long storeId, LocalDateTime startTime) {
+        boolean vipPricing = hasActiveMonthlyCard(userId, storeId);
+        boolean memberDayDiscount = !vipPricing && isRechargeMember(userId) && isMemberDay(startTime);
+        return washPricingService.resolveSnapshotForStore(storeId, vipPricing, memberDayDiscount);
+    }
+
+    private BigDecimal calculateWashOrderAmount(WashOrder order, LocalDateTime endTime) {
+        return washPricingService.calculateAmount(order, endTime);
+    }
+
+    private void ensureBayIsIdle(WashOrder order) {
+        if (order.getDeviceId() == null && order.getBayId() == null) {
+            return;
         }
-        return normalizeAmount(request.getFinalAmount());
+        LambdaQueryWrapper<WashOrder> wrapper = new LambdaQueryWrapper<WashOrder>()
+            .eq(WashOrder::getStoreId, order.getStoreId())
+            .eq(WashOrder::getOrderStatus, STATUS_RUNNING)
+            .ne(order.getId() != null, WashOrder::getId, order.getId());
+        wrapper.and(w -> {
+            if (order.getDeviceId() != null) {
+                w.eq(WashOrder::getDeviceId, order.getDeviceId());
+            }
+            if (order.getBayId() != null) {
+                if (order.getDeviceId() != null) {
+                    w.or();
+                }
+                w.eq(WashOrder::getBayId, order.getBayId());
+            }
+        });
+        long runningCount = this.count(wrapper);
+        if (runningCount > 0) {
+            throw new IllegalArgumentException("bay is using");
+        }
+    }
+
+    private void normalizeOrderTarget(SimpleOrderCreateRequest request) {
+        if (request.getDeviceId() == null && request.getBayId() == null) {
+            throw new IllegalArgumentException("deviceId or bayId is required");
+        }
+
+        Device device = null;
+        if (request.getDeviceId() != null) {
+            device = deviceService.getById(request.getDeviceId());
+            if (device == null) {
+                throw new IllegalArgumentException("device not found");
+            }
+            if (device.getStoreId() == null || !device.getStoreId().equals(request.getStoreId())) {
+                throw new IllegalArgumentException("device does not belong to store");
+            }
+        }
+
+        if (device == null && request.getBayId() != null) {
+            Long bayId = request.getBayId();
+            device = deviceService.lambdaQuery()
+                .eq(Device::getStoreId, request.getStoreId())
+                .and(w -> w.eq(Device::getBayId, bayId).or().eq(Device::getId, bayId))
+                .last("limit 1")
+                .one();
+            if (device == null) {
+                throw new IllegalArgumentException("device not found for store");
+            }
+        }
+
+        Long resolvedBayId = resolveBayId(device);
+        if (request.getBayId() != null && resolvedBayId != null && !request.getBayId().equals(resolvedBayId)) {
+            throw new IllegalArgumentException("deviceId and bayId do not match");
+        }
+
+        validateDeviceCanStart(device);
+
+        request.setDeviceId(device != null ? device.getId() : request.getDeviceId());
+        request.setBayId(resolvedBayId != null ? resolvedBayId : request.getBayId());
+    }
+
+    private void validateDeviceCanStart(Device device) {
+        if (device == null) {
+            return;
+        }
+        String status = StringUtils.hasText(device.getDeviceStatus())
+            ? device.getDeviceStatus().trim().toLowerCase()
+            : "";
+        if (!StringUtils.hasText(status) || "idle".equals(status) || "online".equals(status)) {
+            return;
+        }
+        if ("offline".equals(status)
+            || "fault".equals(status)
+            || "disabled".equals(status)
+            || "running".equals(status)
+            || "paused".equals(status)) {
+            throw new IllegalArgumentException("device is " + status);
+        }
+        throw new IllegalArgumentException("device is unavailable");
+    }
+
+    private Long resolveBayId(Device device) {
+        if (device == null) {
+            return null;
+        }
+        return device.getBayId() != null ? device.getBayId() : device.getId();
     }
 
     private BigDecimal normalizeAmount(BigDecimal amount) {
@@ -575,6 +1009,10 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
     }
 
     private BigDecimal resolveSimpleListAmount(WashOrder order) {
+        if (PAY_MODE_CARD.equals(order.getPayMode())) {
+            return BigDecimal.ZERO;
+        }
+
         BigDecimal finalAmount = normalizeAmount(order.getFinalAmount());
         if (finalAmount.compareTo(BigDecimal.ZERO) > 0) {
             return finalAmount;
@@ -588,6 +1026,25 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         return normalizeAmount(order.getPaidAmount());
     }
 
+    private boolean shouldAutoStopCardOrder(WashOrder order, LocalDateTime now) {
+        if (order == null || !PAY_MODE_CARD.equals(order.getPayMode())) {
+            return false;
+        }
+        LocalDateTime startTime = order.getStartTime();
+        if (startTime == null) {
+            return false;
+        }
+        LocalDateTime deadline = startTime.plusMinutes(CARD_ORDER_LIMIT_MINUTES);
+        return !deadline.isAfter(now != null ? now : LocalDateTime.now());
+    }
+
+    private WashOrder refreshRunningOrderForDisplay(WashOrder order) {
+        if (order == null || !STATUS_RUNNING.equals(order.getOrderStatus()) || order.getId() == null) {
+            return order;
+        }
+        return checkAndAutoStopOrder(order.getId());
+    }
+
     private List<UserStoreWallet> getUserWallets(Long userId) {
         return userStoreWalletMapper.selectList(
             new LambdaQueryWrapper<UserStoreWallet>()
@@ -597,20 +1054,243 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         );
     }
 
+    private BigDecimal calculateWalletAvailableForOrder(WashOrder order) {
+        List<UserStoreWallet> activeWallets = getUserWallets(order.getUserId()).stream()
+            .filter(this::isWalletActive)
+            .toList();
+        if (activeWallets.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal principalAvailable = activeWallets.stream()
+            .map(this::resolveAvailablePrincipal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal giftAvailable = activeWallets.stream()
+            .filter(wallet -> order.getStoreId() != null && order.getStoreId().equals(wallet.getStoreId()))
+            .findFirst()
+            .map(this::resolveAvailableGift)
+            .orElse(BigDecimal.ZERO);
+
+        BigDecimal totalAvailable = principalAvailable.add(giftAvailable);
+        if (totalAvailable.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+        return totalAvailable.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private void ensureWalletCanCoverBaseAmount(Long userId, Long storeId, BigDecimal baseAmount) {
+        BigDecimal requiredAmount = normalizeAmount(baseAmount);
+        if (requiredAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        BigDecimal walletAvailable = calculateWalletAvailableForStart(userId, storeId);
+        if (walletAvailable.compareTo(requiredAmount) < 0) {
+            throw new IllegalArgumentException(
+                "钱包余额不足，至少需要" + formatAmount(requiredAmount) + "元才可开始洗车"
+            );
+        }
+    }
+
+    private BigDecimal calculateWalletAvailableForStart(Long userId, Long storeId) {
+        if (userId == null) {
+            return BigDecimal.ZERO;
+        }
+        List<UserStoreWallet> activeWallets = getUserWallets(userId).stream()
+            .filter(this::isWalletActive)
+            .toList();
+        if (activeWallets.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal principalAvailable = activeWallets.stream()
+            .map(this::resolveAvailablePrincipal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal giftAvailable = activeWallets.stream()
+            .filter(wallet -> storeId != null && storeId.equals(wallet.getStoreId()))
+            .findFirst()
+            .map(this::resolveAvailableGift)
+            .orElse(BigDecimal.ZERO);
+
+        return principalAvailable.add(giftAvailable).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private String formatAmount(BigDecimal amount) {
+        return normalizeAmount(amount).stripTrailingZeros().toPlainString();
+    }
+
+    private String resolvePayModeForCreate(Long userId, Long storeId, String requestedPayMode) {
+        String normalizedPayMode = StringUtils.hasText(requestedPayMode)
+            ? requestedPayMode.trim().toLowerCase()
+            : "";
+
+        if (!StringUtils.hasText(normalizedPayMode)) {
+            return PAY_MODE_WALLET;
+        }
+
+        if (PAY_MODE_CARD.equals(normalizedPayMode)) {
+            UserCard availableCard = findAvailableCard(userId, storeId, false);
+            if (availableCard == null) {
+                throw new IllegalArgumentException("available user card not found");
+            }
+            return PAY_MODE_CARD;
+        }
+
+        if (PAY_MODE_WALLET.equals(normalizedPayMode)) {
+            return PAY_MODE_WALLET;
+        }
+
+        throw new IllegalArgumentException("unsupported pay_mode");
+    }
+
     private UserCard getRequiredAvailableCard(Long userId, Long storeId) {
+        UserCard userCard = findAvailableCard(userId, storeId, true);
+        if (userCard == null) {
+            throw new IllegalArgumentException("available user card not found");
+        }
+        return userCard;
+    }
+
+    private UserCard lockAvailableCardForOrder(WashOrder order) {
+        UserCard userCard = getRequiredAvailableCard(order.getUserId(), order.getStoreId());
+        int updatedRows = userCardMapper.update(
+            null,
+            new LambdaUpdateWrapper<UserCard>()
+                .eq(UserCard::getId, userCard.getId())
+                .eq(UserCard::getStatus, "active")
+                .gt(UserCard::getRemainingTimes, 0)
+                .set(UserCard::getStatus, "locked")
+        );
+        if (updatedRows <= 0) {
+            throw new IllegalStateException("available user card changed while starting order");
+        }
+        userCard.setStatus("locked");
+        return userCard;
+    }
+
+    private UserCard getRequiredLockedCard(WashOrder order) {
+        if (order.getCardUsageId() == null) {
+            return lockAvailableCardForOrder(order);
+        }
+
         UserCard userCard = userCardMapper.selectOne(
+            new LambdaQueryWrapper<UserCard>()
+                .eq(UserCard::getId, order.getCardUsageId())
+                .eq(UserCard::getUserId, order.getUserId())
+                .eq(UserCard::getStoreId, order.getStoreId())
+                .eq(UserCard::getStatus, "locked")
+                .last("limit 1 for update")
+        );
+        if (userCard == null) {
+            throw new IllegalArgumentException("locked user card not found");
+        }
+        return userCard;
+    }
+
+    private void releaseLockedCard(WashOrder order) {
+        if (order.getCardUsageId() == null) {
+            return;
+        }
+        userCardMapper.update(
+            null,
+            new LambdaUpdateWrapper<UserCard>()
+                .eq(UserCard::getId, order.getCardUsageId())
+                .eq(UserCard::getUserId, order.getUserId())
+                .eq(UserCard::getStoreId, order.getStoreId())
+                .eq(UserCard::getStatus, "locked")
+                .set(UserCard::getStatus, "active")
+        );
+    }
+
+    private UserCard findAvailableCard(Long userId, Long storeId, boolean forUpdate) {
+        if (userId == null || storeId == null) {
+            return null;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        return userCardMapper.selectOne(
             new LambdaQueryWrapper<UserCard>()
                 .eq(UserCard::getUserId, userId)
                 .eq(UserCard::getStoreId, storeId)
                 .eq(UserCard::getStatus, "active")
                 .gt(UserCard::getRemainingTimes, 0)
+                .and(wrapper -> wrapper.isNull(UserCard::getEffectiveTime).or().le(UserCard::getEffectiveTime, now))
+                .and(wrapper -> wrapper.isNull(UserCard::getExpireTime).or().gt(UserCard::getExpireTime, now))
                 .orderByAsc(UserCard::getId)
-                .last("limit 1")
+                .last(forUpdate ? "limit 1 for update" : "limit 1")
         );
-        if (userCard == null) {
-            throw new IllegalArgumentException("available user card not found");
+    }
+
+    private boolean hasActiveMonthlyCard(Long userId, Long storeId) {
+        if (userId == null || storeId == null) {
+            return false;
         }
-        return userCard;
+        LocalDateTime now = LocalDateTime.now();
+        Long count = userCardMapper.selectCount(
+            new LambdaQueryWrapper<UserCard>()
+                .eq(UserCard::getUserId, userId)
+                .eq(UserCard::getStoreId, storeId)
+                .eq(UserCard::getCardType, MONTHLY_CARD_TYPE)
+                .eq(UserCard::getStatus, "active")
+                .and(wrapper -> wrapper.isNull(UserCard::getEffectiveTime).or().le(UserCard::getEffectiveTime, now))
+                .and(wrapper -> wrapper.isNull(UserCard::getExpireTime).or().gt(UserCard::getExpireTime, now))
+        );
+        return count != null && count > 0;
+    }
+
+    private boolean isRechargeMember(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        UserInfo user = userInfoService.getById(userId);
+        if (user != null && Integer.valueOf(1).equals(user.getIsMember())) {
+            return true;
+        }
+        if (!hasRechargeHistory(userId)) {
+            return false;
+        }
+        if (user != null) {
+            user.setIsMember(1);
+            if (!StringUtils.hasText(user.getMemberLevel())) {
+                user.setMemberLevel("normal");
+            }
+            if (user.getMemberSinceTime() == null) {
+                user.setMemberSinceTime(LocalDateTime.now());
+            }
+            userInfoService.updateById(user);
+        }
+        return true;
+    }
+
+    private boolean isMemberDay(LocalDateTime time) {
+        LocalDateTime safeTime = time != null ? time : LocalDateTime.now();
+        return washPricingService.isMemberDay(safeTime.toLocalDate());
+    }
+
+    private boolean hasRechargeHistory(Long userId) {
+        Long count = walletTransactionMapper.selectCount(
+            new LambdaQueryWrapper<WalletTransaction>()
+                .eq(WalletTransaction::getUserId, userId)
+                .eq(WalletTransaction::getBizType, "recharge")
+                .eq(WalletTransaction::getChangeType, "in")
+        );
+        return count != null && count > 0;
+    }
+
+    private WashOrder getRequiredOrderForUpdate(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("order id is required");
+        }
+        WashOrder order = this.lambdaQuery()
+            .eq(WashOrder::getId, id)
+            .last("limit 1 for update")
+            .one();
+        if (order == null) {
+            throw new IllegalArgumentException("order not found");
+        }
+        return order;
     }
 
     private WashOrder getRequiredOrder(Long id) {
@@ -619,6 +1299,101 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
             throw new IllegalArgumentException("order not found");
         }
         return order;
+    }
+
+    private void ensureOrderCanStart(WashOrder order) {
+        if (order == null) {
+            throw new IllegalArgumentException("order not found");
+        }
+        if (!STATUS_PENDING.equals(order.getOrderStatus())) {
+            throw new IllegalArgumentException("order cannot start from status " + order.getOrderStatus());
+        }
+        if (order.getUserId() == null) {
+            throw new IllegalArgumentException("userId is required");
+        }
+        if (order.getStoreId() == null) {
+            throw new IllegalArgumentException("storeId is required");
+        }
+        if (order.getDeviceId() == null && order.getBayId() == null) {
+            throw new IllegalArgumentException("deviceId or bayId is required");
+        }
+    }
+
+    private void ensureOrderCanComplete(WashOrder order) {
+        if (order == null) {
+            throw new IllegalArgumentException("order not found");
+        }
+        if (!STATUS_RUNNING.equals(order.getOrderStatus())) {
+            throw new IllegalArgumentException("order cannot complete from status " + order.getOrderStatus());
+        }
+    }
+
+    private Device lockRequiredDeviceForStart(WashOrder order) {
+        Device device = lockDeviceForOrder(order);
+        if (device == null) {
+            throw new IllegalArgumentException("device not found");
+        }
+        if (device.getStoreId() == null || !device.getStoreId().equals(order.getStoreId())) {
+            throw new IllegalArgumentException("device does not belong to store");
+        }
+
+        Long resolvedBayId = resolveBayId(device);
+        if (order.getBayId() != null && resolvedBayId != null && !order.getBayId().equals(resolvedBayId)) {
+            throw new IllegalArgumentException("deviceId and bayId do not match");
+        }
+
+        order.setDeviceId(device.getId());
+        order.setBayId(resolvedBayId != null ? resolvedBayId : order.getBayId());
+        validateDeviceCanStart(device);
+        return device;
+    }
+
+    private Device lockDeviceForOrder(WashOrder order) {
+        if (order == null || order.getStoreId() == null) {
+            return null;
+        }
+
+        if (order.getDeviceId() != null) {
+            return deviceService.lambdaQuery()
+                .eq(Device::getId, order.getDeviceId())
+                .last("limit 1 for update")
+                .one();
+        }
+
+        if (order.getBayId() == null) {
+            return null;
+        }
+
+        return deviceService.lambdaQuery()
+            .eq(Device::getStoreId, order.getStoreId())
+            .and(w -> w.eq(Device::getBayId, order.getBayId()).or().eq(Device::getId, order.getBayId()))
+            .last("limit 1 for update")
+            .one();
+    }
+
+    private void markOrderDeviceIdle(WashOrder order) {
+        Device device = lockDeviceForOrder(order);
+        if (device != null) {
+            markDeviceStatus(device, "idle");
+        }
+    }
+
+    private void markDeviceStatus(Device device, String status) {
+        if (device == null || device.getId() == null || !StringUtils.hasText(status)) {
+            return;
+        }
+        deviceService.update(
+            new LambdaUpdateWrapper<Device>()
+                .eq(Device::getId, device.getId())
+                .set(Device::getDeviceStatus, status)
+        );
+        device.setDeviceStatus(status);
+    }
+
+    private String buildCommandNo(String commandType, WashOrder order) {
+        String type = StringUtils.hasText(commandType) ? commandType.trim().toUpperCase() : "CMD";
+        String orderPart = order != null && order.getId() != null ? String.valueOf(order.getId()) : "0";
+        return type + orderPart + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
     }
 
     private Map<Long, Store> buildStoreMap(List<WashOrder> orders) {
@@ -727,6 +1502,7 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         walletTransactionMapper.insert(transaction);
     }
 
+
     private void insertOrderPaymentDetail(
         WashOrder order,
         Long sourceStoreId,
@@ -751,6 +1527,74 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         detail.setBizActionNo(bizActionNo);
         detail.setRefundedAmount(BigDecimal.ZERO);
         washOrderPaymentDetailMapper.insert(detail);
+    }
+
+    private void generateSettlementDetails(WashOrder order) {
+        if (order == null || order.getId() == null) {
+            return;
+        }
+        List<WashOrderPaymentDetail> details = washOrderPaymentDetailMapper.selectList(
+            new LambdaQueryWrapper<WashOrderPaymentDetail>()
+                .eq(WashOrderPaymentDetail::getOrderId, order.getId())
+                .orderByAsc(WashOrderPaymentDetail::getId)
+        );
+        if (details.isEmpty()) {
+            return;
+        }
+
+        LocalDate bizDate = resolveSettlementBizDate(order);
+        for (WashOrderPaymentDetail detail : details) {
+            if (!"wallet".equals(detail.getSourceType())) {
+                continue;
+            }
+            if (!"principal".equals(detail.getAmountType())) {
+                continue;
+            }
+            Long sourceStoreId = detail.getSourceStoreId();
+            Long consumeStoreId = detail.getConsumeStoreId();
+            if (sourceStoreId == null || consumeStoreId == null || sourceStoreId.equals(consumeStoreId)) {
+                continue;
+            }
+            BigDecimal amount = normalizeAmount(detail.getAmount());
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            StoreSettlementDetail existing = storeSettlementDetailMapper.selectOne(
+                new LambdaQueryWrapper<StoreSettlementDetail>()
+                    .eq(StoreSettlementDetail::getPaymentDetailId, detail.getId())
+                    .last("limit 1")
+            );
+            if (existing != null) {
+                continue;
+            }
+
+            StoreSettlementDetail settlementDetail = new StoreSettlementDetail();
+            settlementDetail.setFromStoreId(sourceStoreId);
+            settlementDetail.setToStoreId(consumeStoreId);
+            settlementDetail.setUserId(order.getUserId());
+            settlementDetail.setOrderId(order.getId());
+            settlementDetail.setOrderNo(order.getOrderNo());
+            settlementDetail.setPaymentDetailId(detail.getId());
+            settlementDetail.setPrincipalAmount(amount);
+            settlementDetail.setRefundAdjustAmount(BigDecimal.ZERO);
+            settlementDetail.setNetAmount(amount);
+            settlementDetail.setBizDate(bizDate);
+            settlementDetail.setDetailStatus("pending");
+            storeSettlementDetailMapper.insert(settlementDetail);
+        }
+    }
+
+    private LocalDate resolveSettlementBizDate(WashOrder order) {
+        LocalDateTime settleTime = order.getSettleTime();
+        if (settleTime != null) {
+            return settleTime.toLocalDate();
+        }
+        LocalDateTime createdAt = order.getCreatedAt();
+        if (createdAt != null) {
+            return createdAt.toLocalDate();
+        }
+        return LocalDate.now();
     }
 
     private WalletAllocation buildWalletAllocation(WashOrder order, BigDecimal finalAmount) {
@@ -896,6 +1740,7 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         );
     }
 
+
     private void applyPrincipalDeduction(UserStoreWallet wallet, BigDecimal amount) {
         BigDecimal availablePrincipal = resolveAvailablePrincipal(wallet);
         BigDecimal principalBalance = wallet.getPrincipalBalance() != null
@@ -1011,6 +1856,111 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         detail.setBizActionNo(bizActionNo);
         detail.setRefundedAmount(BigDecimal.ZERO);
         washOrderPaymentDetailMapper.insert(detail);
+    }
+
+    private String resolveRankingScope(String scope) {
+        if ("month".equalsIgnoreCase(scope)) {
+            return "month";
+        }
+        if ("total".equalsIgnoreCase(scope)) {
+            return "total";
+        }
+        return "day";
+    }
+
+    private LocalDateTime resolveRankingStartTime(String scope, LocalDateTime now) {
+        if ("month".equals(scope)) {
+            return now.minusDays(30);
+        }
+        if ("total".equals(scope)) {
+            return null;
+        }
+        return now.minusHours(24);
+    }
+
+    private long calculateOrderDurationSeconds(WashOrder order) {
+        if (order == null || order.getStartTime() == null || order.getEndTime() == null) {
+            return 0L;
+        }
+        if (order.getEndTime().isBefore(order.getStartTime())) {
+            return 0L;
+        }
+        return Math.max(0L, Duration.between(order.getStartTime(), order.getEndTime()).getSeconds());
+    }
+
+    private Map<Long, UserInfo> buildRankingUserMap(List<DurationRankAggregate> aggregates) {
+        List<Long> userIds = aggregates.stream()
+            .map(DurationRankAggregate::getUserId)
+            .filter(id -> id != null)
+            .distinct()
+            .toList();
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userInfoService.listByIds(userIds).stream()
+            .collect(Collectors.toMap(UserInfo::getId, Function.identity(), (a, b) -> a));
+    }
+
+    private Map<String, Object> toDurationRankItem(
+        int rank,
+        DurationRankAggregate aggregate,
+        UserInfo user
+    ) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("rank", rank);
+        item.put("userId", aggregate.userId);
+        item.put("nickname", resolveRankingNickname(user, aggregate.userId));
+        item.put("name", resolveRankingNickname(user, aggregate.userId));
+        item.put("avatarUrl", user != null ? user.getAvatarUrl() : null);
+        item.put("durationSeconds", aggregate.totalSeconds);
+        item.put("durationMinutes", Math.max(1L, (aggregate.totalSeconds + 59L) / 60L));
+        item.put("durationText", formatDurationText(aggregate.totalSeconds));
+        item.put("orderCount", aggregate.orderCount);
+        item.put("latestEndTime", aggregate.latestEndTime);
+        return item;
+    }
+
+    private String resolveRankingNickname(UserInfo user, Long userId) {
+        if (user != null && StringUtils.hasText(user.getNickname())) {
+            return user.getNickname();
+        }
+        if (userId != null) {
+            return "车友" + userId;
+        }
+        return "匿名车友";
+    }
+
+    private String formatDurationText(long seconds) {
+        long minutes = Math.max(1L, (seconds + 59L) / 60L);
+        long hours = minutes / 60L;
+        long remainMinutes = minutes % 60L;
+        if (hours > 0) {
+            return String.format("%02d时%02d分", hours, remainMinutes);
+        }
+        return String.format("%02d分", remainMinutes);
+    }
+
+    private static class DurationRankAggregate {
+        private final Long userId;
+        private long totalSeconds;
+        private int orderCount;
+        private LocalDateTime latestEndTime;
+
+        private DurationRankAggregate(Long userId) {
+            this.userId = userId;
+        }
+
+        private Long getUserId() {
+            return userId;
+        }
+
+        private long getTotalSeconds() {
+            return totalSeconds;
+        }
+
+        private LocalDateTime getLatestEndTime() {
+            return latestEndTime;
+        }
     }
 
     private record FirstPeriodDiscountResult(

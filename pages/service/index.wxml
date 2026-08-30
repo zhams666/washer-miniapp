@@ -1,35 +1,52 @@
 <view class="page">
-  <Navbar showBackIcon="{{false}}" title="门店导航" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
+  <Navbar showBackIcon="{{false}}" title="周边门店" borderBottom="{{false}}" bottomShadow="{{false}}"></Navbar>
 
   <view class="container">
-    <view class="top-card">
-      <view class="top-card__title">附近可用门店</view>
-      <view class="top-card__desc">选择就近门店，支持到店自助洗车与导航到店</view>
-    </view>
+    <view class="store-card" wx:for="{{stores}}" wx:key="id" data-id="{{item.id}}" bindtap="goDetail">
+      <view class="card-main">
+        <view class="store-copy">
+          <view class="store-name">{{item.name}}</view>
 
-    <view class="store-list">
-      <view class="store-card" wx:for="{{stores}}" wx:key="id">
-        <image class="store-card__image" mode="aspectFill" src="{{item.image}}"></image>
-        <view class="store-card__body">
-          <view class="store-card__header">
-            <view class="store-card__name">{{item.name}}</view>
-            <view class="store-card__status status-{{item.statusType}}">{{item.status}}</view>
+          <view class="info-line">
+            <text class="info-icon">￥</text>
+            <text>{{item.priceText}}</text>
           </view>
-          <view class="store-card__meta">距离 {{item.distance}}</view>
-          <view class="store-card__meta">营业时间 {{item.businessHours}}</view>
-          <view class="store-card__desc">{{item.desc}}</view>
-          <view class="store-card__footer">
-            <view class="store-card__notice">{{item.notice}}</view>
-            <view
-              class="store-card__button"
-              data-name="{{item.name}}"
-              bindtap="navigateStore"
-            >
-              导航
-            </view>
+          <view class="info-line" wx:if="{{item.distanceText}}">
+            <text class="info-icon">●</text>
+            <text>{{item.distanceText}}</text>
           </view>
+          <view class="info-line" wx:if="{{item.addressText}}">
+            <text class="info-icon">➤</text>
+            <text class="address-text">{{item.addressText}}</text>
+          </view>
+        </view>
+
+        <view class="store-side">
+          <image class="store-cover" mode="aspectFill" src="{{item.coverImage}}"></image>
+          <view class="share-link">余额共用店铺</view>
+        </view>
+      </view>
+
+      <view class="tag-row" wx:if="{{item.hasFeatureTags}}">
+        <text class="feature-tag" wx:for="{{item.featureTags}}" wx:key="index">{{item}}</text>
+      </view>
+
+      <view class="divider"></view>
+
+      <view class="bottom-row">
+        <view class="bay-summary">
+          <view class="dot-row">
+            <text class="status-dot {{dot}}" wx:for="{{item.statusDots}}" wx:for-item="dot" wx:key="index"></text>
+          </view>
+          <view class="bay-text">空闲{{item.idleBaysText}} | 使用中{{item.usingBaysText}} | 停用{{item.disabledBaysText}}</view>
+        </view>
+
+        <view class="start-button {{item.actionClass}}" data-id="{{item.id}}" catchtap="handleStoreAction">
+          {{item.actionText}}
         </view>
       </view>
     </view>
+
+    <view class="empty" wx:if="{{showEmpty}}">暂无门店</view>
   </view>
 </view>

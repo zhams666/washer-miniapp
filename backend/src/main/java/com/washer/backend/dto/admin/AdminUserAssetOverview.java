@@ -20,7 +20,9 @@ public class AdminUserAssetOverview {
     private String registerSource;
     private Integer isMember;
     private String memberLevel;
+    private Integer points;
     private LocalDateTime memberSinceTime;
+    private LocalDateTime memberExpireTime;
     private LocalDateTime lastLoginTime;
     private LocalDateTime lastConsumeTime;
     private String remark;

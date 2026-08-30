@@ -1,36 +1,57 @@
 <view class="page">
-  <Navbar title="Coupons"></Navbar>
+  <Navbar title="我的卡券" borderBottom="{{false}}" bottomShadow="{{false}}"></Navbar>
 
-  <view class="list">
-    <view class="item" wx:for="{{list}}" wx:key="index">
-      <image class="bg" mode="widthFix" src="/assets/images/discount-bg.png"></image>
-      <view class="inner">
-        <view class="left">
-          <view class="name">
-            <text wx:if="{{item.type == 0}}">Free</text>
+  <view class="content">
+    <view class="summary-card">
+      <view>
+        <view class="summary-title">我的卡券</view>
+        <view class="summary-desc">次卡按张抵扣，VIP月卡展示有效期和门店权益</view>
+      </view>
+      <view class="summary-count">{{availableCount}}</view>
+    </view>
+
+    <view class="card-list" wx:if="{{list.length > 0}}">
+      <view class="card-item {{item.statusClass}}" wx:for="{{list}}" wx:key="id">
+        <view class="card-item__top">
+          <view>
+            <view class="card-item__store">{{item.storeName}}</view>
+            <view class="card-item__source">{{item.sourceText}}</view>
           </view>
-          <view class="description">{{item.description}}</view>
+          <view class="card-item__status {{item.statusClass}}">{{item.statusText}}</view>
         </view>
-        <view class="right">
-          <view class="name">{{item.name}}</view>
-          <view class="use">Use Now</view>
-          <view class="time">{{item.time}}</view>
-          <view class="description">{{item.use}}</view>
+
+        <view class="card-item__body">
+          <view class="times">
+            <view class="times__value">{{item.timesText}}</view>
+            <view class="times__label">{{item.timesLabel}}</view>
+          </view>
+          <view class="meta">
+            <view class="meta-line">卡号：{{item.cardNo}}</view>
+            <view class="meta-line">{{item.expireText}}</view>
+            <view class="meta-line" wx:if="{{item.externalOrderNo}}">
+              外部券号：{{item.externalOrderNo}}
+            </view>
+          </view>
+        </view>
+
+        <view
+          class="card-item__action {{item.available ? '' : 'disabled'}}"
+          data-store-id="{{item.storeId}}"
+          data-available="{{item.available}}"
+          bindtap="handleUseCard"
+        >
+          {{item.available ? '去使用' : '不可使用'}}
         </view>
       </view>
     </view>
-  </view>
 
-  <view class="no-data">
-    <image
-      class="image"
-      mode="widthFix"
-      src="/assets/images/no-discount.png"
-      wx:if="{{list.length == 0}}"
-    ></image>
-  </view>
-
-  <view class="btn" bindtap="goExchange">
-    <text class="text">Go Exchange</text>
+    <view class="empty-card" wx:if="{{showEmpty}}">
+      <view class="empty-title">暂无卡券</view>
+      <view class="empty-desc">可以在门店详情购买次卡，也可以核销抖音/美团券号。</view>
+      <view class="empty-actions">
+        <view class="empty-btn" bindtap="goRedeem">核销券号</view>
+        <view class="empty-btn primary" bindtap="goStores">去门店购买</view>
+      </view>
+    </view>
   </view>
 </view>

@@ -1,0 +1,7 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "Navbar": "../../components/navbar/index",
+    "Icon": "../../components/icon/index"
+  }
+}

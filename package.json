@@ -12,5 +12,13 @@
   "bugs": {
     "url": "https://github.com/wingscloud/template-wash/issues"
   },
-  "main": "app.ts"
+  "main": "app.ts",
+  "scripts": {
+    "check:miniapp": "tsc --noEmit --pretty false",
+    "test:miniapp": "node --test test/miniapp-project.test.mjs",
+    "check": "npm run check:miniapp && npm run test:miniapp"
+  },
+  "devDependencies": {
+    "typescript": "5.8.2"
+  }
 }

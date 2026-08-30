@@ -3,16 +3,60 @@
 
   <view class="container">
     <view class="hero-card">
-      <view class="hero-card__title">新手也能轻松完成一次洗车</view>
-      <view class="hero-card__desc">按照以下步骤操作，即可快速完成自助洗车流程</view>
+      <view class="hero-card__content">
+        <view class="hero-card__eyebrow">4 步完成自助洗车</view>
+        <view class="hero-card__title">先选门店，再接入设备</view>
+        <view class="hero-card__desc">按流程操作可以减少等待和误操作，看完后可直接进入门店选择工位。</view>
+      </view>
+      <view class="hero-card__visual">
+        <view class="hero-node hero-node--active">
+          <Icon url="/assets/icons/market.png" size="34rpx"></Icon>
+        </view>
+        <view class="hero-line"></view>
+        <view class="hero-node">
+          <Icon url="/assets/icons/scan.png" size="34rpx"></Icon>
+        </view>
+        <view class="hero-line"></view>
+        <view class="hero-node">
+          <Icon url="/assets/icons/car.png" size="34rpx"></Icon>
+        </view>
+      </view>
     </view>
 
-    <view class="doc-list">
-      <view class="doc-card" wx:for="{{docs}}" wx:key="index">
-        <view class="doc-card__index">{{index + 1}}</view>
-        <view class="doc-card__body">
-          <view class="doc-card__title">{{item.title}}</view>
-          <view class="doc-card__content">{{item.content}}</view>
+    <view class="step-list">
+      <view class="step-card {{item.isLast ? 'step-card--last' : ''}}" wx:for="{{docs}}" wx:key="step">
+        <view class="step-card__rail">
+          <view class="step-card__icon">
+            <Icon url="{{item.icon}}" size="40rpx"></Icon>
+          </view>
+          <view wx:if="{{!item.isLast}}" class="step-card__line"></view>
+        </view>
+        <view class="step-card__body">
+          <view class="step-card__meta">
+            <text class="step-card__step">STEP {{item.step}}</text>
+            <text class="step-card__duration">{{item.duration}}</text>
+          </view>
+          <view class="step-card__title">{{item.title}}</view>
+          <view class="step-card__content">{{item.content}}</view>
+          <view class="step-card__tip">
+            <text class="step-card__tip-label">关键</text>
+            <text>{{item.tip}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="cta-panel">
+      <view class="cta-panel__title">准备好了就选择门店</view>
+      <view class="cta-panel__desc">进入门店列表后，优先选择有空闲工位的门店开始洗车。</view>
+      <view class="cta-panel__actions">
+        <view class="cta-button cta-button--primary" bindtap="goService">
+          <Icon url="/assets/icons/market.png" size="38rpx"></Icon>
+          <text class="cta-button__text">查看附近门店</text>
+        </view>
+        <view class="cta-button cta-button--secondary" bindtap="goHome">
+          <Icon url="/assets/icons/car.png" size="36rpx"></Icon>
+          <text class="cta-button__text">返回首页</text>
         </view>
       </view>
     </view>

@@ -6,3 +6,6 @@ target/
 
 # logs
 *.log
+
+# Local development process metadata
+.local/

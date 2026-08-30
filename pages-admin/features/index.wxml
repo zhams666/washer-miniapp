@@ -1,0 +1,33 @@
+<view class="page">
+  <Navbar title="功能整理" customBackPath="/pages-admin/home/index" customBackPathIsTabbar="{{false}}"></Navbar>
+
+  <view class="container">
+    <view class="summary-card">
+      <view class="summary-title">小程序功能检查</view>
+      <view class="summary-desc">按照功能整理文档，将现有功能、部分接入功能和待接入功能统一展示，便于测试和后续开发。</view>
+    </view>
+
+    <view class="group" wx:for="{{groups}}" wx:key="title">
+      <view class="group-head">
+        <view class="group-title">{{item.title}}</view>
+        <view class="group-desc">{{item.desc}}</view>
+      </view>
+
+      <view
+        class="feature-card is-{{feature.status}}"
+        wx:for="{{item.items}}"
+        wx:for-item="feature"
+        wx:key="key"
+        data-route="{{feature.route || ''}}"
+        bindtap="handleFeatureTap"
+      >
+        <view class="feature-top">
+          <view class="feature-title">{{feature.title}}</view>
+          <view class="status-pill is-{{feature.status}}">{{feature.statusText}}</view>
+        </view>
+        <view class="feature-entry">入口：{{feature.entryText}}</view>
+        <view class="feature-logic">{{feature.logic}}</view>
+      </view>
+    </view>
+  </view>
+</view>

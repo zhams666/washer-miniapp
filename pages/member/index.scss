@@ -1,0 +1,128 @@
+.page {
+  min-height: 100vh;
+  background: #f4f7fb;
+  color: #102a43;
+}
+
+.content {
+  padding: 28rpx 30rpx 50rpx;
+}
+
+.member-hero {
+  padding: 36rpx 34rpx;
+  border-radius: 26rpx;
+  background: linear-gradient(135deg, #183b8f, #5b39b8);
+  color: #fff;
+  box-shadow: 0 16rpx 34rpx rgba(41, 57, 130, 0.22);
+}
+
+.hero-label,
+.hero-meta,
+.hero-points {
+  font-size: 25rpx;
+  opacity: 0.84;
+}
+
+.hero-title {
+  margin: 18rpx 0 10rpx;
+  font-size: 46rpx;
+  font-weight: 700;
+}
+
+.hero-points {
+  margin-top: 28rpx;
+  padding-top: 22rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.28);
+}
+
+.benefit-section,
+.plan-section {
+  margin-top: 34rpx;
+}
+
+.section-title {
+  margin-bottom: 18rpx;
+  font-size: 31rpx;
+  font-weight: 700;
+}
+
+.benefit-card,
+.plan-card {
+  border-radius: 20rpx;
+  background: #fff;
+  box-shadow: 0 8rpx 22rpx rgba(15, 23, 42, 0.06);
+}
+
+.benefit-card {
+  padding: 26rpx;
+}
+
+.benefit-name,
+.plan-title {
+  font-size: 31rpx;
+  font-weight: 700;
+}
+
+.benefit-time {
+  margin-top: 12rpx;
+  color: #315bc6;
+  font-size: 27rpx;
+  font-weight: 600;
+}
+
+.benefit-desc,
+.plan-benefit,
+.plan-duration {
+  margin-top: 10rpx;
+  color: #64748b;
+  font-size: 25rpx;
+  line-height: 1.55;
+}
+
+.plan-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-bottom: 18rpx;
+  padding: 26rpx;
+}
+
+.plan-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.plan-action {
+  flex: 0 0 170rpx;
+  text-align: right;
+}
+
+.plan-price {
+  margin-bottom: 14rpx;
+  color: #5b39b8;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.buy-button {
+  width: 166rpx;
+  height: 70rpx;
+  padding: 0;
+  border-radius: 35rpx;
+  background: #3d78e8;
+  color: #fff;
+  font-size: 25rpx;
+  line-height: 70rpx;
+}
+
+.buy-button::after {
+  border: 0;
+}
+
+.loading,
+.empty {
+  padding: 80rpx 30rpx;
+  color: #64748b;
+  text-align: center;
+}

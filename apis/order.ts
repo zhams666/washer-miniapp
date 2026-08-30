@@ -17,8 +17,40 @@ export const getSimpleOrderList = async (
   return [];
 };
 
-export const createSimpleOrder = async (_data: IObject): Promise<IObject> => {
-  const { code, data } = await POST('/api/orders/simple-create', _data);
+export const getOrderPage = async (
+  _page = 1,
+  _size = 10,
+  _userId?: number
+): Promise<IObject> => {
+  const { code, data } = await GET('/api/orders', {
+    page: _page,
+    size: _size,
+    userId: _userId,
+  });
+  if (code == 0) {
+    return data;
+  }
+  return {};
+};
+
+export const startWashOrder = async (_data: IObject): Promise<IObject> => {
+  const { code, data } = await POST('/api/orders/start-wash', _data);
+  if (code == 0) {
+    return data;
+  }
+  return {};
+};
+
+export const joinWashQueue = async (_data: IObject): Promise<IObject> => {
+  const { code, data } = await POST('/api/queues/join', _data);
+  if (code == 0) {
+    return data;
+  }
+  return {};
+};
+
+export const checkWashQueueLocation = async (_data: IObject): Promise<IObject> => {
+  const { code, data } = await POST('/api/queues/check-location', _data);
   if (code == 0) {
     return data;
   }
@@ -35,6 +67,14 @@ export const startOrder = async (_id: number): Promise<IObject> => {
 
 export const completeOrder = async (_id: number): Promise<IObject> => {
   const { code, data } = await POST(`/api/orders/${_id}/complete`, {});
+  if (code == 0) {
+    return data;
+  }
+  return {};
+};
+
+export const checkOrderAutoStop = async (_id: number): Promise<IObject> => {
+  const { code, data } = await POST(`/api/orders/${_id}/auto-stop-check`, {});
   if (code == 0) {
     return data;
   }
@@ -63,4 +103,20 @@ export const getOrderPaymentDetails = async (_id: number): Promise<IObject[]> =>
     return data;
   }
   return [];
+};
+
+export const getDurationRanking = async (
+  _scope = 'day',
+  _userId?: number,
+  _limit = 10
+): Promise<IObject> => {
+  const { code, data } = await GET('/api/orders/duration-ranking', {
+    scope: _scope,
+    userId: _userId,
+    limit: _limit,
+  });
+  if (code == 0 && data) {
+    return data;
+  }
+  return {};
 };

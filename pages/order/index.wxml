@@ -1,62 +1,93 @@
 <view class="page">
-  <Navbar showBackIcon="{{false}}" title="Order" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
+  <Navbar showBackIcon="{{false}}" title="我的订单" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
 
   <view class="container">
     <view class="summary-card">
-      <view class="summary-card__title">My Wash Orders</view>
-      <view class="summary-card__desc">
-        Minimal order flow: create order, start order, complete order, and view real status changes.
+      <view class="summary-card__main">
+        <view class="summary-card__content">
+          <view class="summary-card__title">订单记录</view>
+          <view class="summary-card__desc" wx:if="{{loading}}">正在同步最近的洗车订单</view>
+          <view class="summary-card__desc" wx:elif="{{list.length > 0}}">
+            {{runningCount > 0 ? '有订单正在进行，请优先处理。' : '最近的洗车记录都在这里。'}}
+          </view>
+          <view class="summary-card__desc" wx:elif="{{isLogin}}">当前还没有洗车订单。</view>
+          <view class="summary-card__desc" wx:else>登录后可查看你的洗车记录。</view>
+        </view>
+        <view class="summary-card__count">
+          <view class="summary-card__count-value">{{list.length}}</view>
+          <view class="summary-card__count-label">总订单</view>
+        </view>
       </view>
 
-      <view class="summary-card__picker-label">Store</view>
-      <picker range="{{storePickerRange}}" value="{{selectedStoreIndex}}" bindchange="onStoreChange">
-        <view class="summary-card__picker">
-          <text wx:if="{{storePickerRange.length > 0}}">{{storePickerRange[selectedStoreIndex]}}</text>
-          <text wx:else>No store available</text>
+      <view class="summary-card__stats">
+        <view class="summary-stat summary-stat--active">
+          <view class="summary-stat__value">{{runningCount}}</view>
+          <view class="summary-stat__label">进行中</view>
         </view>
-      </picker>
-
-      <view class="summary-card__picker-label">Device</view>
-      <picker range="{{devicePickerRange}}" value="{{selectedDeviceIndex}}" bindchange="onDeviceChange">
-        <view class="summary-card__picker">
-          <text wx:if="{{devicePickerRange.length > 0}}">{{devicePickerRange[selectedDeviceIndex]}}</text>
-          <text wx:else>No device available</text>
+        <view class="summary-stat">
+          <view class="summary-stat__value">{{recordedCount}}</view>
+          <view class="summary-stat__label">已记录</view>
         </view>
-      </picker>
-
-      <view class="summary-card__picker-label">Pay Mode</view>
-      <picker range="{{payModePickerRange}}" value="{{selectedPayModeIndex}}" bindchange="onPayModeChange">
-        <view class="summary-card__picker">
-          <text>{{payModePickerRange[selectedPayModeIndex]}}</text>
-        </view>
-      </picker>
-
-      <view class="summary-card__action" bindtap="createTestOrder">Create Test Order</view>
+      </view>
     </view>
 
     <view class="order-list" wx:if="{{list.length > 0}}">
-      <view class="order-card" wx:for="{{list}}" wx:key="id" bindtap="handleViewDetail" data-id="{{item.id}}">
-        <view class="order-card__header">
-          <view class="order-card__name">{{item.storeName}}</view>
+      <view
+        class="order-card"
+        wx:for="{{list}}"
+        wx:key="id"
+        bindtap="handleOrderTap"
+        data-id="{{item.id}}"
+        data-order-status="{{item.orderStatus}}"
+      >
+        <view class="order-card__top">
           <view class="order-card__status status-{{item.statusType}}">{{item.status}}</view>
+          <view class="order-card__hint">{{item.statusHint}}</view>
         </view>
-        <view class="order-card__meta">Create Time {{item.createTime}}</view>
-        <view class="order-card__amount">Amount CNY {{item.amount}}</view>
-        <view
-          class="order-card__action"
-          data-id="{{item.id}}"
-          data-action="{{item.actionType}}"
-          catchtap="handleOrderAction"
-        >
-          {{item.actionText}}
+
+        <view class="order-card__main">
+          <view class="order-card__primary">
+            <view class="order-card__name">{{item.storeName}}</view>
+            <view class="order-card__time" wx:if="{{item.createTime}}">
+              <Icon url="/assets/icons/order.png" size="28rpx"></Icon>
+              <text class="order-card__time-text">{{item.timeLabel}} {{item.createTime}}</text>
+            </view>
+          </view>
+          <view class="order-card__amount order-card__amount--{{item.amountClass}}">
+            <view class="order-card__amount-label">{{item.amountLabel}}</view>
+            <view class="order-card__amount-value">{{item.amountValue}}</view>
+          </view>
+        </view>
+
+        <view class="order-card__details">
+          <view class="order-card__detail">
+            <view class="order-card__detail-label">支付方式</view>
+            <view class="order-card__detail-value">{{item.payText}}</view>
+          </view>
+          <view class="order-card__detail" wx:if="{{item.orderNo}}">
+            <view class="order-card__detail-label">订单编号</view>
+            <view class="order-card__detail-value">{{item.orderNo}}</view>
+          </view>
+        </view>
+
+        <view class="order-card__footer">
+          <view class="order-card__pay-badge">{{item.amountText}}</view>
+          <view class="order-card__action {{item.isRunning ? 'order-card__action--primary' : ''}}">
+            {{item.actionText}}
+          </view>
         </view>
       </view>
     </view>
 
     <view class="empty-card" wx:else>
       <image class="empty-card__image" mode="widthFix" src="/assets/images/no-order.png"></image>
-      <view class="empty-card__title">No Orders</view>
-      <view class="empty-card__desc">Tap the button above to create a minimal test order.</view>
+      <view class="empty-card__title">暂无订单</view>
+      <view class="empty-card__desc" wx:if="{{isLogin}}">
+        当前用户还没有洗车订单，后续下单记录会展示在这里。
+      </view>
+      <view class="empty-card__desc" wx:else>
+        当前暂无可展示的订单信息。
+      </view>
     </view>
   </view>
 </view>

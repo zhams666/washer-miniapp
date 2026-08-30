@@ -1,0 +1,32 @@
+<view class="page">
+  <Navbar title="我的权限" customBackPath="/pages-admin/home/index" customBackPathIsTabbar="{{false}}"></Navbar>
+
+  <view class="container">
+    <view class="profile-card">
+      <view class="profile-card__name">{{profile.staffName || '--'}}</view>
+      <view class="profile-card__meta">{{profile.roleName || '--'}} · {{profile.franchiseeName || '未绑定加盟商'}}</view>
+      <view class="profile-card__no">{{profile.staffNoText || '员工编号 --'}}</view>
+    </view>
+
+    <view class="section">
+      <view class="section-title">可管理门店</view>
+      <view class="list-card">
+        <view wx:for="{{stores}}" wx:key="id" class="list-item">
+          <text>{{item.storeName}}</text>
+          <label>门店编号 {{item.id}}</label>
+        </view>
+        <view wx:if="{{!stores.length}}" class="empty-text">暂无绑定门店</view>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-title">权限</view>
+      <view class="permission-grid">
+        <view wx:for="{{permissions}}" wx:key="*this" class="permission-pill">{{item}}</view>
+        <view wx:if="{{!permissions.length}}" class="empty-text">暂无权限</view>
+      </view>
+    </view>
+
+    <button class="logout-button" bindtap="handleLogout">退出管理端</button>
+  </view>
+</view>

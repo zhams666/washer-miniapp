@@ -13,6 +13,7 @@ public class Store {
     @TableId
     private Long id;
 
+    private Long franchiseeId;
     private String storeCode;
     private String storeName;
     private Integer storeStatus;
@@ -25,6 +26,7 @@ public class Store {
     private String contactName;
     private String contactPhone;
     private String businessHours;
+    private String featureTags;
     private String remark;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -26,6 +26,35 @@ export interface CardUsageQueryParams {
   orderNo?: string;
 }
 
+export interface SettlementDetailQueryParams {
+  page: number;
+  size: number;
+  fromStoreId?: number;
+  toStoreId?: number;
+  orderNo?: string;
+  bizDate?: string;
+  billId?: number;
+  billNo?: string;
+}
+
+export interface SettlementBillQueryParams {
+  page: number;
+  size: number;
+  fromStoreId?: number;
+  toStoreId?: number;
+  billNo?: string;
+  startDate?: string;
+  endDate?: string;
+  settlementStatus?: string;
+}
+
+export interface SettlementBillGeneratePayload {
+  settlementPeriodType?: string;
+  startDate: string;
+  endDate: string;
+  remark?: string;
+}
+
 export interface AdminPaymentDetailItem {
   id: number;
   orderId?: number | null;
@@ -80,6 +109,34 @@ export interface AdminCardUsageCenterItem {
   createdAt?: string;
 }
 
+export interface AdminSettlementDetailItem {
+  id: number;
+  orderId?: number | null;
+  orderNo?: string;
+  fromStoreId?: number | null;
+  toStoreId?: number | null;
+  principalAmount?: number | null;
+  bizDate?: string;
+  detailStatus?: string;
+}
+
+export interface AdminSettlementBillItem {
+  id: number;
+  billNo?: string;
+  fromStoreId?: number | null;
+  toStoreId?: number | null;
+  settlementPeriodType?: string;
+  startDate?: string;
+  endDate?: string;
+  totalOrderCount?: number | null;
+  totalAmount?: number | null;
+  totalRefundAmount?: number | null;
+  netAmount?: number | null;
+  settlementStatus?: string;
+  lockStatus?: string;
+  createdAt?: string;
+}
+
 export interface AdminPaymentDetailPageResult {
   records: AdminPaymentDetailItem[];
   total: number;
@@ -99,4 +156,26 @@ export interface AdminCardUsagePageResult {
   total: number;
   size: number;
   current: number;
+}
+
+export interface AdminSettlementDetailPageResult {
+  records: AdminSettlementDetailItem[];
+  total: number;
+  size: number;
+  current: number;
+}
+
+export interface AdminSettlementBillPageResult {
+  records: AdminSettlementBillItem[];
+  total: number;
+  size: number;
+  current: number;
+}
+
+export interface AdminSettlementBillGenerateResult {
+  generatedCount: number;
+  updatedDetailCount: number;
+  settlementPeriodType?: string;
+  startDate?: string;
+  endDate?: string;
 }

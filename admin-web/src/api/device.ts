@@ -12,3 +12,9 @@ export const createDevice = (payload: DeviceFormPayload) =>
 
 export const updateDevice = (id: number, payload: DeviceFormPayload) =>
   http.put<DeviceItem>(`/api/devices/${id}`, payload);
+
+export const mockStartDevice = (id: number) =>
+  http.post<DeviceItem>(`/api/devices/${id}/start`);
+
+export const mockStopDevice = (id: number) =>
+  http.post<DeviceItem>(`/api/devices/${id}/stop`);

@@ -5,7 +5,7 @@
     backgroundColor="rgba(0,0,0,0)"
     borderBottom="{{false}}"
     backIcon="../../assets/icons/back-white.png"
-    title="Wallet Recharge"
+    title="{{pageTitle}}"
     backIconHeight="54rpx"
     backIconWidth="54rpx"
   ></Navbar>
@@ -14,7 +14,25 @@
 
   <view class="card">
     <view class="inner">
-      <view class="title">Recharge Amount</view>
+      <view class="title">{{pageTitle}}</view>
+
+      <view class="store-section">
+        <view class="store-title">充值门店</view>
+        <picker range="{{storePickerRange}}" value="{{selectedStoreIndex}}" bindchange="onStoreChange">
+          <view class="store-picker">
+            <text wx:if="{{storePickerRange.length > 0}}">{{storePickerRange[selectedStoreIndex]}}</text>
+            <text wx:else>暂无门店</text>
+          </view>
+        </picker>
+        <view class="store-confirm" wx:if="{{storeConfirmText}}">
+          {{storeConfirmText}}
+        </view>
+        <view class="store-confirm store-confirm--loading" wx:elif="{{locatingStore}}">
+          正在根据当前位置推荐最近门店...
+        </view>
+        <view class="store-hint">赠送余额仅限所选门店使用，请确认门店后再充值</view>
+      </view>
+
       <view class="list">
         <view
           class="price {{selectIndex == index ? 'select' : ''}}"
@@ -23,11 +41,15 @@
           wx:for="{{priceOps}}"
           wx:key="index"
         >
-          <text class="text">{{item.price}}</text>
+          <text class="text">¥{{item.price}}</text>
+          <text class="gift">赠送¥{{item.gift}}</text>
         </view>
       </view>
-      <view class="description">This page is currently a static recharge demo.</view>
-      <BlueButton width="100%">Confirm Recharge</BlueButton>
+
+      <view class="description">{{sourceHint || '本页将创建充值订单，并在下一页展示充值结果。'}}</view>
+      <view bindtap="handleRecharge">
+        <BlueButton width="100%">{{loading ? '创建订单中...' : '立即充值'}}</BlueButton>
+      </view>
     </view>
   </view>
 </view>

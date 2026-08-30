@@ -1,78 +1,116 @@
 <view class="page">
-  <Navbar showBackIcon="{{false}}" title="自助洗车" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
+  <view class="hero">
+    <image class="hero-image" mode="widthFix" src="/assets/images/home-dolphin-logo.jpg"></image>
+  </view>
 
   <view class="container">
-    <view class="banner-card">
-      <view class="banner-content">
-        <view class="banner-tag">门店精选</view>
-        <view class="banner-title">{{storeInfo.name}}</view>
-        <view class="banner-desc">{{storeInfo.desc}}</view>
-        <view class="banner-notice">{{storeInfo.notice}}</view>
+    <view class="voucher-card" bindtap="goVoucherRedeem">
+      <image class="voucher-icon" mode="aspectFit" src="/assets/icons/home-voucher.png"></image>
+      <view class="voucher-copy">
+        <view class="voucher-title">团购核销</view>
+        <view class="voucher-desc">输入券号，自助核销</view>
       </view>
-      <image class="banner-image" mode="aspectFit" src="/assets/images/car.png"></image>
+      <view class="voucher-button">立即核销</view>
     </view>
 
-    <view class="section">
-      <view class="section-header">
-        <view class="section-title">后端联通测试</view>
-        <view class="section-subtitle">首页加载时自动请求 /ping 接口</view>
-      </view>
-      <view class="ping-card">
-        <view class="ping-card__row">
-          <text class="ping-card__label">请求地址</text>
-          <text class="ping-card__value">GET /ping</text>
-        </view>
-        <view class="ping-card__row">
-          <text class="ping-card__label">当前状态</text>
-          <text class="ping-card__value {{pingSuccess ? 'is-success' : 'is-fail'}}">
-            {{pingLoading ? '请求中...' : pingMessage}}
-          </text>
-        </view>
-        <view class="ping-card__raw">{{pingRaw}}</view>
-      </view>
+    <view class="scan-button" bindtap="scan">
+      <image class="scan-icon" mode="aspectFit" src="/assets/icons/home-scan.png"></image>
+      <text>扫码洗车</text>
     </view>
 
-    <view class="section">
-      <view class="section-header">
-        <view class="section-title">快捷洗车</view>
-        <view class="section-subtitle">到店后可直接开始操作</view>
+    <view class="nearest-card" wx:if="{{hasNearbyStore}}">
+      <view class="nearest-head">
+        <view class="nearest-name">{{nearbyStore.name}}</view>
+        <view class="more-link" bindtap="goService">更多门店 </view>
       </view>
-      <view class="feature-list">
-        <view
-          wx:for="{{featureCards}}"
-          wx:key="key"
-          class="feature-card"
-          data-key="{{item.key}}"
-          bindtap="handleFeatureTap"
-        >
-          <view class="feature-card__badge">{{item.badge}}</view>
-          <view class="feature-card__icon">
-            <Icon url="{{item.icon}}" size="52rpx"></Icon>
+      <view class="nearest-body">
+        <view class="nearest-info">
+          <view class="nearest-line" wx:if="{{nearbyStore.distanceText}}">
+            <image class="line-icon" mode="aspectFit" src="/assets/icons/location-now.png"></image>
+            <text>{{nearbyStore.distanceText}}</text>
           </view>
-          <view class="feature-card__title">{{item.title}}</view>
-          <view class="feature-card__desc">{{item.desc}}</view>
+          <view class="nearest-line" wx:if="{{nearbyStore.addressText}}">
+            <image class="line-icon" mode="aspectFit" src="/assets/icons/location-now.png"></image>
+            <text>{{nearbyStore.addressText}}</text>
+          </view>
+        </view>
+        <view class="nav-actions">
+          <view class="nav-pill" bindtap="handleNearbyNav">
+            <image class="nav-icon" mode="aspectFit" src="/assets/icons/home-nav.png"></image>
+            <text>导航</text>
+          </view>
+          <view class="nav-link" bindtap="handleNearbyNav">导航到店</view>
         </view>
       </view>
     </view>
 
-    <view class="section">
-      <view class="section-header">
-        <view class="section-title">常用服务</view>
-        <view class="section-subtitle">门店服务、订单和账户管理</view>
+    <view class="nearest-card nearest-card--empty" wx:else>
+      <view class="nearest-head">
+        <view class="nearest-name">暂无最近门店</view>
+        <view class="more-link" bindtap="goService">更多门店 </view>
       </view>
-      <view class="quick-grid">
-        <view
-          wx:for="{{quickActions}}"
-          wx:key="key"
-          class="quick-card"
-          data-key="{{item.key}}"
-          bindtap="handleQuickAction"
-        >
-          <view class="quick-card__icon">
-            <Icon url="{{item.icon}}" size="46rpx"></Icon>
+      <view class="nearest-body">
+        <view class="nearest-info">
+          <view class="nearest-line">
+            <image class="line-icon" mode="aspectFit" src="/assets/icons/location-now.png"></image>
+            <text>进入门店列表选择可用门店</text>
           </view>
-          <view class="quick-card__title">{{item.title}}</view>
-          <view class="quick-card__desc">{{item.desc}}</view>
+        </view>
+        <view class="nav-actions">
+          <view class="nav-pill" bindtap="goService">查看门店</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="quick-panel">
+      <view
+        wx:for="{{quickActions}}"
+        wx:key="key"
+        class="quick-item"
+        data-key="{{item.key}}"
+        bindtap="handleQuickAction"
+      >
+        <view class="quick-icon-wrap">
+          <image class="quick-icon" mode="aspectFit" src="{{item.icon}}"></image>
+        </view>
+        <view class="quick-title">{{item.title}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="franchise-mask" wx:if="{{franchiseModalVisible}}" bindtap="closeFranchiseModal">
+    <view class="franchise-modal" catchtap="noop">
+      <view class="franchise-title">加盟联系</view>
+      <view class="franchise-desc">留下姓名和电话号码，后台会清晰记录你的加盟意向。</view>
+
+      <view class="franchise-field">
+        <view class="franchise-label">姓名</view>
+        <input
+          class="franchise-input"
+          maxlength="24"
+          placeholder="请输入姓名"
+          value="{{franchiseForm.contactName}}"
+          bindinput="onFranchiseNameInput"
+        />
+      </view>
+
+      <view class="franchise-field">
+        <view class="franchise-label">电话号码</view>
+        <input
+          class="franchise-input"
+          type="number"
+          maxlength="20"
+          placeholder="请输入电话号码"
+          value="{{franchiseForm.contactPhone}}"
+          bindinput="onFranchisePhoneInput"
+        />
+      </view>
+
+      <view class="franchise-actions">
+        <view class="franchise-cancel" bindtap="closeFranchiseModal">取消</view>
+        <view class="franchise-submit" bindtap="submitFranchiseForm">
+          <text wx:if="{{franchiseSubmitting}}">提交中</text>
+          <text wx:else>提交</text>
         </view>
       </view>
     </view>

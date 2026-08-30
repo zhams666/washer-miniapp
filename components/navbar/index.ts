@@ -1,15 +1,13 @@
-import type { IObject } from "typings/interface.d";
-
 Component({
   options: { multipleSlots: true },
   properties: {
     title: {
       type: String,
-      value: "导航栏",
+      value: '导航栏',
     },
     backIcon: {
       type: String,
-      value: "../../assets/icons/back.png",
+      value: '../../assets/icons/back.png',
     },
     showBackIcon: {
       type: Boolean,
@@ -25,7 +23,7 @@ Component({
     },
     backText: {
       type: String,
-      value: "返回",
+      value: '返回',
     },
     slotHeight: {
       type: Number,
@@ -37,27 +35,27 @@ Component({
     },
     titleColor: {
       type: String,
-      value: "#030303",
+      value: '#1F2933',
     },
     backTextColor: {
       type: String,
-      value: "#555",
+      value: '#6B7280',
     },
     backgroundColor: {
       type: String,
-      value: "#fff",
+      value: '#FFFFFF',
     },
     backIconWidth: {
       type: String,
-      value: "44rpx",
+      value: '44rpx',
     },
     backIconHeight: {
       type: String,
-      value: "44rpx",
+      value: '44rpx',
     },
     customBackPath: {
       type: String,
-      value: "",
+      value: '',
     },
     customBackPathIsTabbar: {
       type: Boolean,
@@ -78,19 +76,36 @@ Component({
     statusBarHeight: 0,
     navbarInnerTop: 0,
     collapseHeight: 0,
+    titleWidth: 0,
   },
   attached() {
-    const systemInfo: IObject = wx.getSystemInfoSync();
-    const menuButtonInfo: IObject = wx.getMenuButtonBoundingClientRect();
+    const windowInfo = wx.getWindowInfo();
+    const safeWindowInfo = windowInfo as {
+      windowWidth?: number;
+      screenWidth?: number;
+      statusBarHeight?: number;
+    };
+    const menuButtonInfo = wx.getMenuButtonBoundingClientRect();
+    const screenWidth = safeWindowInfo.windowWidth || safeWindowInfo.screenWidth || 375;
+    const statusBarHeight = safeWindowInfo.statusBarHeight || 0;
+    const menuTop = menuButtonInfo.top || statusBarHeight + 6;
+    const menuHeight = menuButtonInfo.height || 32;
+    const menuWidth = menuButtonInfo.width || 87;
+    const menuRight = menuButtonInfo.right || screenWidth - 8;
+    const edgePadding = Math.max(screenWidth - menuRight, 8);
+    const navPaddingBottom = Math.max(menuTop - statusBarHeight, 4);
+    const titleGuardWidth = Math.max(menuWidth + edgePadding + 12, edgePadding + 72);
+
     this.setData({
-      navbarHeight: menuButtonInfo.height,
-      menuWidth: menuButtonInfo.width,
-      navbarPaddingTop: menuButtonInfo.top,
-      navbarPaddingBottom: menuButtonInfo.top - systemInfo.statusBarHeight,
-      navbarPaddingLeft: systemInfo.screenWidth - menuButtonInfo.right,
-      navbarPaddingRight: systemInfo.screenWidth - menuButtonInfo.right,
-      statusBarHeight: systemInfo.statusBarHeight,
-      navbarInnerTop: menuButtonInfo.height / 2,
+      navbarHeight: menuHeight,
+      menuWidth,
+      navbarPaddingTop: menuTop,
+      navbarPaddingBottom: navPaddingBottom,
+      navbarPaddingLeft: edgePadding,
+      navbarPaddingRight: edgePadding,
+      statusBarHeight,
+      navbarInnerTop: menuHeight / 2,
+      titleWidth: Math.max(screenWidth - titleGuardWidth * 2, 120),
     });
     this.getCollapseHeight();
   },
@@ -115,8 +130,8 @@ Component({
     getCollapseHeight() {
       const _this = this;
       this.createSelectorQuery()
-        .select("#slot")
-        .boundingClientRect(function (res) {
+        .select('#slot')
+        .boundingClientRect((res) => {
           const height = res ? Number(res.height) : 0;
           _this.setData({
             collapseHeight:
@@ -125,7 +140,7 @@ Component({
               _this.data.navbarPaddingBottom +
               height,
           });
-          _this.triggerEvent("getCollapseHeight", _this.data.collapseHeight);
+          _this.triggerEvent('getCollapseHeight', _this.data.collapseHeight);
         })
         .exec();
     },

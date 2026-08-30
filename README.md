@@ -36,6 +36,34 @@ cd washer
 使用 微信开发者工具 IDE 进行微信小程序开发
 ```
 
+## 本地联调
+
+本地开发统一使用以下地址：
+
+- 后端 API：`http://127.0.0.1:18080`
+- PC 管理后台：`http://127.0.0.1:18073`
+
+准备好 JDK 17、Maven 3.9+、Node.js 20+ 和本机 MySQL 后，在 PowerShell 中运行：
+
+```powershell
+.\scripts\start-local.ps1 -DbPassword '你的 MySQL 密码'
+```
+
+脚本会在缺少前端依赖时执行 `npm ci`，随后启动 Spring Boot 后端和 PC 管理后台。日志与进程 ID 写入 `.local/`。数据库连接也支持通过 `WASHER_DB_URL`、`WASHER_DB_USERNAME`、`WASHER_DB_PASSWORD` 环境变量覆盖。
+
+小程序请求地址位于 `config/url.ts`，本地微信开发者工具调试时保持为 `http://127.0.0.1:18080`。
+
+## 质量检查
+
+```powershell
+npm install
+npm run check
+cd .\backend
+mvn test
+cd ..\admin-web
+npm run build
+```
+
 ## 演示
 
 <table>

@@ -9,6 +9,7 @@ import com.washer.backend.entity.WashOrderPaymentDetail;
 import com.washer.backend.entity.WashOrderStatusLog;
 import com.washer.backend.service.WashOrderService;
 import java.util.List;
+import java.util.Map;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -57,9 +58,23 @@ public class WashOrderController {
         return ApiResponse.success(washOrderService.getSimpleOrderList(userId, size));
     }
 
+    @GetMapping("/duration-ranking")
+    public ApiResponse<Map<String, Object>> durationRanking(
+        @RequestParam(defaultValue = "day") String scope,
+        @RequestParam(required = false) Long userId,
+        @RequestParam(defaultValue = "10") int limit
+    ) {
+        return ApiResponse.success(washOrderService.getDurationRanking(scope, userId, limit));
+    }
+
     @PostMapping("/simple-create")
     public ApiResponse<WashOrder> simpleCreate(@RequestBody SimpleOrderCreateRequest request) {
         return ApiResponse.success("created", washOrderService.createSimpleOrder(request));
+    }
+
+    @PostMapping("/start-wash")
+    public ApiResponse<WashOrder> startWash(@RequestBody SimpleOrderCreateRequest request) {
+        return ApiResponse.success("started", washOrderService.createAndStartWashOrder(request));
     }
 
     @PostMapping("/{id}/start")
@@ -72,9 +87,19 @@ public class WashOrderController {
         return ApiResponse.success("completed", washOrderService.completeOrder(id));
     }
 
+    @PostMapping("/{id}/cancel")
+    public ApiResponse<WashOrder> cancel(@PathVariable Long id) {
+        return ApiResponse.success("cancelled", washOrderService.cancelOrder(id));
+    }
+
+    @PostMapping("/{id}/auto-stop-check")
+    public ApiResponse<WashOrder> autoStopCheck(@PathVariable Long id) {
+        return ApiResponse.success(washOrderService.checkAndAutoStopOrder(id));
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<WashOrder> getById(@PathVariable Long id) {
-        WashOrder order = washOrderService.getById(id);
+        WashOrder order = washOrderService.checkAndAutoStopOrder(id);
         if (order == null) {
             throw new IllegalArgumentException("order not found");
         }

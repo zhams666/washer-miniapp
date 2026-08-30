@@ -1,0 +1,78 @@
+<view class="page">
+  <Navbar
+    title=""
+    titleColor="#ffffff"
+    backIcon="/assets/icons/back-white.png"
+    backgroundColor="#237b84"
+    borderBottom="{{false}}"
+    bottomShadow="{{false}}"
+  ></Navbar>
+
+  <view class="rank-hero">
+    <view class="rank-tabs">
+      <view
+        wx:for="{{tabs}}"
+        wx:key="key"
+        class="rank-tab {{activeScope == item.key ? 'active' : ''}}"
+        data-scope="{{item.key}}"
+        bindtap="switchScope"
+      >
+        {{item.title}}
+      </view>
+    </view>
+
+    <view class="hero-main">
+      <view>
+        <view class="hero-title">排行榜</view>
+        <view class="hero-subtitle">按洗车时长统计</view>
+      </view>
+      <view class="hero-medal">
+        <view class="medal-ribbon left"></view>
+        <view class="medal-ribbon right"></view>
+        <view class="medal-shield">
+          <view class="medal-star">★</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="rank-panel">
+    <view class="rank-head">
+      <view class="rank-col rank-col--rank">排行</view>
+      <view class="rank-col rank-col--user">洗车车友</view>
+      <view class="rank-col rank-col--time">洗车时长</view>
+    </view>
+
+    <view class="rank-list" wx:if="{{rows.length > 0}}">
+      <view
+        wx:for="{{rows}}"
+        wx:key="rank"
+        class="rank-row rank-row--{{item.rank}}"
+      >
+        <view class="rank-cell rank-cell--rank">
+          <view wx:if="{{item.rank <= 3}}" class="rank-medal rank-medal--{{item.rank}}">
+            {{item.rank}}
+          </view>
+          <view wx:else class="rank-number">{{item.rank}}</view>
+        </view>
+        <view class="rank-cell rank-cell--user">
+          <image class="rank-avatar" mode="aspectFill" src="{{item.avatarUrl}}"></image>
+          <view class="rank-user">
+            <view class="rank-user__name">{{item.nickname}}</view>
+            <view class="rank-user__meta">{{item.orderCount}} 次洗车</view>
+          </view>
+        </view>
+        <view class="rank-cell rank-cell--time">{{item.durationText}}</view>
+      </view>
+    </view>
+    <view class="rank-empty" wx:elif="{{loading}}">榜单加载中...</view>
+    <view class="rank-empty" wx:else>当前榜单暂无记录</view>
+  </view>
+
+  <view class="my-rank" wx:if="{{hasMyRank}}">
+    <view class="my-rank__rank">{{myRankText}}</view>
+    <image class="my-rank__avatar" mode="aspectFill" src="{{myAvatarUrl}}"></image>
+    <view class="my-rank__name">{{myName}}</view>
+    <view class="my-rank__time">{{myDurationText}}</view>
+  </view>
+</view>

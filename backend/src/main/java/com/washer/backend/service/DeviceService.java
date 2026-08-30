@@ -10,4 +10,8 @@ public interface DeviceService extends IService<Device> {
     List<DeviceSimpleItem> getSimpleDevices(Long storeId, String keyword);
 
     DeviceSimpleItem getSimpleDeviceById(Long id);
+
+    DeviceSimpleItem mockStartDevice(Long id);
+
+    DeviceSimpleItem mockStopDevice(Long id);
 }

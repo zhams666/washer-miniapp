@@ -1,7 +1,92 @@
 <view class="page">
-  <!-- 自定义导航栏 -->
-  <Navbar fixed="{{false}}" titleColor="#fff" backgroundColor="rgba(0,0,0,0)" borderBottom="{{false}}" backIcon="../../assets/icons/back-white.png" title="支付成功" backIconHeight="54rpx" backIconWidth="54rpx">
-  </Navbar>
-  <!-- 蓝色背景 -->
+  <Navbar
+    fixed="{{false}}"
+    titleColor="#fff"
+    backgroundColor="rgba(0,0,0,0)"
+    borderBottom="{{false}}"
+    backIcon="../../assets/icons/back-white.png"
+    title="充值结果"
+    backIconHeight="54rpx"
+    backIconWidth="54rpx"
+  ></Navbar>
+
   <view class="bg"></view>
+
+  <view
+    style="position:absolute;top:240rpx;left:0;right:0;padding:20rpx 30rpx;box-sizing:border-box;"
+  >
+    <view
+      style="background:#fff;border-radius:24rpx;padding:32rpx 30rpx;min-height:50vh;box-sizing:border-box;"
+    >
+      <view style="font-size:36rpx;font-weight:700;color:#242526;">{{statusTitle}}</view>
+      <view style="margin-top:16rpx;font-size:26rpx;line-height:1.6;color:#6b7280;">
+        {{loading ? '正在加载充值订单结果...' : statusDesc}}
+      </view>
+
+      <view
+        wx:if="{{errorMessage}}"
+        style="margin-top:20rpx;padding:18rpx 20rpx;border-radius:16rpx;background:#fff4e5;color:#b45309;font-size:24rpx;line-height:1.6;"
+      >
+        {{errorMessage}}
+      </view>
+
+      <view
+        style="margin-top:28rpx;padding:8rpx 0;border-top:1rpx solid #eef1f4;border-bottom:1rpx solid #eef1f4;"
+      >
+        <view
+          style="display:flex;justify-content:space-between;align-items:flex-start;padding:20rpx 0;font-size:26rpx;"
+        >
+          <text style="color:#6b7280;">充值订单号</text>
+          <text style="color:#242526;max-width:420rpx;text-align:right;word-break:break-all;">
+            {{rechargeOrderNo}}
+          </text>
+        </view>
+
+        <view
+          style="display:flex;justify-content:space-between;align-items:center;padding:20rpx 0;font-size:26rpx;"
+        >
+          <text style="color:#6b7280;">本金金额</text>
+          <text style="color:#242526;">¥{{principalAmount}}</text>
+        </view>
+
+        <view
+          style="display:flex;justify-content:space-between;align-items:center;padding:20rpx 0;font-size:26rpx;"
+        >
+          <text style="color:#6b7280;">赠送金额</text>
+          <text style="color:#242526;">¥{{giftAmount}}</text>
+        </view>
+
+        <view
+          style="display:flex;justify-content:space-between;align-items:center;padding:20rpx 0;font-size:26rpx;"
+        >
+          <text style="color:#6b7280;">支付状态</text>
+          <text style="color:#242526;">{{payStatusText}}</text>
+        </view>
+      </view>
+
+      <view style="margin-top:40rpx;">
+        <view
+          wx:if="{{canReturnToWash}}"
+          bindtap="goReturnStorePage"
+          style="height:88rpx;border-radius:18rpx;background:#237b84;color:#fff;font-size:30rpx;font-weight:600;display:flex;align-items:center;justify-content:center;margin-bottom:20rpx;"
+        >
+          返回门店继续洗车
+        </view>
+
+        <view
+          bindtap="goWalletPage"
+          style="height:88rpx;border-radius:18rpx;background:#2f9aa5;color:#fff;font-size:30rpx;font-weight:600;display:flex;align-items:center;justify-content:center;"
+        >
+          返回钱包页
+        </view>
+
+        <view
+          bindtap="goBack"
+          style="margin-top:20rpx;height:88rpx;border-radius:18rpx;background:#f2f4f7;color:#242526;font-size:30rpx;font-weight:600;display:flex;align-items:center;justify-content:center;"
+        >
+          返回上一页
+        </view>
+      </view>
+    </view>
+  </view>
 </view>

@@ -1,23 +1,5 @@
 {
-  "projectname": "@wingscloud/template-wash",
-  "description": "基于微信小程序 + TypeScript 的自助洗车开发模板。提供洗车流程、订单、钱包等 16 张页面模板。",
-  "packOptions": {
-    "ignore": [
-      {
-        "type": "folder",
-        "value": "admin-web"
-      },
-      {
-        "type": "folder",
-        "value": "backend"
-      },
-      {
-        "type": "folder",
-        "value": "sql"
-      }
-    ],
-    "include": []
-  },
+  "projectname": "wash-car",
   "miniprogramRoot": "",
   "setting": {
     "useCompilerPlugins": [
@@ -29,14 +11,9 @@
       "disablePlugins": [],
       "outputPath": ""
     },
-    "packNpmManually": true,
-    "packNpmRelationList": [
-      {
-        "packageJsonPath": "./package.json",
-        "miniprogramNpmDistDir": "./"
-      }
-    ],
-    "es6": false,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "es6": true,
     "enhance": false,
     "minifyWXSS": false,
     "postcss": false,
@@ -46,21 +23,79 @@
     "uploadWithSourceMap": true,
     "minifyWXML": true,
     "localPlugins": false,
+    "urlCheck": false,
     "disableUseStrict": false,
     "condition": false,
     "swc": false,
-    "disableSWC": true
+    "disableSWC": true,
+    "sassSetting": {
+      "sassCommonUseFilePath": "global.sass",
+      "scssCommonUseFilePath": "global.scss"
+    }
   },
-  "style": "v2",
-  "simulatorType": "wechat",
+  "compileType": "miniprogram",
   "simulatorPluginLibVersion": {},
-  "condition": {},
-  "srcMiniprogramRoot": "",
-  "appid": "wx84913000e5469201",
-  "libVersion": "2.26.1",
-  "editorSetting": {
-    "tabIndent": "insertSpaces",
-    "tabSize": 2
+  "packOptions": {
+    "ignore": [
+      {
+        "value": "admin-web",
+        "type": "folder"
+      },
+      {
+        "value": "backend",
+        "type": "folder"
+      },
+      {
+        "value": "sql",
+        "type": "folder"
+      },
+      {
+        "value": ".git",
+        "type": "folder"
+      },
+      {
+        "value": ".m2",
+        "type": "folder"
+      },
+      {
+        "value": ".github",
+        "type": "folder"
+      },
+      {
+        "value": ".claude",
+        "type": "folder"
+      },
+      {
+        "value": ".eslintrc.js",
+        "type": "file"
+      },
+      {
+        "value": ".prettierrc.js",
+        "type": "file"
+      },
+      {
+        "value": ".prettierignore",
+        "type": "file"
+      },
+      {
+        "value": ".gitignore",
+        "type": "file"
+      },
+      {
+        "value": "README.md",
+        "type": "file"
+      },
+      {
+        "value": "LICENSE",
+        "type": "file"
+      }
+    ],
+    "include": []
   },
-  "compileType": "miniprogram"
+  "appid": "wxb83ca5cce97b3680",
+  "editorSetting": {},
+  "libVersion": "3.16.1",
+  "simulatorType": "wechat",
+  "style": "v2",
+  "condition": {}
 }

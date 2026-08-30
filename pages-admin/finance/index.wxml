@@ -1,0 +1,36 @@
+<view class="page">
+  <Navbar title="流水中心" customBackPath="/pages-admin/home/index" customBackPathIsTabbar="{{false}}"></Navbar>
+
+  <view class="container">
+    <view class="filter-card">
+      <picker mode="selector" range="{{storePickerOptions}}" value="{{selectedStoreIndex}}" bindchange="handleStoreChange">
+        <view class="picker-row">
+          <text>{{storePickerOptions[selectedStoreIndex]}}</text>
+          <label>切换门店</label>
+        </view>
+      </picker>
+    </view>
+
+    <view class="finance-grid">
+      <view wx:for="{{financeCards}}" wx:key="key" class="finance-card">
+        <view class="finance-card__title">{{item.title}}</view>
+        <view class="finance-card__value">{{item.value}}<text>{{item.unit}}</text></view>
+        <view class="finance-card__desc">{{item.desc}}</view>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-title">最近流水</view>
+      <view class="activity-list">
+        <view wx:for="{{recentActivities}}" wx:key="referenceNo" class="activity-item">
+          <view>
+            <view class="activity-item__title">{{item.title}}</view>
+            <view class="activity-item__meta">{{item.storeName}} · {{item.referenceNo || '--'}}</view>
+          </view>
+          <view class="activity-item__amount">¥{{item.amountText || '0.00'}}</view>
+        </view>
+        <view wx:if="{{!recentActivities.length && !loading}}" class="empty-text">暂无流水</view>
+      </view>
+    </view>
+  </view>
+</view>

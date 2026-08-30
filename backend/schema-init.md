@@ -249,7 +249,7 @@ mvn spring-boot:run
 Started WasherBackendApplication in xx.xxx seconds
 ```
 
-默认端口是 `8080`。
+默认端口是 `18080`。
 
 ---
 
@@ -260,13 +260,13 @@ Started WasherBackendApplication in xx.xxx seconds
 打开浏览器或 PowerShell，访问：
 
 ```text
-http://localhost:8080/ping
+http://127.0.0.1:18080/ping
 ```
 
 或者用命令：
 
 ```powershell
-curl http://localhost:8080/ping
+curl http://127.0.0.1:18080/ping
 ```
 
 预期返回：
@@ -299,7 +299,7 @@ curl http://localhost:8080/ping
 ### 9.1 新增一个用户
 
 ```powershell
-curl -X POST http://localhost:8080/api/users `
+curl -X POST http://127.0.0.1:18080/api/users `
   -H "Content-Type: application/json" `
   -d "{\"nickname\":\"测试用户\",\"mobile\":\"13800138000\"}"
 ```
@@ -313,13 +313,13 @@ curl -X POST http://localhost:8080/api/users `
 ### 9.2 查询用户列表
 
 ```powershell
-curl "http://localhost:8080/api/users?page=1&size=10"
+curl "http://127.0.0.1:18080/api/users?page=1&size=10"
 ```
 
 ### 9.3 新增门店
 
 ```powershell
-curl -X POST http://localhost:8080/api/stores `
+curl -X POST http://127.0.0.1:18080/api/stores `
   -H "Content-Type: application/json" `
   -d "{\"storeName\":\"南山测试店\",\"address\":\"深圳市南山区测试路100号\"}"
 ```
@@ -329,7 +329,7 @@ curl -X POST http://localhost:8080/api/stores `
 这里假设上一步创建出的门店 ID 是 `1`：
 
 ```powershell
-curl -X POST http://localhost:8080/api/devices `
+curl -X POST http://127.0.0.1:18080/api/devices `
   -H "Content-Type: application/json" `
   -d "{\"storeId\":1,\"deviceName\":\"1号洗车机\"}"
 ```
@@ -343,7 +343,7 @@ curl -X POST http://localhost:8080/api/devices `
 - 设备 ID 是 `1`
 
 ```powershell
-curl -X POST http://localhost:8080/api/orders `
+curl -X POST http://127.0.0.1:18080/api/orders `
   -H "Content-Type: application/json" `
   -d "{\"userId\":1,\"storeId\":1,\"deviceId\":1,\"remark\":\"最小闭环测试订单\"}"
 ```
@@ -351,7 +351,7 @@ curl -X POST http://localhost:8080/api/orders `
 ### 9.6 查询订单列表
 
 ```powershell
-curl "http://localhost:8080/api/orders?page=1&size=10"
+curl "http://127.0.0.1:18080/api/orders?page=1&size=10"
 ```
 
 如果以上都成功，说明第一阶段目标已经基本达成：

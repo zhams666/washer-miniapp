@@ -8,3 +8,19 @@ export interface ResponseData<T = any> {
   msg?: string;
   message?: string;
 }
+
+export interface LoginCandidate {
+  id: number | string;
+  nickname?: string;
+  avatarUrl?: string;
+  mobile?: string;
+  openid?: string;
+  userNo?: string;
+  lastLoginTime?: string;
+}
+
+export interface LoginResponse {
+  status: number;
+  profile: IObject | null;
+  costomerId: number | string | null;
+}

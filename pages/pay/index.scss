@@ -10,7 +10,7 @@
   width: 100vw;
   height: 33vh;
   opacity: 1;
-  background: linear-gradient(135deg, #4d97ff 0%, #3377ff 100%);
+  background: linear-gradient(135deg, #2f9aa5 0%, #237b84 100%);
 }
 
 .card {
@@ -23,7 +23,7 @@
     background-color: #fff;
     border-radius: 24rpx;
     padding: 30rpx;
-    height: 50vh;
+    min-height: 50vh;
   }
 }
 
@@ -32,6 +32,49 @@
   font-size: 36rpx;
   margin-bottom: 44rpx;
   font-weight: bold;
+}
+
+.store-section {
+  margin-bottom: 30rpx;
+}
+
+.store-title {
+  color: #242526;
+  font-size: 28rpx;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+
+.store-picker {
+  height: 72rpx;
+  border-radius: 16rpx;
+  background: #f2f4f7;
+  display: flex;
+  align-items: center;
+  padding: 0 20rpx;
+  font-size: 26rpx;
+  color: #242526;
+}
+
+.store-confirm {
+  margin-top: 14rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 14rpx;
+  background: #eef8f7;
+  color: #237b84;
+  font-size: 24rpx;
+  line-height: 1.45;
+}
+
+.store-confirm--loading {
+  background: #f5f7fb;
+  color: #6b7280;
+}
+
+.store-hint {
+  margin-top: 12rpx;
+  color: #a66f1f;
+  font-size: 24rpx;
 }
 
 .list {
@@ -53,9 +96,16 @@
       font-size: 36rpx;
       font-weight: 600;
     }
+    .gift {
+      display: block;
+      margin-top: 6rpx;
+      font-size: 24rpx;
+      color: inherit;
+      opacity: 0.85;
+    }
     &.select {
       transition: all 0.4s ease-in-out;
-      background-color: #3377ff;
+      background-color: #2f9aa5;
       color: #fff;
     }
   }

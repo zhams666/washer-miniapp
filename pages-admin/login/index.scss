@@ -1,0 +1,156 @@
+@import "../../styles/theme";
+
+.page {
+  @include page-shell;
+}
+
+.container {
+  min-height: 70vh;
+  padding: 56rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.login-card {
+  @include card;
+  padding: 38rpx 32rpx;
+  border-color: #d9eff2;
+  background: linear-gradient(135deg, $color-card 0%, $color-primary-soft 100%);
+}
+
+.login-card__eyebrow {
+  color: $color-primary;
+  font-size: $font-micro;
+  font-weight: 800;
+}
+
+.login-card__title {
+  margin-top: 12rpx;
+  color: $color-text-primary;
+  font-size: 44rpx;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.login-card__desc {
+  margin-top: 16rpx;
+  color: $color-text-secondary;
+  font-size: $font-body;
+  line-height: 1.7;
+}
+
+.login-button {
+  @include cta-button;
+  width: 100%;
+  height: 92rpx;
+  margin-top: 42rpx;
+  border: 0;
+  font-size: 30rpx;
+}
+
+.login-button::after {
+  border: 0;
+}
+
+.exit-button {
+  width: 100%;
+  height: 86rpx;
+  margin-top: 22rpx;
+  border: 1rpx solid $color-cta-border;
+  border-radius: $radius-pill;
+  background: #ffffff;
+  color: $color-primary;
+  font-size: 28rpx;
+  font-weight: 800;
+  line-height: 86rpx;
+  text-align: center;
+}
+
+.exit-button::after {
+  border: 0;
+}
+
+.exit-button[disabled] {
+  opacity: 0.62;
+}
+
+.dev-login {
+  margin-top: 30rpx;
+}
+
+.dev-login__title {
+  color: $color-text-secondary;
+  font-size: $font-caption;
+  font-weight: 800;
+}
+
+.dev-login__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12rpx;
+  margin-top: 14rpx;
+}
+
+.dev-login__item {
+  min-height: 104rpx;
+  padding: 16rpx 10rpx;
+  border: 1rpx solid $color-border-light;
+  border-radius: $radius-control;
+  background: rgba(255, 255, 255, 0.78);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.dev-login__item-title {
+  color: $color-text-primary;
+  font-size: 24rpx;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.dev-login__item-desc {
+  margin-top: 8rpx;
+  color: $color-text-secondary;
+  font-size: 20rpx;
+  line-height: 1.35;
+}
+
+.bind-panel {
+  margin-top: 32rpx;
+  padding: 24rpx;
+  border-radius: $radius-card-sm;
+  background: $color-warning-soft;
+}
+
+.bind-panel__title {
+  color: $color-warning;
+  font-size: $font-body;
+  font-weight: 800;
+}
+
+.bind-panel__desc {
+  margin-top: 10rpx;
+  color: $color-text-secondary;
+  font-size: $font-caption;
+  line-height: 1.6;
+}
+
+.bind-panel__code {
+  margin-top: 16rpx;
+  padding: 18rpx;
+  border-radius: $radius-control;
+  background: rgba(255, 255, 255, 0.76);
+  color: $color-text-primary;
+  font-size: $font-micro;
+  word-break: break-all;
+}
+
+.bind-panel__debug {
+  margin-top: 14rpx;
+  padding: 16rpx;
+  border-radius: $radius-control;
+  background: rgba(255, 255, 255, 0.76);
+  color: $color-text-secondary;
+  font-size: 22rpx;
+  line-height: 1.5;
+  word-break: break-all;
+}

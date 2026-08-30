@@ -5,19 +5,55 @@
     <view class="user-card">
       <view class="user-card__top">
         <view class="user-card__profile">
-          <view class="user-card__avatar">
+          <button
+            wx:if="{{isLogin}}"
+            class="user-card__avatar user-card__avatar--button"
+            open-type="chooseAvatar"
+            bindchooseavatar="onLoggedInAvatarChoose"
+          >
+            <image class="user-card__avatar-image" mode="aspectFill" src="{{userInfo.avatarUrl}}"></image>
+            <view class="user-card__avatar-tip" wx:if="{{avatarUploading}}">上传中</view>
+          </button>
+          <view wx:else class="user-card__avatar">
             <image class="user-card__avatar-image" mode="aspectFit" src="{{userInfo.avatarUrl}}"></image>
           </view>
+
           <view class="user-card__info">
-            <view class="user-card__name">{{userInfo.nickName}}</view>
-            <view class="user-card__desc">{{userInfo.memberText}}</view>
+            <view class="user-card__name-row">
+              <view class="user-card__name">{{userInfo.nickName}}</view>
+              <view class="member-badge {{userInfo.memberBadgeClass}}">{{userInfo.memberBadgeText}}</view>
+            </view>
+            <view class="user-card__desc-row">
+              <view class="user-card__desc">{{userInfo.memberText}}</view>
+            </view>
           </view>
+
+          <button
+            class="user-card__login"
+            bindtap="openPhoneLoginModal"
+            loading="{{phoneLoginSubmitting}}"
+            disabled="{{phoneLoginSubmitting}}"
+          >
+            <text wx:if="{{phoneLoginSubmitting}}">登录中...</text>
+            <text wx:elif="{{isLogin}}">切换用户</text>
+            <text wx:else>手机号登录</text>
+          </button>
         </view>
-        <view class="user-card__more" bindtap="handleHeaderAction">更多</view>
+      </view>
+
+      <view class="member-panel {{userInfo.memberBadgeClass}}">
+        <view class="member-panel__title">{{userInfo.memberBadgeText}}</view>
+        <view class="member-panel__desc">{{userInfo.memberBenefitText}}</view>
+        <view class="member-panel__time" wx:if="{{userInfo.showMemberSince}}">
+          {{userInfo.memberSinceText}}
+        </view>
+        <view class="member-panel__action" wx:if="{{isLogin}}" bindtap="openMembershipPage">
+          {{userInfo.memberActionText}}
+        </view>
       </view>
 
       <view class="stats-card">
-        <view class="stats-item" wx:for="{{stats}}" wx:key="label">
+        <view class="stats-item" wx:for="{{stats}}" wx:key="label" data-key="{{item.key}}" bindtap="handleStatsTap">
           <view class="stats-item__value">{{item.value}}</view>
           <view class="stats-item__label">{{item.label}}</view>
         </view>
@@ -40,6 +76,170 @@
           <view class="menu-card__title">{{item.title}}</view>
         </view>
       </view>
+    </view>
+
+    <view class="admin-entry" data-key="admin" bindtap="handleMenuTap">进入管理端</view>
+  </view>
+
+  <view class="profile-mask" wx:if="{{showRegisterModal}}" bindtap="closeRegisterModal">
+    <view class="profile-modal" catchtap="noop">
+      <view class="profile-modal__handle"></view>
+      <view class="profile-modal__title">完善资料</view>
+      <view class="profile-modal__desc">可选择头像和昵称，后续会展示在个人中心和洗车时长榜单中。</view>
+      <button class="profile-avatar" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <image
+          wx:if="{{registerForm.avatarUrl}}"
+          class="profile-avatar__image"
+          mode="aspectFill"
+          src="{{registerForm.avatarUrl}}"
+        ></image>
+        <view wx:else class="profile-avatar__empty">
+          <image class="profile-avatar__icon" mode="aspectFit" src="/assets/icons/user.png"></image>
+          <text>选择头像</text>
+        </view>
+      </button>
+      <view class="profile-field">
+        <view class="profile-field__label">昵称</view>
+        <input
+          class="profile-field__input"
+          type="nickname"
+          maxlength="24"
+          placeholder="请输入或选择微信昵称"
+          value="{{registerForm.nickname}}"
+          bindinput="onNicknameInput"
+        />
+      </view>
+      <view class="profile-modal__actions">
+        <view class="profile-modal__cancel" bindtap="closeRegisterModal">暂不登录</view>
+        <view class="profile-modal__submit" bindtap="handleRegisterSubmit">
+          <text wx:if="{{registerSubmitting}}">提交中...</text>
+          <text wx:else>完成登录</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="profile-mask" wx:if="{{showNicknameModal}}" bindtap="closeNicknameModal">
+    <view class="profile-modal nickname-modal" catchtap="noop">
+      <view class="profile-modal__handle"></view>
+      <view class="profile-modal__title">修改昵称</view>
+      <view class="profile-modal__desc">昵称会展示在个人中心和洗车时长榜单中。</view>
+      <view class="profile-field">
+        <view class="profile-field__label">昵称</view>
+        <input
+          class="profile-field__input"
+          type="nickname"
+          maxlength="24"
+          placeholder="请输入新的昵称"
+          value="{{nicknameForm.nickname}}"
+          bindinput="onEditNicknameInput"
+          focus="{{showNicknameModal}}"
+        />
+      </view>
+      <view class="profile-modal__actions">
+        <view class="profile-modal__cancel" bindtap="closeNicknameModal">取消</view>
+        <view class="profile-modal__submit" bindtap="handleNicknameSubmit">
+          <text wx:if="{{nicknameSubmitting}}">保存中...</text>
+          <text wx:else>保存昵称</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="phone-auth-mask" wx:if="{{showPhoneLoginModal}}" bindtap="closePhoneLoginModal">
+    <view class="phone-auth-panel" catchtap="noop">
+      <view class="phone-auth-head">
+        <view class="phone-auth-brand">
+          <image class="phone-auth-logo" mode="aspectFill" src="/assets/icons/car.png"></image>
+          <view class="phone-auth-app">海豚洗车</view>
+        </view>
+        <view class="phone-auth-info">i</view>
+      </view>
+
+      <view class="phone-auth-title">申请获取并验证你的手机号</view>
+      <view class="phone-auth-subtitle">用于登录、订单记录和账户识别</view>
+
+      <button
+        class="phone-auth-wechat {{phoneLoginSubmitting ? 'disabled' : ''}}"
+        open-type="getPhoneNumber"
+        bindgetphonenumber="handlePhoneLogin"
+        loading="{{phoneLoginSubmitting}}"
+        disabled="{{phoneLoginSubmitting}}"
+      >
+        微信授权手机号登录
+      </button>
+
+      <view class="phone-auth-fallback" wx:if="{{showPhoneFallbackLogin}}">
+        <view class="phone-auth-fallback-title">真机测试备用登录</view>
+        <view class="phone-auth-fallback-desc">当前小程序未开通手机号接口，可先输入手机号完成业务测试。</view>
+        <view class="phone-auth-test-list">
+          <view
+            wx:for="{{testLoginAccounts}}"
+            wx:key="mobile"
+            class="phone-auth-test-account {{phoneLoginSubmitting ? 'disabled' : ''}}"
+            data-mobile="{{item.mobile}}"
+            bindtap="handleTestAccountLogin"
+            hover-class="phone-auth-test-account--hover"
+          >
+            <view class="phone-auth-test-name">{{item.nickname}}</view>
+            <view class="phone-auth-test-mobile">{{item.display}}</view>
+          </view>
+        </view>
+        <input
+          class="phone-auth-fallback-input"
+          type="number"
+          maxlength="11"
+          placeholder="请输入手机号"
+          value="{{fallbackMobile}}"
+          bindinput="onFallbackMobileInput"
+        />
+        <view
+          class="phone-auth-fallback-button {{phoneLoginSubmitting ? 'disabled' : ''}}"
+          bindtap="handleFallbackMobileLogin"
+        >
+          手机号测试登录
+        </view>
+      </view>
+
+      <view class="phone-auth-history" wx:if="{{loginMobileOptions.length > 0}}">
+        <view class="phone-auth-history-title">曾用手机号</view>
+        <view class="phone-auth-list">
+          <view
+            wx:for="{{loginMobileOptions}}"
+            wx:key="mobile"
+            class="phone-auth-option {{phoneLoginSubmitting ? 'disabled' : ''}}"
+            data-mobile="{{item.mobile}}"
+            bindtap="handleHistoryMobileLogin"
+            hover-class="phone-auth-option--hover"
+          >
+            <view class="phone-auth-number">{{item.display}}</view>
+            <view class="phone-auth-last" wx:if="{{item.isLastUsed}}">上次使用</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="phone-auth-empty" wx:else>暂无曾用手机号</view>
+
+      <view class="phone-auth-deny {{phoneLoginSubmitting ? 'disabled' : ''}}" bindtap="closePhoneLoginModal">
+        不允许
+      </view>
+    </view>
+  </view>
+
+  <view class="mask" wx:if="{{showBalanceDetail}}" bindtap="closeBalanceDetail">
+    <view class="modal" catchtap="noop">
+      <view class="modal-title">余额明细</view>
+      <view class="modal-row">
+        <text class="label">通用余额</text>
+        <text class="value">{{principalBalance}}</text>
+      </view>
+      <view class="modal-subtitle">门店赠送余额</view>
+      <view class="store-row" wx:for="{{giftBalances}}" wx:key="storeId">
+        <text class="label">{{item.storeName}}</text>
+        <text class="value">{{item.giftBalance}}</text>
+      </view>
+      <view class="empty" wx:if="{{giftBalances.length == 0}}">暂无赠送余额</view>
+      <view class="modal-btn" bindtap="closeBalanceDetail">我知道了</view>
     </view>
   </view>
 </view>

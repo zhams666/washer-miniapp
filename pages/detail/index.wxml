@@ -1,9 +1,9 @@
 <view class="page">
-  <Navbar showBackIcon="{{true}}" title="Order Detail" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
+  <Navbar showBackIcon="{{true}}" title="订单详情" borderBottom="{{false}}" bottomShadow="{{true}}"></Navbar>
 
   <view class="container">
     <view class="section-card">
-      <view class="section-card__title">Order Main Info</view>
+      <view class="section-card__title">订单信息</view>
       <view class="field-list">
         <view class="field-row" wx:for="{{detailFields}}" wx:key="label">
           <view class="field-row__label">{{item.label}}</view>
@@ -13,35 +13,35 @@
     </view>
 
     <view class="section-card section-card--logs">
-      <view class="section-card__title">Payment Details</view>
+      <view class="section-card__title">支付明细</view>
 
       <view wx:if="{{paymentDetails.length > 0}}">
         <view class="log-card" wx:for="{{paymentDetails}}" wx:key="id">
-          <view class="log-card__line">Source: {{item.sourceType}}</view>
-          <view class="log-card__line">Amount Type: {{item.amountType}}</view>
-          <view class="log-card__line">Amount: {{item.amount}}</view>
-          <view class="log-card__line">Deduct Times: {{item.deductTimes}}</view>
-          <view class="log-card__line">Settle Stage: {{item.settleStage}}</view>
-          <view class="log-card__line">Allocation: {{item.allocationStrategy}}</view>
+          <view class="log-card__line">来源：{{item.sourceType}}</view>
+          <view class="log-card__line">类型：{{item.amountType}}</view>
+          <view class="log-card__line">金额：{{item.amount}}</view>
+          <view class="log-card__line">核销次数：{{item.deductTimes}}</view>
+          <view class="log-card__line">结算阶段：{{item.settleStage}}</view>
+          <view class="log-card__line">分配策略：{{item.allocationStrategy}}</view>
           <view class="log-card__time">{{item.createdAt}}</view>
         </view>
       </view>
 
-      <view class="empty-text" wx:else>No payment details yet.</view>
+      <view class="empty-text" wx:else>暂无支付明细</view>
     </view>
 
     <view class="section-card section-card--logs">
-      <view class="section-card__title">Status Logs</view>
+      <view class="section-card__title">状态记录</view>
 
       <view wx:if="{{statusLogs.length > 0}}">
         <view class="log-card" wx:for="{{statusLogs}}" wx:key="id">
-          <view class="log-card__line">Status: {{item.fromStatus}} -> {{item.toStatus}}</view>
-          <view class="log-card__line">Action: {{item.actionType}}</view>
+          <view class="log-card__line">状态：{{item.fromStatus}} -> {{item.toStatus}}</view>
+          <view class="log-card__line">动作：{{item.actionType}}</view>
           <view class="log-card__time">{{item.createdAt}}</view>
         </view>
       </view>
 
-      <view class="empty-text" wx:else>No status logs yet.</view>
+      <view class="empty-text" wx:else>暂无状态记录</view>
     </view>
   </view>
 </view>

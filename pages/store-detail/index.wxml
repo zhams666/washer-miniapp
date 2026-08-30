@@ -1,0 +1,69 @@
+<view class="page">
+  <Navbar title="店铺详情" borderBottom="{{false}}" bottomShadow="{{false}}"></Navbar>
+
+  <view class="content">
+    <view class="store-card">
+      <view class="cover-wrap">
+        <image class="cover" mode="aspectFill" src="{{coverImage}}"></image>
+      </view>
+
+      <view class="store-info">
+        <view class="store-main">
+          <view class="store-name">{{name || 'POP自助洗车'}}</view>
+          <view class="price-line">￥{{minimumStartAmount || '6.00'}}/10分钟 <text>（超出后￥0.5/分钟）</text></view>
+          <view class="address-line" wx:if="{{hasAddress}}">{{address}}</view>
+        </view>
+
+        <view class="store-actions">
+          <view class="circle-action" bindtap="handleNav">
+            <text class="circle-icon">➤</text>
+            <text class="circle-label">导航</text>
+          </view>
+          <view class="circle-action" bindtap="handlePhoneCall">
+            <text class="circle-icon">☎</text>
+            <text class="circle-label">电话</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="tabs">
+      <view class="tab active">工位</view>
+      <view class="tab" bindtap="handleRecharge">店铺充值</view>
+      <view class="tab" bindtap="handleCard">通用充值</view>
+    </view>
+
+    <view class="start-strip {{idleBays <= 0 ? 'is-queue' : ''}}" bindtap="handleStartWash">
+      <view class="start-title">{{idleBays > 0 ? '开始洗车' : '排队洗车'}} <text class="hourglass">⌛</text></view>
+      <view class="start-desc" wx:if="{{queueActive}}">前方排队 {{queueAheadCount}} 人</view>
+      <view class="start-desc" wx:elif="{{selectedBayName}}">已选择 {{selectedBayName}}</view>
+      <view class="start-desc" wx:elif="{{idleBays > 0}}">选择工位开始洗车</view>
+      <view class="start-desc" wx:else>100米内可排队</view>
+    </view>
+
+    <view class="bay-grid">
+      <view
+        class="bay-tile is-{{item.stateClass}} {{item.selected ? 'is-selected' : ''}}"
+        wx:for="{{bays}}"
+        wx:key="id"
+        data-bay-id="{{item.bayId}}"
+        data-device-id="{{item.deviceId}}"
+        data-can-start="{{item.canStart}}"
+        bindtap="handleBayStart"
+      >
+        <view class="door-panel">
+          <view class="door-stripes"></view>
+          <view class="door-text">{{item.actionText}}</view>
+        </view>
+        <view class="bay-name">工位 #{{index + 1}}</view>
+        <view class="bay-badge {{item.stateClass}}">
+          {{item.stateText}}
+        </view>
+      </view>
+    </view>
+
+    <view class="bay-empty" wx:if="{{bays.length == 0}}">
+      暂无工位数据
+    </view>
+  </view>
+</view>

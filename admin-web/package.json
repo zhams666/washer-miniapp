@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "dev:local": "vite --host 127.0.0.1 --port 18073",
+    "check": "vue-tsc --noEmit",
+    "build": "npm run check && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

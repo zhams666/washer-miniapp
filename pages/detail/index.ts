@@ -4,6 +4,8 @@ import {
   getOrderStatusLogs,
 } from '../../apis/order';
 
+let detailRefreshTimer: number | undefined;
+
 type FieldItem = {
   label: string;
   value: string;
@@ -51,6 +53,14 @@ Page({
     this.loadOrderDetail(orderId);
   },
 
+  onHide() {
+    this.stopDetailPolling();
+  },
+
+  onUnload() {
+    this.stopDetailPolling();
+  },
+
   async loadOrderDetail(orderId: number) {
     this.setData({ loading: true });
 
@@ -71,6 +81,7 @@ Page({
         statusLogs: this.mapStatusLogs(logs),
         paymentDetails: this.mapPaymentDetails(paymentDetails),
       });
+      this.updateDetailPolling(String(detail.orderStatus || ''));
     } catch (error) {
       this.setData({ loading: false });
       wx.showToast({
@@ -82,30 +93,45 @@ Page({
   },
 
   mapDetailFields(detail: Record<string, any>) {
-    return [
-      { label: 'Order No', value: this.formatValue(detail.orderNo) },
-      { label: 'User ID', value: this.formatValue(detail.userId) },
-      { label: 'Store ID', value: this.formatValue(detail.storeId) },
-      { label: 'Device ID', value: this.formatValue(detail.deviceId) },
-      { label: 'Estimated Amount', value: this.formatAmount(detail.estimatedAmount) },
-      {
-        label: 'First Period Discount Used',
-        value: Number(detail.isFirstPeriodDiscountUsed || 0) === 1 ? 'Yes' : 'No',
-      },
-      { label: 'First Period Discount Amount', value: this.formatAmount(detail.firstPeriodDiscountAmount) },
-      { label: 'Order Status', value: this.formatValue(detail.orderStatus) },
-      { label: 'Pay Mode', value: this.formatValue(detail.payMode) },
-      { label: 'Payment Status', value: this.formatValue(detail.paymentStatus) },
-      { label: 'Paid Amount', value: this.formatAmount(detail.paidAmount) },
-      { label: 'Final Amount', value: this.formatAmount(this.resolveFinalAmount(detail)) },
-      { label: 'Card Usage ID', value: this.formatValue(detail.cardUsageId) },
-      { label: 'Card Deduct Times', value: this.formatValue(detail.cardDeductTimes) },
-      { label: 'Start Time', value: this.formatTime(detail.startTime) },
-      { label: 'End Time', value: this.formatTime(detail.endTime) },
-      { label: 'Settle Time', value: this.formatTime(detail.settleTime) },
-      { label: 'Remark', value: this.formatValue(detail.remark) },
-      { label: 'Created At', value: this.formatTime(detail.createdAt) },
+    const isCardOrder = String(detail.payMode || '').toLowerCase() === 'card';
+    const fields: FieldItem[] = [
+      { label: '订单号', value: this.formatValue(detail.orderNo) },
+      { label: '用户 ID', value: this.formatValue(detail.userId) },
+      { label: '门店 ID', value: this.formatValue(detail.storeId) },
+      { label: '设备 ID', value: this.formatValue(detail.deviceId) },
+      { label: '订单状态', value: this.formatStatus(detail.orderStatus) },
+      { label: '支付方式', value: isCardOrder ? '次卡支付' : '钱包支付' },
+      { label: '支付状态', value: this.formatValue(detail.paymentStatus) },
     ];
+
+    if (isCardOrder) {
+      fields.push(
+        { label: '次卡状态', value: detail.orderStatus === 'running' ? '使用次卡中' : '已核销次卡' },
+        { label: '次卡时长', value: '30 分钟' },
+        { label: '核销次数', value: `${Number(detail.cardDeductTimes || 1)} 次` }
+      );
+    } else {
+      fields.push(
+        { label: '预估金额', value: this.formatAmount(detail.estimatedAmount) },
+        {
+          label: '优惠券',
+          value: Number(detail.isFirstPeriodDiscountUsed || 0) === 1 ? '已使用' : '未使用',
+        },
+        { label: '优惠金额', value: this.formatAmount(detail.firstPeriodDiscountAmount) },
+        { label: '实付金额', value: this.formatAmount(detail.paidAmount) },
+        { label: '订单金额', value: this.formatAmount(this.resolveFinalAmount(detail)) }
+      );
+    }
+
+    fields.push(
+      { label: '开始时间', value: this.formatTime(detail.startTime) },
+      { label: '结束时间', value: this.formatTime(detail.endTime) },
+      { label: '结算时间', value: this.formatTime(detail.settleTime) },
+      { label: '备注', value: this.formatValue(detail.remark) },
+      { label: '创建时间', value: this.formatTime(detail.createdAt) }
+    );
+
+    return fields;
   },
 
   mapStatusLogs(logs: Record<string, any>[]) {
@@ -129,14 +155,55 @@ Page({
 
     return details.map((item: Record<string, any>) => ({
       id: Number(item.id || 0),
-      sourceType: this.formatValue(item.sourceType),
-      amountType: this.formatValue(item.amountType),
-      amount: this.formatAmount(item.amount),
+      sourceType: this.formatSourceType(item.sourceType),
+      amountType: this.formatAmountType(item.amountType),
+      amount: String(item.sourceType || '').toLowerCase() === 'card'
+        ? '不计金额'
+        : this.formatAmount(item.amount),
       deductTimes: this.formatValue(item.deductTimes),
       settleStage: this.formatValue(item.settleStage),
       allocationStrategy: this.formatValue(item.allocationStrategy),
       createdAt: this.formatTime(item.createdAt),
     }));
+  },
+
+  formatStatus(value: unknown) {
+    const status = String(value || '');
+    const statusMap: Record<string, string> = {
+      pending: '待启动',
+      running: '洗车中',
+      completed: '已完成',
+      cancelled: '已取消',
+      canceled: '已取消',
+      failed: '已失败',
+      closed: '已关闭',
+    };
+    return statusMap[status] || this.formatValue(value);
+  },
+
+  formatSourceType(value: unknown) {
+    const text = String(value || '').toLowerCase();
+    if (text === 'card') {
+      return '次卡';
+    }
+    if (text === 'wallet') {
+      return '钱包';
+    }
+    return this.formatValue(value);
+  },
+
+  formatAmountType(value: unknown) {
+    const text = String(value || '').toLowerCase();
+    if (text === 'principal') {
+      return '余额';
+    }
+    if (text === 'gift') {
+      return '赠送余额';
+    }
+    if (text === 'card') {
+      return '次卡';
+    }
+    return this.formatValue(value);
   },
 
   formatValue(value: unknown) {
@@ -178,5 +245,32 @@ Page({
       return 'N/A';
     }
     return String(value).replace('T', ' ').slice(0, 19);
+  },
+
+  updateDetailPolling(orderStatus: string) {
+    if (orderStatus === 'running') {
+      this.startDetailPolling();
+      return;
+    }
+    this.stopDetailPolling();
+  },
+
+  startDetailPolling() {
+    if (detailRefreshTimer !== undefined) {
+      return;
+    }
+    detailRefreshTimer = setInterval(() => {
+      const orderId = Number(this.data.orderId || 0);
+      if (orderId) {
+        this.loadOrderDetail(orderId);
+      }
+    }, 15000) as unknown as number;
+  },
+
+  stopDetailPolling() {
+    if (detailRefreshTimer !== undefined) {
+      clearInterval(detailRefreshTimer);
+      detailRefreshTimer = undefined;
+    }
   },
 });

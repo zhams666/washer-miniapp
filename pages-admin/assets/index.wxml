@@ -1,0 +1,111 @@
+<view class="page">
+  <Navbar title="用户资产" customBackPath="/pages-admin/home/index" customBackPathIsTabbar="{{false}}"></Navbar>
+
+  <view class="container">
+    <view class="filter-card">
+      <picker mode="selector" range="{{storePickerOptions}}" value="{{selectedStoreIndex}}" bindchange="handleStoreChange">
+        <view class="picker-row">
+          <text>{{storePickerOptions[selectedStoreIndex]}}</text>
+          <label>操作门店</label>
+        </view>
+      </picker>
+      <view class="search-row">
+        <input value="{{keyword}}" placeholder="用户ID/手机号/昵称" bindinput="handleKeywordInput" confirm-type="search" bindconfirm="searchUsers" />
+        <view class="search-button" bindtap="searchUsers">搜索</view>
+      </view>
+    </view>
+
+    <view class="user-list" wx:if="{{users.length}}">
+      <view
+        wx:for="{{users}}"
+        wx:key="id"
+        class="user-card {{selectedUser && selectedUser.id === item.id ? 'is-active' : ''}}"
+        data-index="{{index}}"
+        bindtap="handleUserTap"
+      >
+        <view>
+          <view class="user-card__name">{{item.nickname || item.realName || '用户' + item.id}}</view>
+          <view class="user-card__meta">ID {{item.id}} / {{item.mobile || '未留手机号'}}</view>
+        </view>
+        <view class="user-card__asset">
+          <text>¥{{item.principalBalance || '0.00'}} + {{item.giftBalance || '0.00'}}</text>
+          <label>次卡 {{item.remainingCardTimes || 0}}</label>
+        </view>
+      </view>
+    </view>
+
+    <view class="asset-card" wx:if="{{summary}}">
+      <view class="section-head">
+        <view>
+          <view class="section-title">{{summary.nickname || summary.realName || '用户' + summary.userId}}</view>
+          <view class="section-subtitle">{{summary.storeName}} / 用户ID {{summary.userId}}</view>
+        </view>
+      </view>
+      <view class="asset-grid">
+        <view>
+          <text>{{summary.principalText}}</text>
+          <label>通用余额</label>
+        </view>
+        <view>
+          <text>{{summary.giftText}}</text>
+          <label>赠送余额</label>
+        </view>
+        <view>
+          <text>{{summary.totalText}}</text>
+          <label>合计余额</label>
+        </view>
+        <view>
+          <text>{{summary.remainingCardTimes || 0}}</text>
+          <label>剩余次卡</label>
+        </view>
+      </view>
+    </view>
+
+    <view class="operation-card" wx:if="{{summary}}">
+      <view class="section-title">钱包加减</view>
+      <view class="segmented">
+        <view class="{{walletChangeType === 'in' ? 'is-active' : ''}}" bindtap="setWalletIn">加款</view>
+        <view class="{{walletChangeType === 'out' ? 'is-active' : ''}}" bindtap="setWalletOut">扣款</view>
+      </view>
+      <view class="form-grid">
+        <input type="digit" value="{{walletPrincipalAmount}}" placeholder="通用金额" bindinput="onWalletPrincipalInput" />
+        <input type="digit" value="{{walletGiftAmount}}" placeholder="赠送金额" bindinput="onWalletGiftInput" />
+      </view>
+      <textarea value="{{walletRemark}}" maxlength="120" placeholder="备注，例如补偿活动、误充值修正" bindinput="onWalletRemarkInput"></textarea>
+      <button class="submit-button" loading="{{submitting}}" bindtap="submitWalletAdjust">提交钱包调整</button>
+    </view>
+
+    <view class="operation-card operation-card--fine" wx:if="{{summary}}">
+      <view class="section-title">罚款</view>
+      <input type="digit" value="{{fineAmount}}" placeholder="罚款金额" bindinput="onFineAmountInput" />
+      <textarea value="{{fineRemark}}" maxlength="120" placeholder="罚款原因，例如拿走毛巾、损坏设备配件" bindinput="onFineRemarkInput"></textarea>
+      <button class="submit-button submit-button--warning" loading="{{submitting}}" bindtap="submitFine">提交罚款</button>
+    </view>
+
+    <view class="operation-card" wx:if="{{summary}}">
+      <view class="section-title">次卡增减</view>
+      <picker mode="selector" range="{{cardPickerOptions}}" value="{{selectedCardIndex}}" bindchange="handleCardChange">
+        <view class="picker-row picker-row--inner">
+          <text>{{cardPickerOptions[selectedCardIndex]}}</text>
+          <label>目标次卡</label>
+        </view>
+      </picker>
+      <input type="number" value="{{cardDeltaTimes}}" placeholder="次数，增加填正数，减少填负数" bindinput="onCardDeltaInput" />
+      <textarea value="{{cardRemark}}" maxlength="120" placeholder="备注，例如补偿1次、核销异常修正" bindinput="onCardRemarkInput"></textarea>
+      <button class="submit-button" loading="{{submitting}}" bindtap="submitCardAdjust">提交次卡调整</button>
+    </view>
+
+    <view class="card-list" wx:if="{{cards.length}}">
+      <view class="section-title">用户次卡</view>
+      <view wx:for="{{cards}}" wx:key="id" class="card-item">
+        <view>
+          <view class="card-item__title">{{item.cardNo}}</view>
+          <view class="card-item__meta">{{item.cardType}} / {{item.status}}</view>
+        </view>
+        <view class="card-item__times">剩 {{item.remainingTimes || 0}} 次</view>
+      </view>
+    </view>
+
+    <view wx:if="{{!users.length && !loading}}" class="empty-text">请选择门店并搜索用户</view>
+  </view>
+</view>

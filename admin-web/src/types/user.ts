@@ -8,6 +8,8 @@ export interface AdminUserItem {
   registerSource?: string;
   isMember?: number | null;
   memberLevel?: string;
+  points?: number | null;
+  memberExpireTime?: string;
   lastConsumeTime?: string;
   createdAt?: string;
 }
@@ -17,6 +19,99 @@ export interface AdminUserPageResult {
   total: number;
   size: number;
   current: number;
+}
+
+export interface AdminUserFormPayload {
+  userNo?: string;
+  nickname?: string;
+  realName?: string;
+  mobile?: string;
+  userStatus?: number | null;
+  remark?: string;
+}
+
+export interface AdminManualRechargePayload {
+  userId: number;
+  storeId: number;
+  principalAmount?: number | null;
+  giftAmount?: number | null;
+  remark?: string;
+}
+
+export interface AdminManualRefundPayload {
+  userId: number;
+  storeId: number;
+  principalAmount?: number | null;
+  remark?: string;
+}
+
+export interface AdminManualFinePayload {
+  userId: number;
+  storeId: number;
+  amount?: number | null;
+  remark?: string;
+}
+
+export interface AdminUserCardQueryParams {
+  page: number;
+  size: number;
+  storeId?: number;
+  status?: string;
+  cardNo?: string;
+}
+
+export interface AdminUserCardPageItem {
+  id: number;
+  userId?: number | null;
+  storeId?: number | null;
+  storeName?: string;
+  cardProductId?: number | null;
+  cardType?: string;
+  sourceChannel?: string;
+  cardNo?: string;
+  totalTimes?: number | null;
+  usedTimes?: number | null;
+  remainingTimes?: number | null;
+  purchaseTime?: string;
+  effectiveTime?: string;
+  expireTime?: string;
+  status?: string;
+  externalOrderNo?: string;
+  remark?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminUserCardPageResult {
+  records: AdminUserCardPageItem[];
+  total: number;
+  size: number;
+  current: number;
+}
+
+export interface AdminUserCardDetail {
+  card: AdminUserCardPageItem;
+  usageRecords: AdminUserCardUsageItem[];
+}
+
+export interface AdminUserCardManualAddPayload {
+  storeId: number;
+  count: number;
+  effectiveTime?: string;
+  expireTime?: string;
+  remark?: string;
+}
+
+export interface AdminUserCardManualReducePayload {
+  storeId?: number;
+  count?: number;
+  userCardIds?: number[];
+  remark?: string;
+}
+
+export interface AdminUserCardAdjustResult {
+  affectedCount: number;
+  userCardIds: number[];
 }
 
 export interface AdminUserWalletAsset {
@@ -99,7 +194,9 @@ export interface AdminUserOverview {
   registerSource?: string;
   isMember?: number | null;
   memberLevel?: string;
+  points?: number | null;
   memberSinceTime?: string;
+  memberExpireTime?: string;
   lastLoginTime?: string;
   lastConsumeTime?: string;
   remark?: string;

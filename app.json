@@ -2,62 +2,94 @@
   "entryPagePath": "pages/home/index",
   "pages": [
     "pages/home/index",
+    "pages/ranking/index",
+    "pages/voucher-redeem/index",
+    "pages/points-mall/index",
     "pages/mine/index",
     "pages/message/index",
     "pages/order/index",
     "pages/discount/index",
     "pages/wallet/index",
-    "pages/submit/index",
-    "pages/wash/index",
+    "pages/member/index",
     "pages/washing/index",
     "pages/service/index",
+    "pages/store-detail/index",
+    "pages/card-purchase/index",
     "pages/question/index",
     "pages/pay/index",
+    "pages/pay-result/index",
     "pages/detail/index",
-    "pages/exchange/index"
+    "pages/exchange/index",
+    "pages/device-docs/index",
+    "pages/wash-docs/index",
+    "pages/invitation/index"
   ],
+  "subPackages": [
+    {
+      "root": "pages-admin",
+      "pages": [
+        "login/index",
+        "home/index",
+        "devices/index",
+        "orders/index",
+        "finance/index",
+        "assets/index",
+        "features/index",
+        "profile/index"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/mine/index": {
+      "network": "all",
+      "packages": [
+        "pages-admin"
+      ]
+    }
+  },
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#fff",
+    "navigationBarBackgroundColor": "#FFFFFF",
     "navigationBarTitleText": "自助洗车",
     "navigationBarTextStyle": "black",
     "navigationStyle": "custom"
   },
   "tabBar": {
-    "color": "#666666",
-    "selectedColor": "#f5b400",
-    "backgroundColor": "#ffffff",
+    "custom": true,
+    "color": "#6B7280",
+    "selectedColor": "#2F9AA5",
+    "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/home/index",
         "text": "首页",
-        "iconPath": "assets/icons/car.png",
-        "selectedIconPath": "assets/icons/car.png"
+        "iconPath": "assets/icons/tab-home.png",
+        "selectedIconPath": "assets/icons/tab-home-active.png"
       },
       {
         "pagePath": "pages/service/index",
         "text": "门店",
-        "iconPath": "assets/icons/market.png",
-        "selectedIconPath": "assets/icons/market.png"
+        "iconPath": "assets/icons/tab-store.png",
+        "selectedIconPath": "assets/icons/tab-store-active.png"
       },
       {
-        "pagePath": "pages/question/index",
-        "text": "教程",
-        "iconPath": "assets/icons/question.png",
-        "selectedIconPath": "assets/icons/question.png"
+        "pagePath": "pages/ranking/index",
+        "text": "榜单",
+        "iconPath": "assets/icons/tab-ranking.png",
+        "selectedIconPath": "assets/icons/tab-ranking-active.png"
       },
       {
         "pagePath": "pages/order/index",
         "text": "订单",
-        "iconPath": "assets/icons/order.png",
-        "selectedIconPath": "assets/icons/order.png"
+        "iconPath": "assets/icons/tab-order.png",
+        "selectedIconPath": "assets/icons/tab-order-active.png"
       },
       {
         "pagePath": "pages/mine/index",
         "text": "我的",
-        "iconPath": "assets/icons/user.png",
-        "selectedIconPath": "assets/icons/user.png"
+        "iconPath": "assets/icons/tab-mine.png",
+        "selectedIconPath": "assets/icons/tab-mine-active.png"
       }
     ]
   },

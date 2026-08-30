@@ -1,0 +1,112 @@
+@import "../../styles/theme";
+
+.page {
+  @include page-shell;
+}
+
+.container {
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.profile-card,
+.list-card {
+  @include card;
+}
+
+.profile-card {
+  padding: 30rpx;
+  background: linear-gradient(135deg, $color-primary-light 0%, $color-card 72%);
+}
+
+.profile-card__name {
+  color: $color-text-primary;
+  font-size: 40rpx;
+  font-weight: 800;
+}
+
+.profile-card__meta {
+  margin-top: 12rpx;
+  color: $color-text-secondary;
+  font-size: $font-caption;
+}
+
+.profile-card__no {
+  margin-top: 18rpx;
+  color: $color-primary;
+  font-size: $font-micro;
+  font-weight: 800;
+}
+
+.section {
+  margin-top: 28rpx;
+}
+
+.section-title {
+  margin-bottom: 16rpx;
+  color: $color-text-primary;
+  font-size: $font-section-title;
+  font-weight: 800;
+}
+
+.list-card {
+  padding: 6rpx 24rpx;
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 88rpx;
+  border-bottom: 1rpx solid $color-border-light;
+}
+
+.list-item:last-child {
+  border-bottom: 0;
+}
+
+.list-item text {
+  color: $color-text-primary;
+  font-size: $font-body;
+  font-weight: 700;
+}
+
+.list-item label {
+  color: $color-text-tertiary;
+  font-size: $font-micro;
+}
+
+.permission-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+}
+
+.permission-pill {
+  @include pill;
+  min-height: 44rpx;
+  padding: 0 18rpx;
+  background: $color-primary-light;
+  color: $color-primary;
+  font-size: $font-micro;
+  font-weight: 800;
+}
+
+.logout-button {
+  @include outline-button;
+  width: 100%;
+  height: 86rpx;
+  margin-top: 42rpx;
+  font-size: $font-body;
+}
+
+.logout-button::after {
+  border: 0;
+}
+
+.empty-text {
+  padding: 34rpx 0;
+  color: $color-text-tertiary;
+  font-size: $font-caption;
+  text-align: center;
+}

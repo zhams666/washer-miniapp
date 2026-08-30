@@ -1,128 +1,196 @@
+@import "../../styles/theme";
+
 .page {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: #e9e9e9;
+  color: #111111;
+  box-sizing: border-box;
 }
 
 .container {
-  padding: 24rpx 24rpx calc(140rpx + env(safe-area-inset-bottom));
+  padding: 20rpx 22rpx calc(132rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
 }
 
-.top-card,
 .store-card {
-  background: #ffffff;
+  margin-bottom: 24rpx;
+  padding: 26rpx 24rpx 22rpx;
   border-radius: 28rpx;
-  box-shadow: 0 10rpx 24rpx rgba(0, 0, 0, 0.04);
+  background: #ffffff;
+  box-sizing: border-box;
 }
 
-.top-card {
-  padding: 30rpx;
+.card-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22rpx;
 }
 
-.top-card__title {
-  color: #222222;
-  font-size: 32rpx;
-  font-weight: 600;
+.store-copy {
+  flex: 1;
+  min-width: 0;
 }
 
-.top-card__desc {
-  margin-top: 10rpx;
-  color: #888888;
-  font-size: 24rpx;
-  line-height: 1.7;
+.store-name {
+  color: #050505;
+  font-size: 34rpx;
+  font-weight: 900;
+  line-height: 1.28;
 }
 
-.store-list {
+.info-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
+  margin-top: 16rpx;
+  color: #3d3d3d;
+  font-size: 26rpx;
+  line-height: 1.34;
+}
+
+.info-icon {
+  width: 28rpx;
+  height: 28rpx;
+  flex-shrink: 0;
+  border-radius: 6rpx;
+  background: #050505;
+  color: #ffffff;
+  font-size: 20rpx;
+  font-weight: 900;
+  line-height: 28rpx;
+  text-align: center;
+}
+
+.address-text {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.store-side {
+  width: 160rpx;
+  flex-shrink: 0;
+  padding-top: 54rpx;
+}
+
+.store-cover {
+  width: 144rpx;
+  height: 144rpx;
+  margin-left: auto;
+  display: block;
+  border-radius: 24rpx;
+  background: #eef0f2;
+}
+
+.share-link {
+  margin-top: 22rpx;
+  color: #3587bb;
+  font-size: 22rpx;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
   margin-top: 24rpx;
 }
 
-.store-card {
-  overflow: hidden;
-  margin-bottom: 24rpx;
+.feature-tag {
+  height: 42rpx;
+  padding: 0 16rpx;
+  border-radius: 4rpx;
+  background: #fff7f2;
+  color: #55463b;
+  font-size: 24rpx;
+  font-weight: 800;
+  line-height: 42rpx;
 }
 
-.store-card__image {
-  width: 100%;
-  height: 240rpx;
-  display: block;
-  background: #f0f0f0;
+.divider {
+  height: 1rpx;
+  margin-top: 24rpx;
+  background: #ececec;
 }
 
-.store-card__body {
-  padding: 28rpx;
-}
-
-.store-card__header,
-.store-card__footer {
+.bottom-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 18rpx;
+  padding-top: 22rpx;
 }
 
-.store-card__name {
-  width: 70%;
-  color: #222222;
-  font-size: 32rpx;
-  font-weight: 600;
+.bay-summary {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
 }
 
-.store-card__status {
-  min-width: 104rpx;
-  height: 44rpx;
-  padding: 0 16rpx;
-  border-radius: 999rpx;
-  text-align: center;
-  line-height: 44rpx;
-  font-size: 22rpx;
+.dot-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  flex-shrink: 0;
 }
 
-.status-open {
-  background: #fff4cf;
-  color: #9a6700;
+.status-dot {
+  width: 22rpx;
+  height: 22rpx;
+  border-radius: 50%;
+  display: block;
 }
 
-.status-idle {
-  background: #edf7ec;
-  color: #4b8b45;
+.status-dot.idle {
+  background: #10f35a;
 }
 
-.status-busy {
-  background: #fff0eb;
-  color: #d0663d;
+.status-dot.busy {
+  background: #f6c21f;
 }
 
-.store-card__meta,
-.store-card__desc,
-.store-card__notice {
-  color: #888888;
-  font-size: 24rpx;
-  line-height: 1.7;
+.status-dot.disabled {
+  background: #e5231f;
 }
 
-.store-card__meta {
-  margin-top: 12rpx;
-}
-
-.store-card__desc {
-  margin-top: 10rpx;
-}
-
-.store-card__footer {
-  margin-top: 20rpx;
-}
-
-.store-card__notice {
-  width: 72%;
-}
-
-.store-card__button {
-  min-width: 132rpx;
-  height: 64rpx;
-  padding: 0 24rpx;
-  border-radius: 999rpx;
-  background: #f7c400;
-  color: #2c2200;
-  text-align: center;
-  line-height: 64rpx;
+.bay-text {
+  color: #969696;
   font-size: 28rpx;
-  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.start-button {
+  width: 176rpx;
+  height: 78rpx;
+  flex-shrink: 0;
+  border-radius: 14rpx;
+  color: #050505;
+  font-size: 30rpx;
+  font-weight: 900;
+  line-height: 78rpx;
+  text-align: center;
+}
+
+.start-button.start {
+  background: #63ef75;
+}
+
+.start-button.queue {
+  background: #ffd94d;
+}
+
+.empty {
+  padding: 120rpx 0;
+  color: #8d8d8d;
+  font-size: 28rpx;
+  text-align: center;
 }

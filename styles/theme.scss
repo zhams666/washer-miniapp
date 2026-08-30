@@ -1,0 +1,111 @@
+$color-primary: #2f9aa5;
+$color-primary-light: #e8f7f8;
+$color-primary-soft: #f4fbfb;
+$color-primary-deep: #237b84;
+
+$color-cta: #237b84;
+$color-cta-hover: #2f9aa5;
+$color-cta-soft: #e8f7f8;
+$color-cta-border: #98d5da;
+
+$color-success: #16a36a;
+$color-success-soft: #e8f7ef;
+$color-warning: #a66f1f;
+$color-warning-soft: #fff8e6;
+$color-danger: #ef4444;
+$color-danger-soft: #fff1f2;
+
+$color-bg: #f6f8fa;
+$color-card: #ffffff;
+$color-surface: #f9fbfd;
+$color-border: #e5e7eb;
+$color-border-light: #edf1f5;
+
+$color-text-primary: #1f2933;
+$color-text-secondary: #6b7280;
+$color-text-tertiary: #98a2b3;
+$color-text-inverse: #ffffff;
+
+$radius-card: 24rpx;
+$radius-card-sm: 20rpx;
+$radius-control: 18rpx;
+$radius-icon: 22rpx;
+$radius-pill: 999rpx;
+
+$shadow-card: 0 10rpx 28rpx rgba(31, 41, 51, 0.06);
+$shadow-card-soft: 0 6rpx 18rpx rgba(31, 41, 51, 0.04);
+$shadow-cta: 0 10rpx 22rpx rgba(35, 123, 132, 0.18);
+
+$font-page-title: 34rpx;
+$font-section-title: 32rpx;
+$font-card-title: 30rpx;
+$font-body: 26rpx;
+$font-caption: 24rpx;
+$font-micro: 22rpx;
+
+$page-padding-x: 24rpx;
+$page-padding-y: 24rpx;
+$tabbar-height: 112rpx;
+$fixed-action-height: 118rpx;
+
+@mixin page-shell {
+  min-height: 100vh;
+  background: $color-bg;
+  color: $color-text-primary;
+  box-sizing: border-box;
+}
+
+@mixin page-container {
+  padding: $page-padding-y $page-padding-x calc(#{$tabbar-height} + #{$page-padding-y} + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+@mixin fixed-action-page {
+  min-height: 100vh;
+  padding-bottom: calc(#{$fixed-action-height} + #{$page-padding-y} + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+@mixin fixed-bottom-panel($padding-y: 18rpx, $padding-x: $page-padding-x) {
+  padding: $padding-y $padding-x calc(#{$padding-y} + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+@mixin card {
+  background: $color-card;
+  border: 1rpx solid $color-border-light;
+  border-radius: $radius-card;
+  box-shadow: $shadow-card-soft;
+}
+
+@mixin icon-tile($bg: $color-primary-light) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-icon;
+  background: $bg;
+}
+
+@mixin pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-pill;
+  line-height: 1;
+}
+
+@mixin cta-button {
+  @include pill;
+  background: linear-gradient(180deg, $color-cta-hover 0%, $color-cta 100%);
+  color: $color-text-inverse;
+  font-weight: 700;
+  box-shadow: $shadow-cta;
+}
+
+@mixin outline-button {
+  @include pill;
+  border: 1rpx solid $color-cta;
+  background: $color-card;
+  color: $color-cta;
+  font-weight: 700;
+}

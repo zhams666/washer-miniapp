@@ -1,225 +1,437 @@
-import { getDeviceList } from '../../apis/device';
-import { getStoreList } from '../../apis/store';
-import {
-  completeOrder,
-  createSimpleOrder,
-  getSimpleOrderList,
-  startOrder,
-} from '../../apis/order';
+import { getSimpleOrderList } from '../../apis/order';
+import { requireCurrentUser } from '../../utils/user';
+
+let orderRefreshTimer: number | undefined;
+
+const ORDER_PAGE_SIZE = 50;
+const ORDER_POLL_INTERVAL = 15000;
+const TEXT_ORDER_LOAD_FAILED = '\u8ba2\u5355\u52a0\u8f7d\u5931\u8d25';
+const TEXT_LOGIN_REQUIRED = '\u8bf7\u5148\u767b\u5f55';
 
 type OrderCardItem = {
   id: number;
+  orderNo: string;
   storeName: string;
   createTime: string;
   amount: string;
+  amountText: string;
+  amountLabel: string;
+  amountValue: string;
+  amountClass: string;
+  payMode: string;
+  payText: string;
   status: string;
   statusType: string;
   orderStatus: string;
+  statusHint: string;
+  timeLabel: string;
+  isRunning: boolean;
   actionText: string;
-  actionType: string;
 };
 
-type DeviceOption = {
-  id: number;
-  label: string;
+type CurrentUser = {
+  userId: number;
 };
 
-type StoreOption = {
-  id: number;
-  label: string;
-};
-
-type PayModeOption = {
-  value: string;
-  label: string;
+type LoadOptions = {
+  showLoading?: boolean;
+  showErrorToast?: boolean;
 };
 
 Page({
   data: {
     list: [] as OrderCardItem[],
     loading: false,
-    storeOptions: [] as StoreOption[],
-    storePickerRange: [] as string[],
-    selectedStoreIndex: 0,
-    storeId: 0,
-    deviceOptions: [] as DeviceOption[],
-    devicePickerRange: [] as string[],
-    selectedDeviceIndex: 0,
-    selectedDeviceId: 0,
-    payModeOptions: [
-      { value: 'wallet', label: 'Wallet' },
-      { value: 'card', label: 'Card' },
-    ] as PayModeOption[],
-    payModePickerRange: ['Wallet', 'Card'],
-    selectedPayModeIndex: 0,
-    selectedPayMode: 'wallet',
+    isLogin: false,
+    userId: 0,
+    runningCount: 0,
+    recordedCount: 0,
   },
 
   onLoad() {
-    this.loadOrders();
-    this.loadStores();
+    void this.enterPage();
   },
 
-  async loadOrders() {
-    this.setData({ loading: true });
+  onShow() {
+    const tabBar = (this as any).getTabBar && (this as any).getTabBar();
+    if (tabBar && tabBar.setData) {
+      tabBar.setData({ selectedPath: 'pages/order/index' });
+    }
+    void this.enterPage();
+  },
+
+  onHide() {
+    this.stopOrderPolling();
+  },
+
+  onUnload() {
+    this.stopOrderPolling();
+  },
+
+  async enterPage() {
+    const page = this as any;
+    const pageEnterSequence = (page._pageEnterSequence || 0) + 1;
+    page._pageEnterSequence = pageEnterSequence;
 
     try {
-      const orders = await getSimpleOrderList(1, 10);
-      this.setData({
-        list: orders.map((item: Record<string, any>) => this.mapOrderItem(item)),
-        loading: false,
+      const currentUser = await this.requirePageUser();
+      if (pageEnterSequence !== page._pageEnterSequence) {
+        return false;
+      }
+
+      const previousUserId = Number(this.data.userId || 0);
+      const nextUserId = this.applyCurrentUser(currentUser);
+
+      if (previousUserId && previousUserId !== nextUserId) {
+        this.stopOrderPolling();
+        this.setData({
+          list: [],
+          runningCount: 0,
+          recordedCount: 0,
+        });
+      }
+
+      await this.loadOrdersForUser(nextUserId, {
+        showLoading: true,
+        showErrorToast: true,
       });
+      return true;
     } catch (error) {
-      this.setData({ loading: false });
-      wx.showToast({
-        title: 'Load failed',
-        icon: 'none',
-      });
-      console.error('loadOrders error:', error);
+      if (pageEnterSequence !== page._pageEnterSequence) {
+        return false;
+      }
+
+      this.handleRequireCurrentUserError(error, true);
+      console.error('enterPage error:', error);
+      return false;
     }
   },
 
-  async loadDevices() {
-    if (!this.data.storeId) {
+  normalizeUserId(value: unknown) {
+    const userId = Number(value || 0);
+    if (Number.isInteger(userId) && userId > 0) {
+      return userId;
+    }
+    return 0;
+  },
+
+  async requirePageUser(): Promise<CurrentUser> {
+    const result = await requireCurrentUser();
+    const userId = this.normalizeUserId(result && result.costomerId);
+
+    if (!userId) {
+      throw new Error('current user is required');
+    }
+
+    return {
+      userId,
+    };
+  },
+
+  applyCurrentUser(currentUser: CurrentUser) {
+    const userId = this.normalizeUserId(currentUser && currentUser.userId);
+
+    this.setData({
+      isLogin: Boolean(userId),
+      userId,
+    });
+
+    return userId;
+  },
+
+  resetCurrentUserState() {
+    this.stopOrderPolling();
+    this.setData({
+      list: [],
+      loading: false,
+      isLogin: false,
+      userId: 0,
+      runningCount: 0,
+      recordedCount: 0,
+    });
+  },
+
+  handleRequireCurrentUserError(error: unknown, showToast: boolean) {
+    this.resetCurrentUserState();
+
+    if (!showToast) {
+      return;
+    }
+
+    wx.showToast({
+      title: this.resolveRequireCurrentUserErrorMessage(error),
+      icon: 'none',
+    });
+  },
+
+  resolveRequireCurrentUserErrorMessage(error: unknown) {
+    const message = this.extractErrorMessage(error);
+    if (!message || message.includes('current user is required')) {
+      return TEXT_LOGIN_REQUIRED;
+    }
+    return message;
+  },
+
+  extractErrorMessage(error: unknown) {
+    const safeError = error as Record<string, any>;
+    const candidates = [
+      safeError && safeError.msg,
+      safeError && safeError.message,
+      safeError && safeError.errMsg,
+    ];
+
+    for (let i = 0; i < candidates.length; i += 1) {
+      const message = candidates[i];
+      if (typeof message === 'string' && message.trim()) {
+        return message.trim();
+      }
+    }
+
+    return '';
+  },
+
+  async loadOrdersForUser(userId: number, options: LoadOptions = {}) {
+    const safeUserId = this.normalizeUserId(userId);
+    if (!safeUserId) {
+      return;
+    }
+
+    const page = this as any;
+    const showLoading = options.showLoading !== false;
+    const showErrorToast = options.showErrorToast !== false;
+    const orderLoadSequence = (page._orderLoadSequence || 0) + 1;
+    page._orderLoadSequence = orderLoadSequence;
+
+    if (showLoading) {
+      this.setData({ loading: true });
+    }
+
+    try {
+      const orders = await getSimpleOrderList(safeUserId, ORDER_PAGE_SIZE);
+      if (orderLoadSequence !== page._orderLoadSequence) {
+        return;
+      }
+
+      if (Number(this.data.userId || 0) !== safeUserId) {
+        return;
+      }
+
+      const list = orders.map((item) => this.mapOrderItem(item as Record<string, any>));
+      const runningCount = list.filter((item) => item.orderStatus === 'running').length;
+      const recordedCount = Math.max(list.length - runningCount, 0);
+
       this.setData({
-        deviceOptions: [],
-        devicePickerRange: [],
-        selectedDeviceIndex: 0,
-        selectedDeviceId: 0,
+        list,
+        runningCount,
+        recordedCount,
+        loading: false,
+      });
+      this.updateOrderPolling(list);
+    } catch (error) {
+      if (orderLoadSequence !== page._orderLoadSequence) {
+        return;
+      }
+
+      if (Number(this.data.userId || 0) !== safeUserId) {
+        return;
+      }
+
+      this.setData({ loading: false });
+
+      if (showErrorToast) {
+        wx.showToast({
+          title: TEXT_ORDER_LOAD_FAILED,
+          icon: 'none',
+        });
+      }
+
+      console.error('loadOrdersForUser error:', error);
+    }
+  },
+
+  mapOrderItem(item: Record<string, any>): OrderCardItem {
+    const orderStatus = String(item.orderStatus || '');
+    const payMode = String(item.payMode || '').toLowerCase();
+    const isCardOrder = payMode === 'card';
+    const amountValue = this.resolveOrderAmountValue(item, isCardOrder);
+    const isRunning = orderStatus === 'running';
+
+    return {
+      id: Number(item.id || 0),
+      orderNo: this.resolveOrderNo(item),
+      storeName: item.storeName || '\u6d17\u8f66\u8ba2\u5355',
+      createTime: this.formatTime(item.createdAt),
+      amount: this.resolveOrderAmount(item),
+      amountText: this.resolveOrderAmountText(item, isCardOrder),
+      amountLabel: this.resolveAmountLabel(item, isCardOrder),
+      amountValue,
+      amountClass: isCardOrder ? 'card' : 'wallet',
+      payMode,
+      payText: this.resolvePayText(item, isCardOrder),
+      status: this.getStatusText(orderStatus),
+      statusType: this.getStatusType(orderStatus),
+      orderStatus,
+      statusHint: this.getStatusHint(orderStatus),
+      timeLabel: this.resolveTimeLabel(orderStatus),
+      isRunning,
+      actionText: isRunning ? '\u7ee7\u7eed\u6d17\u8f66' : '\u67e5\u770b\u8be6\u60c5',
+    };
+  },
+
+  handleOrderTap(e: WechatMiniprogram.TouchEvent) {
+    const dataset = (e.currentTarget.dataset || {}) as {
+      id?: number | string;
+      orderStatus?: string;
+    };
+    const orderId = Number(dataset.id || 0);
+    const orderStatus = String(dataset.orderStatus || '');
+
+    if (!orderId) {
+      wx.showToast({
+        title: '\u8ba2\u5355\u4fe1\u606f\u65e0\u6548',
+        icon: 'none',
       });
       return;
     }
 
-    try {
-      const devices = await getDeviceList(this.data.storeId);
-      const deviceOptions = devices.map((item: Record<string, any>) => ({
-        id: Number(item.id || 0),
-        label: this.getDeviceLabel(item),
-      }));
+    if (orderStatus === 'running') {
+      wx.navigateTo({
+        url: `/pages/washing/index?orderId=${orderId}`,
+      });
+      return;
+    }
 
-      this.setData({
-        deviceOptions: deviceOptions,
-        devicePickerRange: deviceOptions.map((item: DeviceOption) => item.label),
-        selectedDeviceIndex: 0,
-        selectedDeviceId: deviceOptions.length > 0 ? deviceOptions[0].id : 0,
-      });
-    } catch (error) {
-      wx.showToast({
-        title: 'Load devices failed',
-        icon: 'none',
-      });
-      console.error('loadDevices error:', error);
+    wx.navigateTo({
+      url: `/pages/detail/index?id=${orderId}`,
+    });
+  },
+
+  updateOrderPolling(list: OrderCardItem[]) {
+    const hasRunningOrder =
+      Array.isArray(list) && list.some((item) => item.orderStatus === 'running');
+
+    if (hasRunningOrder) {
+      this.startOrderPolling();
+      return;
+    }
+
+    this.stopOrderPolling();
+  },
+
+  startOrderPolling() {
+    if (orderRefreshTimer !== undefined) {
+      return;
+    }
+
+    orderRefreshTimer = setInterval(() => {
+      const userId = Number(this.data.userId || 0);
+      if (userId) {
+        void this.loadOrdersForUser(userId, {
+          showLoading: false,
+          showErrorToast: false,
+        });
+      }
+    }, ORDER_POLL_INTERVAL) as unknown as number;
+  },
+
+  stopOrderPolling() {
+    if (orderRefreshTimer !== undefined) {
+      clearInterval(orderRefreshTimer);
+      orderRefreshTimer = undefined;
     }
   },
 
-  async loadStores() {
-    try {
-      const pageData = await getStoreList(1, 100);
-      const records = Array.isArray(pageData.records) ? pageData.records : [];
-      const storeOptions = records.map((item: Record<string, any>) => ({
-        id: Number(item.id || 0),
-        label: item.storeName || `Store ${item.id || ''}`,
-      }));
-      const firstStoreId = storeOptions.length > 0 ? storeOptions[0].id : 0;
+  getStatusText(orderStatus: string) {
+    const statusMap: Record<string, string> = {
+      pending: '\u5f85\u542f\u52a8',
+      running: '\u8fdb\u884c\u4e2d',
+      completed: '\u5df2\u5b8c\u6210',
+      cancelled: '\u5df2\u53d6\u6d88',
+      canceled: '\u5df2\u53d6\u6d88',
+      failed: '\u5df2\u5931\u8d25',
+      closed: '\u5df2\u5173\u95ed',
+    };
 
-      this.setData({
-        storeOptions: storeOptions,
-        storePickerRange: storeOptions.map((item: StoreOption) => item.label),
-        selectedStoreIndex: 0,
-        storeId: firstStoreId,
-      });
-
-      this.loadDevices();
-    } catch (error) {
-      wx.showToast({
-        title: 'Load stores failed',
-        icon: 'none',
-      });
-      console.error('loadStores error:', error);
+    if (statusMap[orderStatus]) {
+      return statusMap[orderStatus];
     }
+
+    if (orderStatus) {
+      return orderStatus;
+    }
+
+    return '\u672a\u77e5\u72b6\u6001';
   },
 
-  getDeviceLabel(item: Record<string, any>) {
-    const code = item.deviceCode || 'NoCode';
-    const name = item.deviceName || 'Unnamed Device';
-    const status = item.status || 'unknown';
-    return `${name} (${code}) - ${status}`;
+  getStatusType(orderStatus: string) {
+    if (orderStatus === 'completed') {
+      return 'done';
+    }
+
+    if (orderStatus === 'running') {
+      return 'doing';
+    }
+
+    if (orderStatus === 'pending') {
+      return 'pending';
+    }
+
+    return 'cancel';
   },
 
-  onStoreChange(e: WechatMiniprogram.PickerChange) {
-    const index = Number(e.detail.value || 0);
-    const storeOptions = this.data.storeOptions as StoreOption[];
-    const selectedStore = storeOptions[index];
-
-    this.setData({
-      selectedStoreIndex: index,
-      storeId: selectedStore ? selectedStore.id : 0,
-      selectedDeviceIndex: 0,
-      selectedDeviceId: 0,
-      deviceOptions: [],
-      devicePickerRange: [],
-    });
-
-    this.loadDevices();
-  },
-
-  onDeviceChange(e: WechatMiniprogram.PickerChange) {
-    const index = Number(e.detail.value || 0);
-    const deviceOptions = this.data.deviceOptions as DeviceOption[];
-    const selectedDevice = deviceOptions[index];
-
-    this.setData({
-      selectedDeviceIndex: index,
-      selectedDeviceId: selectedDevice ? selectedDevice.id : 0,
-    });
-  },
-
-  onPayModeChange(e: WechatMiniprogram.PickerChange) {
-    const index = Number(e.detail.value || 0);
-    const payModeOptions = this.data.payModeOptions as PayModeOption[];
-    const selectedPayMode = payModeOptions[index];
-
-    this.setData({
-      selectedPayModeIndex: index,
-      selectedPayMode: selectedPayMode ? selectedPayMode.value : 'wallet',
-    });
-  },
-
-  mapOrderItem(item: Record<string, any>): OrderCardItem {
-    const statusMap: Record<string, { text: string; type: string; actionText: string; actionType: string }> = {
-      pending: { text: 'Pending', type: 'pending', actionText: 'Start Order', actionType: 'start' },
-      running: { text: 'Running', type: 'doing', actionText: 'Finish Order', actionType: 'complete' },
-      completed: { text: 'Completed', type: 'done', actionText: 'View Detail', actionType: 'detail' },
+  getStatusHint(orderStatus: string) {
+    const hintMap: Record<string, string> = {
+      pending: '\u8ba2\u5355\u5df2\u521b\u5efa\uff0c\u7b49\u5f85\u8bbe\u5907\u542f\u52a8',
+      running: '\u6b63\u5728\u4f7f\u7528\u4e2d\uff0c\u53ef\u7ee7\u7eed\u63a7\u5236\u8bbe\u5907',
+      completed: '\u6d17\u8f66\u5df2\u5b8c\u6210',
+      cancelled: '\u8ba2\u5355\u5df2\u53d6\u6d88',
+      canceled: '\u8ba2\u5355\u5df2\u53d6\u6d88',
+      failed: '\u8ba2\u5355\u5904\u7406\u5931\u8d25',
+      closed: '\u8ba2\u5355\u5df2\u5173\u95ed',
     };
 
-    const statusInfo = statusMap[item.orderStatus] || {
-      text: item.orderStatus || 'Unknown',
-      type: 'cancel',
-      actionText: 'View Detail',
-      actionType: 'detail',
-    };
-
-    return {
-      id: Number(item.id || 0),
-      storeName: item.storeName || 'Unknown Store',
-      createTime: this.formatTime(item.createdAt),
-      amount: this.resolveOrderAmount(item),
-      status: statusInfo.text,
-      statusType: statusInfo.type,
-      orderStatus: item.orderStatus || 'pending',
-      actionText: statusInfo.actionText,
-      actionType: statusInfo.actionType,
-    };
+    return hintMap[orderStatus] || '\u67e5\u770b\u8ba2\u5355\u8be6\u60c5';
   },
 
-  formatTime(value: string) {
+  resolveTimeLabel(orderStatus: string) {
+    if (orderStatus === 'running') {
+      return '\u5f00\u59cb\u65f6\u95f4';
+    }
+
+    if (orderStatus === 'completed') {
+      return '\u4e0b\u5355\u65f6\u95f4';
+    }
+
+    return '\u521b\u5efa\u65f6\u95f4';
+  },
+
+  resolveOrderNo(item: Record<string, any>) {
+    const orderNo = String(item.orderNo || '').trim();
+    if (orderNo) {
+      return orderNo;
+    }
+
+    const id = Number(item.id || 0);
+    if (id) {
+      return `#${id}`;
+    }
+
+    return '';
+  },
+
+  formatTime(value: unknown) {
     if (!value) {
-      return 'N/A';
+      return '';
     }
-    return value.replace('T', ' ').slice(0, 16);
+
+    return String(value).replace('T', ' ').slice(0, 16);
   },
 
   resolveOrderAmount(item: Record<string, any>) {
+    if (String(item.payMode || '').toLowerCase() === 'card') {
+      return '0.00';
+    }
+
     const finalAmount = Number(item.finalAmount || 0);
     if (!Number.isNaN(finalAmount) && finalAmount > 0) {
       return finalAmount.toFixed(2);
@@ -233,99 +445,49 @@ Page({
     return '0.00';
   },
 
-  async createTestOrder() {
-    if (!this.data.storeId) {
-      wx.showToast({
-        title: 'Select store first',
-        icon: 'none',
-      });
-      return;
+  resolveOrderAmountText(item: Record<string, any>, isCardOrder: boolean) {
+    if (isCardOrder) {
+      const deductTimes = this.resolveCardDeductTimes(item);
+      return `次卡支付 · ${deductTimes}次`;
     }
 
-    if (!this.data.selectedDeviceId) {
-      wx.showToast({
-        title: 'Select device first',
-        icon: 'none',
-      });
-      return;
-    }
-
-    try {
-      await createSimpleOrder({
-        userId: 1,
-        storeId: this.data.storeId,
-        deviceId: this.data.selectedDeviceId,
-        payMode: this.data.selectedPayMode,
-        estimatedAmount: 18,
-        finalAmount: 18,
-        remark: 'miniapp test order',
-      });
-
-      wx.showToast({
-        title: 'Created',
-        icon: 'success',
-      });
-
-      this.loadOrders();
-    } catch (error) {
-      wx.showToast({
-        title: 'Create failed',
-        icon: 'none',
-      });
-      console.error('createTestOrder error:', error);
-    }
+    return `金额 ¥${this.resolveOrderAmount(item)}`;
   },
 
-  async handleOrderAction(e: WechatMiniprogram.TouchEvent) {
-    const { id, action } = e.currentTarget.dataset as { id: number; action: string };
-
-    try {
-      if (action === 'start') {
-        await startOrder(Number(id));
-        wx.showToast({
-          title: 'Started',
-          icon: 'success',
-        });
-        this.loadOrders();
-        return;
-      }
-
-      if (action === 'complete') {
-        await completeOrder(Number(id));
-        wx.showToast({
-          title: 'Completed',
-          icon: 'success',
-        });
-        this.loadOrders();
-        return;
-      }
-
-      this.showOrderDetail(Number(id));
-    } catch (error) {
-      wx.showToast({
-        title: 'Action failed',
-        icon: 'none',
-      });
-      console.error('handleOrderAction error:', error);
-    }
-  },
-
-  handleViewDetail(e: WechatMiniprogram.TouchEvent) {
-    const { id } = e.currentTarget.dataset as { id: number };
-    this.showOrderDetail(Number(id));
-  },
-
-  showOrderDetail(id: number) {
-    if (!id) {
-      wx.showToast({
-        title: 'Invalid order',
-        icon: 'none',
-      });
-      return;
+  resolveAmountLabel(item: Record<string, any>, isCardOrder: boolean) {
+    if (isCardOrder) {
+      return '\u6b21\u5361\u6838\u9500';
     }
 
-    wx.navigateTo({
-      url: `/pages/detail/index?id=${id}`,
-    });
+    const finalAmount = Number(item.finalAmount || 0);
+    if (!Number.isNaN(finalAmount) && finalAmount > 0) {
+      return '\u5b9e\u4ed8\u91d1\u989d';
+    }
+
+    return '\u9884\u4f30\u91d1\u989d';
+  },
+
+  resolveOrderAmountValue(item: Record<string, any>, isCardOrder: boolean) {
+    if (isCardOrder) {
+      return `${this.resolveCardDeductTimes(item)}次`;
+    }
+
+    return `¥${this.resolveOrderAmount(item)}`;
+  },
+
+  resolvePayText(item: Record<string, any>, isCardOrder: boolean) {
+    if (isCardOrder) {
+      const orderStatus = String(item.orderStatus || '');
+      return orderStatus === 'running' ? '使用次卡中' : '次卡订单';
+    }
+    return '钱包订单';
+  },
+
+  resolveCardDeductTimes(item: Record<string, any>) {
+    const value = Number(item.cardDeductTimes || 0);
+    if (!Number.isNaN(value) && value > 0) {
+      return value;
+    }
+    return 1;
   },
 });

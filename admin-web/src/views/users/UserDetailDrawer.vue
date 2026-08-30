@@ -30,8 +30,14 @@
               <el-descriptions-item :label="t('users.table.memberLevel')">
                 {{ detail.memberLevel || t('common.noData') }}
               </el-descriptions-item>
+              <el-descriptions-item :label="t('users.table.points')">
+                {{ detail.points ?? 0 }}
+              </el-descriptions-item>
               <el-descriptions-item :label="t('users.detail.memberSinceTime')">
                 {{ formatDateTime(detail.memberSinceTime) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="会员有效期">
+                {{ detail.memberExpireTime ? formatDateTime(detail.memberExpireTime) : '永久或未设置' }}
               </el-descriptions-item>
               <el-descriptions-item :label="t('users.table.lastConsumeTime')">
                 {{ formatDateTime(detail.lastConsumeTime) }}

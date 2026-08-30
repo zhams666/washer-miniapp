@@ -1,0 +1,48 @@
+<view class="page">
+  <Navbar title="订单查询" customBackPath="/pages-admin/home/index" customBackPathIsTabbar="{{false}}"></Navbar>
+
+  <view class="container">
+    <view class="filter-card">
+      <view class="filter-grid">
+        <picker mode="selector" range="{{storePickerOptions}}" value="{{selectedStoreIndex}}" bindchange="handleStoreChange">
+          <view class="filter-item">
+            <text>{{storePickerOptions[selectedStoreIndex]}}</text>
+            <label>门店</label>
+          </view>
+        </picker>
+        <picker mode="selector" range="{{statusOptions}}" value="{{selectedStatusIndex}}" bindchange="handleStatusChange">
+          <view class="filter-item">
+            <text>{{statusOptions[selectedStatusIndex]}}</text>
+            <label>状态</label>
+          </view>
+        </picker>
+      </view>
+      <view class="search-row">
+        <input value="{{keyword}}" placeholder="订单号/备注" bindinput="handleKeywordInput" confirm-type="search" bindconfirm="handleSearch" />
+        <view class="search-button" bindtap="handleSearch">搜索</view>
+      </view>
+    </view>
+
+    <view class="order-list">
+      <view wx:for="{{orders}}" wx:key="id" class="order-card">
+        <view class="order-card__top">
+          <view>
+            <view class="order-card__no">{{item.orderNo}}</view>
+            <view class="order-card__meta">{{item.storeName || '未知门店'}} · {{item.deviceName || '设备未绑定'}}</view>
+          </view>
+          <view class="order-card__amount">¥{{item.amountText}}</view>
+        </view>
+        <view class="order-card__bottom">
+          <view class="status-pill">{{item.orderStatusText}}</view>
+          <view class="status-pill status-pill--pay">{{item.paymentStatusText}}</view>
+          <text>{{item.displayTime}}</text>
+        </view>
+      </view>
+      <view wx:if="{{!orders.length && !loading}}" class="empty-text">暂无订单</view>
+      <view wx:if="{{hasMore && orders.length}}" class="load-more" bindtap="handleLoadMore">
+        {{loading ? '加载中...' : '加载更多'}}
+      </view>
+      <view wx:if="{{!hasMore && orders.length}}" class="empty-text">已到底</view>
+    </view>
+  </view>
+</view>

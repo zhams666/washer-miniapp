@@ -4,6 +4,12 @@ import type {
   AdminCardUsagePageResult,
   AdminPaymentDetailItem,
   AdminPaymentDetailPageResult,
+  AdminSettlementDetailPageResult,
+  AdminSettlementBillGenerateResult,
+  AdminSettlementBillPageResult,
+  SettlementDetailQueryParams,
+  SettlementBillGeneratePayload,
+  SettlementBillQueryParams,
   AdminWalletTransactionCenterItem,
   AdminWalletTransactionPageResult,
   CardUsageQueryParams,
@@ -19,3 +25,12 @@ export const fetchWalletTransactionPage = (params: WalletTransactionQueryParams)
 
 export const fetchCardUsagePage = (params: CardUsageQueryParams) =>
   http.get<AdminCardUsagePageResult>('/api/admin/card-usages', { params });
+
+export const fetchSettlementDetailPage = (params: SettlementDetailQueryParams) =>
+  http.get<AdminSettlementDetailPageResult>('/api/admin/settlement-details', { params });
+
+export const fetchSettlementBillPage = (params: SettlementBillQueryParams) =>
+  http.get<AdminSettlementBillPageResult>('/api/admin/settlement-bills', { params });
+
+export const generateSettlementBills = (payload: SettlementBillGeneratePayload) =>
+  http.post<AdminSettlementBillGenerateResult>('/api/admin/settlement-bills/generate', payload);

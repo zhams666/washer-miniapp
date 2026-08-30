@@ -32,6 +32,14 @@ const http = {
     const response = await instance.put<ApiEnvelope<T>>(url, data, config);
     return unwrap(response.data);
   },
+  async patch<T>(url: string, data?: object, config?: object) {
+    const response = await instance.patch<ApiEnvelope<T>>(url, data, config);
+    return unwrap(response.data);
+  },
+  async delete<T>(url: string, config?: object) {
+    const response = await instance.delete<ApiEnvelope<T>>(url, config);
+    return unwrap(response.data);
+  },
 };
 
 export default http;

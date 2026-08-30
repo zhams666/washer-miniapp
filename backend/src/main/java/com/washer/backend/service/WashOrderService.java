@@ -11,6 +11,7 @@ import com.washer.backend.entity.WashOrderPaymentDetail;
 import com.washer.backend.entity.WashOrderStatusLog;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public interface WashOrderService extends IService<WashOrder> {
 
@@ -18,13 +19,23 @@ public interface WashOrderService extends IService<WashOrder> {
 
     WashOrder createSimpleOrder(SimpleOrderCreateRequest request);
 
+    WashOrder createAndStartWashOrder(SimpleOrderCreateRequest request);
+
     WashOrder startOrder(Long id);
 
     WashOrder completeOrder(Long id);
 
+    WashOrder cancelOrder(Long id);
+
+    int cancelRunningOrdersForDevice(Long deviceId, String remark);
+
+    WashOrder checkAndAutoStopOrder(Long id);
+
     List<WashOrderStatusLog> getStatusLogs(Long orderId);
 
     List<WashOrderPaymentDetail> getPaymentDetails(Long orderId);
+
+    Map<String, Object> getDurationRanking(String scope, Long userId, int limit);
 
     Page<AdminOrderListItem> pageAdminOrders(
         long page,

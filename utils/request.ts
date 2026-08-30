@@ -1,9 +1,17 @@
 import type { IObject, ResponseData } from '../typings/interface.d';
 import { REQUEST_URL, TENCENT_MAP_URL } from '../config/url';
-import { BaseEnum } from '../config/enums';
+import { BaseEnum, StorageEnum } from '../config/enums';
 
 const getResponseMessage = (response: ResponseData<any>) => {
   return response.msg || response.message || 'Request failed';
+};
+
+const buildJsonHeaders = () => {
+  const openId = String(wx.getStorageSync(StorageEnum.OPEN_ID) || '').trim();
+  return {
+    'content-type': 'application/json',
+    ...(openId ? { 'X-Washer-Openid': openId } : {}),
+  };
 };
 
 export const GET = <T>(
@@ -14,10 +22,9 @@ export const GET = <T>(
     wx.request({
       url: REQUEST_URL + _url,
       data: { ..._data, wxAppId: BaseEnum.APP_ID },
-      header: {
-        'content-type': 'application/json',
-      },
+      header: buildJsonHeaders(),
       method: 'GET',
+      timeout: 8000,
       success({ statusCode, data }) {
         const reponseData: ResponseData<T> = (data as unknown) as ResponseData;
         if (statusCode == 200 && reponseData.code == 0) {
@@ -45,10 +52,9 @@ export const POST = <T>(
     wx.request({
       url: REQUEST_URL + _url,
       data: { ..._data, wxAppId: BaseEnum.APP_ID },
-      header: {
-        'content-type': 'application/json',
-      },
+      header: buildJsonHeaders(),
       method: 'POST',
+      timeout: 8000,
       success({ statusCode, data }) {
         const reponseData: ResponseData<T> = (data as unknown) as ResponseData;
         if (statusCode == 200 && reponseData.code == 0) {
@@ -104,7 +110,7 @@ export const TENCENT_MAP_GET = <T>(
       url: TENCENT_MAP_URL + _url,
       data: { ..._data, wxAppId: BaseEnum.APP_ID },
       header: {
-        'content-type': 'application/json',
+        ...buildJsonHeaders(),
       },
       method: 'GET',
       success({ statusCode, data }) {

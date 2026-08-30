@@ -8,6 +8,7 @@ public class SimpleOrderCreateRequest {
 
     private Long userId;
     private Long storeId;
+    private Long bayId;
     private Long deviceId;
     private String payMode;
     private BigDecimal estimatedAmount;

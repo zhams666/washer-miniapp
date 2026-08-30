@@ -32,6 +32,7 @@
           <el-select v-model="filters.bizType" clearable style="width: 160px">
             <el-option :label="t('walletBizType.recharge')" value="recharge" />
             <el-option :label="t('walletBizType.consume')" value="consume" />
+            <el-option :label="t('walletBizType.fine')" value="fine" />
             <el-option :label="t('walletBizType.refund')" value="refund" />
             <el-option :label="t('walletBizType.adjust')" value="adjust" />
             <el-option :label="t('walletBizType.clear_gift')" value="clear_gift" />

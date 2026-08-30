@@ -1,0 +1,81 @@
+<view class="page">
+  <Navbar
+    title="券号核销"
+    titleColor="#211a14"
+    backgroundColor="#fff8ef"
+    borderBottom="{{false}}"
+    bottomShadow="{{false}}"
+  ></Navbar>
+
+  <view class="content">
+    <view class="hero-card">
+      <view class="hero-copy">
+        <view class="hero-kicker">第三方平台券</view>
+        <view class="hero-title">核销抖音 / 美团次卡券</view>
+        <view class="hero-desc">输入券号或扫码核销，成功后会生成本门店可用单次卡。</view>
+      </view>
+      <view class="hero-badge">
+        <view class="hero-badge__scan"></view>
+      </view>
+    </view>
+
+    <view class="panel">
+      <view class="panel-title">选择平台</view>
+      <view class="platform-row">
+        <view
+          wx:for="{{platforms}}"
+          wx:key="key"
+          class="platform-pill {{selectedPlatform == item.key ? 'active' : ''}}"
+          data-platform="{{item.key}}"
+          bindtap="selectPlatform"
+        >
+          {{item.label}}
+        </view>
+      </view>
+
+      <view class="field-group">
+        <view class="field-label">门店</view>
+        <picker
+          mode="selector"
+          range="{{storeNames}}"
+          value="{{storeIndex}}"
+          bindchange="handleStoreChange"
+        >
+          <view class="store-picker">
+            <view class="store-picker__value">
+              {{storesLoading ? '加载门店中...' : (selectedStoreName || '请选择门店')}}
+            </view>
+            <view class="store-picker__arrow"></view>
+          </view>
+        </picker>
+      </view>
+
+      <view class="field-group">
+        <view class="field-label">券号</view>
+        <input
+          class="field-input"
+          value="{{voucherCode}}"
+          placeholder="请输入券号"
+          confirm-type="done"
+          bindinput="handleVoucherCodeInput"
+          bindconfirm="handleSubmit"
+        />
+      </view>
+
+      <view class="action-row">
+        <view class="action-btn secondary" bindtap="scanVoucherCode">扫码识别</view>
+        <view class="action-btn primary {{loading ? 'disabled' : ''}}" bindtap="handleSubmit">
+          <text wx:if="{{loading}}">核销中</text>
+          <text wx:else>确认核销</text>
+        </view>
+      </view>
+
+      <view wx:if="{{resultVisible}}" class="result-card">
+        <view class="result-title">核销成功</view>
+        <view class="result-line">门店：{{resultStoreName}}</view>
+        <view class="result-line">发放单次卡：{{resultTimes}} 张</view>
+        <view class="result-line">首张卡号：{{resultCardNo}}</view>
+      </view>
+    </view>
+  </view>
+</view>

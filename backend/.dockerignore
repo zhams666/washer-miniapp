@@ -1,0 +1,10 @@
+target/
+.git/
+.idea/
+.local/
+*.iml
+*.log
+*.sql
+*.zip
+*.tar
+*.gz

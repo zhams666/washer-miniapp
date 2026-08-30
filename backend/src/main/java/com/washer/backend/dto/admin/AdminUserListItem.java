@@ -17,6 +17,8 @@ public class AdminUserListItem {
     private String registerSource;
     private Integer isMember;
     private String memberLevel;
+    private Integer points;
+    private LocalDateTime memberExpireTime;
     private LocalDateTime lastConsumeTime;
     private LocalDateTime createdAt;
 }

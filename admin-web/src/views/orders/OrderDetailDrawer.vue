@@ -11,6 +11,7 @@
           <div class="detail-card">
             <h3>{{ t('orders.detail.overview') }}</h3>
             <el-descriptions :column="2" border>
+              <el-descriptions-item :label="t('orders.detail.id')">{{ detail.id }}</el-descriptions-item>
               <el-descriptions-item :label="t('orders.detail.orderNo')">{{ detail.orderNo }}</el-descriptions-item>
               <el-descriptions-item :label="t('orders.detail.userId')">{{ detail.userId }}</el-descriptions-item>
               <el-descriptions-item :label="t('orders.detail.storeId')">{{ detail.storeId }}</el-descriptions-item>
