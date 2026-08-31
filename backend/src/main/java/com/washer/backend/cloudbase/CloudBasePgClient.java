@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -17,6 +19,7 @@ import java.util.regex.Pattern;
 
 public class CloudBasePgClient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(CloudBasePgClient.class);
     private static final Pattern RESOURCE_NAME = Pattern.compile("[a-z][a-z0-9_]{0,62}");
 
     private final RestClient restClient;
@@ -68,7 +71,15 @@ public class CloudBasePgClient {
             String response = request.retrieve().body(String.class);
             return response == null || response.isBlank() ? objectMapper.nullNode() : objectMapper.readTree(response);
         } catch (RestClientResponseException exception) {
-            throw new CloudBasePgException(extractMessage(exception.getResponseBodyAsString(), exception.getStatusCode().value()), exception);
+            String responseBody = exception.getResponseBodyAsString();
+            LOGGER.warn(
+                "CloudBase PostgreSQL request failed: method={}, resource={}, status={}, response={}",
+                method,
+                uri.getPath(),
+                exception.getStatusCode().value(),
+                compact(responseBody)
+            );
+            throw new CloudBasePgException(extractMessage(responseBody, exception.getStatusCode().value()), exception);
         } catch (JsonProcessingException exception) {
             throw new CloudBasePgException("CloudBase PostgreSQL returned invalid JSON", exception);
         } catch (Exception exception) {
@@ -96,7 +107,13 @@ public class CloudBasePgClient {
     private String extractMessage(String body, int status) {
         try {
             JsonNode response = objectMapper.readTree(body);
-            String message = response.path("message").asText(response.path("error").asText(""));
+            String message = firstNonBlank(
+                response.path("message").asText(""),
+                response.path("error").asText(""),
+                response.path("error").path("message").asText(""),
+                response.path("details").asText(""),
+                response.path("detail").asText("")
+            );
             if (!message.isBlank()) {
                 return "CloudBase PostgreSQL request failed (HTTP " + status + "): " + message;
             }
@@ -104,5 +121,22 @@ public class CloudBasePgClient {
             // A status code without a JSON message is still safe to report.
         }
         return "CloudBase PostgreSQL request failed (HTTP " + status + ")";
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    private String compact(String value) {
+        if (value == null || value.isBlank()) {
+            return "<empty>";
+        }
+        String compacted = value.replaceAll("\\s+", " ").trim();
+        return compacted.length() <= 1_000 ? compacted : compacted.substring(0, 1_000) + "...";
     }
 }

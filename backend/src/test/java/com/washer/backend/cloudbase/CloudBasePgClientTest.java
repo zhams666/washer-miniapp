@@ -59,6 +59,15 @@ class CloudBasePgClientTest {
     }
 
     @Test
+    void unsuccessfulResponseReadsNestedCloudBaseErrorMessage() {
+        CloudBasePgException exception = assertThrows(
+            CloudBasePgException.class,
+            () -> client.select("store", Map.of("id", List.of("eq.400")))
+        );
+        assertEquals("CloudBase PostgreSQL request failed (HTTP 400): column points does not exist", exception.getMessage());
+    }
+
+    @Test
     void rejectsUnsafeResourceNamesBeforeNetworkCall() {
         assertThrows(IllegalArgumentException.class, () -> client.select("store;drop_table", Map.of()));
     }
@@ -68,6 +77,10 @@ class CloudBasePgClientTest {
         requestPath = exchange.getRequestURI().toString();
         if (requestPath.contains("eq.403")) {
             writeJson(exchange, 403, "{\"message\":\"permission denied\"}");
+            return;
+        }
+        if (requestPath.contains("eq.400")) {
+            writeJson(exchange, 400, "{\"error\":{\"message\":\"column points does not exist\"}}");
             return;
         }
         writeJson(exchange, 200, "[{\"id\":1}]");
