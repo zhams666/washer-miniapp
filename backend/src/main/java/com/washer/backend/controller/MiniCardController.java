@@ -132,22 +132,17 @@ public class MiniCardController {
         );
 
         LocalDateTime now = LocalDateTime.now();
-        var availableWrapper = new LambdaQueryWrapper<UserCard>()
+        List<UserCard> availableCandidates = userCardMapper.selectList(
+            new LambdaQueryWrapper<UserCard>()
             .eq(UserCard::getUserId, userId)
             .eq(UserCard::getStatus, "active")
-            .gt(UserCard::getRemainingTimes, 0)
-            .and(wrapper -> wrapper.isNull(UserCard::getEffectiveTime).or().le(UserCard::getEffectiveTime, now))
-            .and(wrapper -> wrapper.isNull(UserCard::getExpireTime).or().gt(UserCard::getExpireTime, now));
-
-        Long availableRows = userCardMapper.selectCount(availableWrapper);
-        Integer remainingTimes = userCardMapper.selectList(
-            new LambdaQueryWrapper<UserCard>()
-                .eq(UserCard::getUserId, userId)
-                .eq(UserCard::getStatus, "active")
                 .gt(UserCard::getRemainingTimes, 0)
-                .and(wrapper -> wrapper.isNull(UserCard::getEffectiveTime).or().le(UserCard::getEffectiveTime, now))
-                .and(wrapper -> wrapper.isNull(UserCard::getExpireTime).or().gt(UserCard::getExpireTime, now))
-        ).stream()
+        );
+        List<UserCard> availableCards = availableCandidates.stream()
+            .filter(card -> isAvailableCard(card, now))
+            .toList();
+        long availableRows = availableCards.size();
+        Integer remainingTimes = availableCards.stream()
             .map(UserCard::getRemainingTimes)
             .filter(times -> times != null && times > 0)
             .reduce(0, Integer::sum);
@@ -155,7 +150,7 @@ public class MiniCardController {
         Map<String, Object> result = new HashMap<>();
         result.put("totalCount", totalCount != null ? totalCount : 0);
         result.put("availableCount", remainingTimes);
-        result.put("availableCardRows", availableRows != null ? availableRows : 0);
+        result.put("availableCardRows", availableRows);
         result.put("remainingTimes", remainingTimes);
         return ApiResponse.success(result);
     }
