@@ -82,7 +82,7 @@ final class CloudBaseWrapperTranslator {
             if (!matcher.matches()) {
                 throw new CloudBasePgException("CloudBase HTTP profile does not support this MyBatis update expression");
             }
-            body.put(matcher.group(1), updateWrapper.getParamNameValuePairs().get(matcher.group(2)));
+            body.put(columnName(matcher.group(1)), updateWrapper.getParamNameValuePairs().get(matcher.group(2)));
         }
         return body;
     }
@@ -90,12 +90,12 @@ final class CloudBaseWrapperTranslator {
     private void translateCondition(String condition, Map<String, Object> parameters, Map<String, List<String>> query) {
         Matcher nullCheck = NULL_CHECK.matcher(condition);
         if (nullCheck.matches()) {
-            add(query, nullCheck.group(1), nullCheck.group(2) == null ? "is.null" : "not.is.null");
+            add(query, columnName(nullCheck.group(1)), nullCheck.group(2) == null ? "is.null" : "not.is.null");
             return;
         }
         Matcher comparison = COMPARISON.matcher(condition);
         if (comparison.matches()) {
-            add(query, comparison.group(1), operator(comparison.group(2)) + "." + value(parameters.get(comparison.group(3))));
+            add(query, columnName(comparison.group(1)), operator(comparison.group(2)) + "." + value(parameters.get(comparison.group(3))));
             return;
         }
         Matcher in = IN.matcher(condition);
@@ -108,7 +108,7 @@ final class CloudBaseWrapperTranslator {
             if (values.isEmpty()) {
                 throw new CloudBasePgException("CloudBase HTTP profile requires parameterized IN values");
             }
-            add(query, in.group(1), (in.group(2) == null ? "in" : "not.in") + ".(" + String.join(",", values) + ")");
+            add(query, columnName(in.group(1)), (in.group(2) == null ? "in" : "not.in") + ".(" + String.join(",", values) + ")");
             return;
         }
         throw new CloudBasePgException("CloudBase HTTP profile does not support this MyBatis condition");
@@ -118,10 +118,10 @@ final class CloudBaseWrapperTranslator {
         List<String> translated = new ArrayList<>();
         for (String item : order.split(",\\s*")) {
             String[] parts = item.trim().split("\\s+");
-            if (parts.length != 2 || !parts[0].matches("[a-z][a-z0-9_]*") || !(parts[1].equalsIgnoreCase("ASC") || parts[1].equalsIgnoreCase("DESC"))) {
+            if (parts.length != 2 || !parts[0].matches("(?i)[a-z][a-z0-9_]*") || !(parts[1].equalsIgnoreCase("ASC") || parts[1].equalsIgnoreCase("DESC"))) {
                 throw new CloudBasePgException("CloudBase HTTP profile does not support this MyBatis order expression");
             }
-            translated.add(parts[0] + "." + parts[1].toLowerCase(java.util.Locale.ROOT));
+            translated.add(columnName(parts[0]) + "." + parts[1].toLowerCase(java.util.Locale.ROOT));
         }
         return String.join(",", translated);
     }
@@ -163,5 +163,9 @@ final class CloudBaseWrapperTranslator {
 
     private void add(Map<String, List<String>> query, String key, String value) {
         query.computeIfAbsent(key, ignored -> new ArrayList<>()).add(value);
+    }
+
+    private String columnName(String value) {
+        return value.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase(java.util.Locale.ROOT);
     }
 }

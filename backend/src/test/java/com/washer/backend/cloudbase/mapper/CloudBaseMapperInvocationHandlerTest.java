@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.washer.backend.cloudbase.CloudBasePgClient;
 import com.washer.backend.entity.UserInfo;
+import com.washer.backend.entity.WalletTransaction;
 import com.washer.backend.mapper.UserInfoMapper;
+import com.washer.backend.mapper.WalletTransactionMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -88,5 +90,25 @@ class CloudBaseMapperInvocationHandlerTest {
         verify(client).insert(eq("user_info"), body.capture());
         assertEquals("2026-08-31T09:21:41.469244838", body.getValue().get("last_login_time"));
         assertEquals(1L, user.getId());
+    }
+
+    @Test
+    void selectTranslatesCamelCaseColumnsToPostgresNames() throws Exception {
+        CloudBasePgClient client = mock(CloudBasePgClient.class);
+        when(client.select(eq("wallet_transaction"), any())).thenReturn(objectMapper.readTree("[]"));
+        WalletTransactionMapper mapper = CloudBaseMapperFactory.create(WalletTransactionMapper.class, client, objectMapper);
+
+        mapper.selectList(new LambdaQueryWrapper<WalletTransaction>()
+            .eq(WalletTransaction::getUserId, 1L)
+            .eq(WalletTransaction::getBizType, "recharge")
+            .eq(WalletTransaction::getChangeType, "in")
+            .orderByDesc(WalletTransaction::getCreatedAt));
+
+        ArgumentCaptor<Map<String, List<String>>> query = ArgumentCaptor.forClass(Map.class);
+        verify(client).select(eq("wallet_transaction"), query.capture());
+        assertEquals(List.of("eq.1"), query.getValue().get("user_id"));
+        assertEquals(List.of("eq.recharge"), query.getValue().get("biz_type"));
+        assertEquals(List.of("eq.in"), query.getValue().get("change_type"));
+        assertEquals(List.of("created_at.desc"), query.getValue().get("order"));
     }
 }
