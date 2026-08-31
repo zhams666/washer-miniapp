@@ -9,6 +9,7 @@ import com.washer.backend.mapper.UserInfoMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -70,5 +71,22 @@ class CloudBaseMapperInvocationHandlerTest {
         assertEquals(List.of("eq.1"), filter.getValue().get("id"));
         assertEquals("new-name", body.getValue().get("nickname"));
         assertEquals(1, affected);
+    }
+
+    @Test
+    void insertSerializesLocalDateTimesAsPostgrestTimestampStrings() throws Exception {
+        CloudBasePgClient client = mock(CloudBasePgClient.class);
+        when(client.insert(eq("user_info"), any())).thenReturn(objectMapper.readTree("[{\"id\":1}]"));
+        UserInfoMapper mapper = CloudBaseMapperFactory.create(UserInfoMapper.class, client, objectMapper);
+        UserInfo user = new UserInfo();
+        user.setUserNo("U-1");
+        user.setLastLoginTime(LocalDateTime.of(2026, 8, 31, 9, 21, 41, 469_244_838));
+
+        mapper.insert(user);
+
+        ArgumentCaptor<Map<String, Object>> body = ArgumentCaptor.forClass(Map.class);
+        verify(client).insert(eq("user_info"), body.capture());
+        assertEquals("2026-08-31T09:21:41.469244838", body.getValue().get("last_login_time"));
+        assertEquals(1L, user.getId());
     }
 }

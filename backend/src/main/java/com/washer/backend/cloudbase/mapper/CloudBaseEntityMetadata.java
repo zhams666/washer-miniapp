@@ -11,6 +11,10 @@ import org.apache.ibatis.session.Configuration;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -74,7 +78,7 @@ final class CloudBaseEntityMetadata<T> {
             try {
                 Object value = field.get(entity);
                 if (value != null && (includeId || field != idField)) {
-                    body.put(columnName(field.getName()), value);
+                    body.put(columnName(field.getName()), postgrestValue(value));
                 }
             } catch (IllegalAccessException exception) {
                 throw new CloudBasePgException("Unable to serialize entity field", exception);
@@ -102,5 +106,18 @@ final class CloudBaseEntityMetadata<T> {
 
     private String columnName(String fieldName) {
         return fieldName.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private Object postgrestValue(Object value) {
+        if (value instanceof LocalDateTime dateTime) {
+            return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(dateTime);
+        }
+        if (value instanceof LocalDate date) {
+            return DateTimeFormatter.ISO_LOCAL_DATE.format(date);
+        }
+        if (value instanceof LocalTime time) {
+            return DateTimeFormatter.ISO_LOCAL_TIME.format(time);
+        }
+        return value;
     }
 }
