@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 
 final class CloudBaseWrapperTranslator {
 
-    private static final Pattern ORDER_BY = Pattern.compile("(?i)\\s+ORDER BY\\s+(.+)$");
+    private static final Pattern ORDER_BY = Pattern.compile("(?i)(?:^|\\s+)ORDER BY\\s+(.+)$");
     private static final Pattern LIMIT = Pattern.compile("(?i)\\s+LIMIT\\s+(\\d+)(?:\\s+OFFSET\\s+(\\d+))?$");
     private static final Pattern PARAMETER = Pattern.compile("#\\{ew\\.paramNameValuePairs\\.([A-Za-z0-9_]+)}");
     private static final Pattern COMPARISON = Pattern.compile(

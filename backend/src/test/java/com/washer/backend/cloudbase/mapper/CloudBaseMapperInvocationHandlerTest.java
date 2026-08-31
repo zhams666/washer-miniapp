@@ -42,6 +42,19 @@ class CloudBaseMapperInvocationHandlerTest {
     }
 
     @Test
+    void selectListTranslatesAnOrderOnlyWrapper() throws Exception {
+        CloudBasePgClient client = mock(CloudBasePgClient.class);
+        when(client.select(eq("user_info"), any())).thenReturn(objectMapper.readTree("[]"));
+        UserInfoMapper mapper = CloudBaseMapperFactory.create(UserInfoMapper.class, client, objectMapper);
+
+        mapper.selectList(new LambdaQueryWrapper<UserInfo>().orderByDesc(UserInfo::getId));
+
+        ArgumentCaptor<Map<String, List<String>>> query = ArgumentCaptor.forClass(Map.class);
+        verify(client).select(eq("user_info"), query.capture());
+        assertEquals(List.of("id.desc"), query.getValue().get("order"));
+    }
+
+    @Test
     void updateTranslatesSafeSetAndFilterExpressions() throws Exception {
         CloudBasePgClient client = mock(CloudBasePgClient.class);
         when(client.update(eq("user_info"), any(), any())).thenReturn(objectMapper.readTree("[{\"id\":1}]"));
