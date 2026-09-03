@@ -80,12 +80,12 @@ final class CloudBaseMapperInvocationHandler implements InvocationHandler {
 
     private IPage<Object> selectPage(IPage<Object> page, Wrapper<?> wrapper) {
         Map<String, List<String>> baseQuery = wrapperTranslator.query(wrapper);
-        long total = select(baseQuery).size();
         Map<String, List<String>> pageQuery = new LinkedHashMap<>(baseQuery);
         pageQuery.put("limit", List.of(String.valueOf(page.getSize())));
         pageQuery.put("offset", List.of(String.valueOf((page.getCurrent() - 1) * page.getSize())));
-        page.setTotal(total);
-        page.setRecords(select(pageQuery));
+        CloudBasePgClient.PageResult result = client.selectPage(metadata.tableName(), pageQuery);
+        page.setTotal(result.total());
+        page.setRecords(readRows(result.rows()));
         return page;
     }
 
@@ -130,7 +130,10 @@ final class CloudBaseMapperInvocationHandler implements InvocationHandler {
     }
 
     private List<Object> select(Map<String, List<String>> query) {
-        JsonNode response = client.select(metadata.tableName(), query);
+        return readRows(client.select(metadata.tableName(), query));
+    }
+
+    private List<Object> readRows(JsonNode response) {
         if (!response.isArray()) {
             throw new CloudBasePgException("CloudBase PostgreSQL select response was not an array");
         }

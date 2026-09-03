@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
@@ -40,6 +41,27 @@ public class CloudBasePgClient {
         return request(HttpMethod.GET, resourceUri(table, query), null, false);
     }
 
+    public PageResult selectPage(String table, Map<String, List<String>> query) {
+        URI uri = resourceUri(table, query);
+        try {
+            ResponseEntity<String> response = restClient.get()
+                .uri(uri)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getApiKey())
+                .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .header("Prefer", "count=exact")
+                .retrieve()
+                .toEntity(String.class);
+            JsonNode rows = parseResponse(response.getBody());
+            return new PageResult(rows, parseTotal(response.getHeaders().getFirst("Content-Range"), rows.size()));
+        } catch (RestClientResponseException exception) {
+            throw requestException(HttpMethod.GET, uri, exception);
+        } catch (JsonProcessingException exception) {
+            throw new CloudBasePgException("CloudBase PostgreSQL returned invalid JSON", exception);
+        } catch (Exception exception) {
+            throw new CloudBasePgException("CloudBase PostgreSQL request failed", exception);
+        }
+    }
+
     public JsonNode insert(String table, Object body) {
         return request(HttpMethod.POST, resourceUri(table, Map.of()), body, true);
     }
@@ -69,21 +91,44 @@ public class CloudBasePgClient {
                     .body(body);
             }
             String response = request.retrieve().body(String.class);
-            return response == null || response.isBlank() ? objectMapper.nullNode() : objectMapper.readTree(response);
+            return parseResponse(response);
         } catch (RestClientResponseException exception) {
-            String responseBody = exception.getResponseBodyAsString();
-            LOGGER.warn(
-                "CloudBase PostgreSQL request failed: method={}, resource={}, status={}, response={}",
-                method,
-                uri.getPath(),
-                exception.getStatusCode().value(),
-                compact(responseBody)
-            );
-            throw new CloudBasePgException(extractMessage(responseBody, exception.getStatusCode().value()), exception);
+            throw requestException(method, uri, exception);
         } catch (JsonProcessingException exception) {
             throw new CloudBasePgException("CloudBase PostgreSQL returned invalid JSON", exception);
         } catch (Exception exception) {
             throw new CloudBasePgException("CloudBase PostgreSQL request failed", exception);
+        }
+    }
+
+    private JsonNode parseResponse(String response) throws JsonProcessingException {
+        return response == null || response.isBlank() ? objectMapper.nullNode() : objectMapper.readTree(response);
+    }
+
+    private CloudBasePgException requestException(HttpMethod method, URI uri, RestClientResponseException exception) {
+        String responseBody = exception.getResponseBodyAsString();
+        LOGGER.warn(
+            "CloudBase PostgreSQL request failed: method={}, resource={}, status={}, response={}",
+            method,
+            uri.getPath(),
+            exception.getStatusCode().value(),
+            compact(responseBody)
+        );
+        return new CloudBasePgException(extractMessage(responseBody, exception.getStatusCode().value()), exception);
+    }
+
+    private long parseTotal(String contentRange, int fallback) {
+        if (contentRange == null || contentRange.isBlank()) {
+            return fallback;
+        }
+        int separator = contentRange.lastIndexOf('/');
+        if (separator < 0 || separator == contentRange.length() - 1) {
+            return fallback;
+        }
+        try {
+            return Long.parseLong(contentRange.substring(separator + 1));
+        } catch (NumberFormatException ignored) {
+            return fallback;
         }
     }
 
@@ -138,5 +183,8 @@ public class CloudBasePgClient {
         }
         String compacted = value.replaceAll("\\s+", " ").trim();
         return compacted.length() <= 1_000 ? compacted : compacted.substring(0, 1_000) + "...";
+    }
+
+    public record PageResult(JsonNode rows, long total) {
     }
 }

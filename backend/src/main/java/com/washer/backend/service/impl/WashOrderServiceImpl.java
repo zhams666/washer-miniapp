@@ -46,10 +46,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -85,6 +87,7 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
     private final StoreSettlementDetailMapper storeSettlementDetailMapper;
     private final WashPricingService washPricingService;
     private final UserInfoService userInfoService;
+    private final Environment environment;
 
     public WashOrderServiceImpl(
         StoreService storeService,
@@ -98,7 +101,8 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         WashOrderPaymentDetailMapper washOrderPaymentDetailMapper,
         StoreSettlementDetailMapper storeSettlementDetailMapper,
         WashPricingService washPricingService,
-        UserInfoService userInfoService
+        UserInfoService userInfoService,
+        Environment environment
     ) {
         this.storeService = storeService;
         this.deviceService = deviceService;
@@ -112,6 +116,7 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         this.storeSettlementDetailMapper = storeSettlementDetailMapper;
         this.washPricingService = washPricingService;
         this.userInfoService = userInfoService;
+        this.environment = environment;
     }
 
     @Override
@@ -363,30 +368,25 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
             return 0;
         }
 
-        Device device = deviceService.lambdaQuery()
-            .eq(Device::getId, deviceId)
-            .last("limit 1 for update")
-            .one();
+        Device device = getDeviceForOrderCancellation(deviceId);
         if (device == null || device.getStoreId() == null) {
             return 0;
         }
 
         Long bayId = resolveBayId(device);
-        LambdaQueryWrapper<WashOrder> wrapper = new LambdaQueryWrapper<WashOrder>()
+        List<WashOrder> candidateOrders = this.list(new LambdaQueryWrapper<WashOrder>()
             .eq(WashOrder::getStoreId, device.getStoreId())
-            .eq(WashOrder::getOrderStatus, STATUS_RUNNING);
-        wrapper.and(w -> {
-            w.eq(WashOrder::getDeviceId, deviceId);
-            if (bayId != null) {
-                w.or().eq(WashOrder::getBayId, bayId);
-            }
-        });
+            .eq(WashOrder::getOrderStatus, STATUS_RUNNING));
 
-        List<WashOrder> runningOrders = this.list(wrapper);
-        for (WashOrder order : runningOrders) {
+        int cancelledCount = 0;
+        for (WashOrder order : candidateOrders) {
+            if (!isOrderRunningOnDeviceOrBay(order, deviceId, bayId)) {
+                continue;
+            }
             cancelOrder(order.getId(), remark);
+            cancelledCount++;
         }
-        return runningOrders.size();
+        return cancelledCount;
     }
 
     @Override
@@ -1283,6 +1283,9 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         if (id == null) {
             throw new IllegalArgumentException("order id is required");
         }
+        if (isCloudBaseProfile()) {
+            return getRequiredOrder(id);
+        }
         WashOrder order = this.lambdaQuery()
             .eq(WashOrder::getId, id)
             .last("limit 1 for update")
@@ -1291,6 +1294,30 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
             throw new IllegalArgumentException("order not found");
         }
         return order;
+    }
+
+    private Device getDeviceForOrderCancellation(Long deviceId) {
+        if (isCloudBaseProfile()) {
+            return deviceService.getById(deviceId);
+        }
+        return deviceService.lambdaQuery()
+            .eq(Device::getId, deviceId)
+            .last("limit 1 for update")
+            .one();
+    }
+
+    private boolean isOrderRunningOnDeviceOrBay(WashOrder order, Long deviceId, Long bayId) {
+        return Objects.equals(order.getDeviceId(), deviceId)
+            || (bayId != null && Objects.equals(order.getBayId(), bayId));
+    }
+
+    private boolean isCloudBaseProfile() {
+        for (String profile : environment.getActiveProfiles()) {
+            if ("cloudbase".equalsIgnoreCase(profile)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private WashOrder getRequiredOrder(Long id) {
@@ -1351,6 +1378,22 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
     private Device lockDeviceForOrder(WashOrder order) {
         if (order == null || order.getStoreId() == null) {
             return null;
+        }
+
+        if (isCloudBaseProfile()) {
+            if (order.getDeviceId() != null) {
+                return deviceService.getById(order.getDeviceId());
+            }
+            if (order.getBayId() == null) {
+                return null;
+            }
+            return deviceService.list(new LambdaQueryWrapper<Device>()
+                    .eq(Device::getStoreId, order.getStoreId()))
+                .stream()
+                .filter(device -> Objects.equals(device.getBayId(), order.getBayId())
+                    || Objects.equals(device.getId(), order.getBayId()))
+                .findFirst()
+                .orElse(null);
         }
 
         if (order.getDeviceId() != null) {

@@ -22,6 +22,7 @@ class CloudBasePgClientTest {
     private HttpServer server;
     private String authorization;
     private String requestPath;
+    private String prefer;
     private CloudBasePgClient client;
 
     @BeforeEach
@@ -50,6 +51,15 @@ class CloudBasePgClientTest {
     }
 
     @Test
+    void selectPageRequestsExactCountAndParsesContentRange() {
+        CloudBasePgClient.PageResult result = client.selectPage("store", Map.of("limit", List.of("10"), "offset", List.of("0")));
+
+        assertEquals(1, result.rows().get(0).path("id").asInt());
+        assertEquals(42L, result.total());
+        assertEquals("count=exact", prefer);
+    }
+
+    @Test
     void unsuccessfulResponseBecomesCloudBasePgException() {
         CloudBasePgException exception = assertThrows(
             CloudBasePgException.class,
@@ -74,6 +84,7 @@ class CloudBasePgClientTest {
 
     private void handleStore(HttpExchange exchange) throws IOException {
         authorization = exchange.getRequestHeaders().getFirst("Authorization");
+        prefer = exchange.getRequestHeaders().getFirst("Prefer");
         requestPath = exchange.getRequestURI().toString();
         if (requestPath.contains("eq.403")) {
             writeJson(exchange, 403, "{\"message\":\"permission denied\"}");
@@ -82,6 +93,9 @@ class CloudBasePgClientTest {
         if (requestPath.contains("eq.400")) {
             writeJson(exchange, 400, "{\"error\":{\"message\":\"column points does not exist\"}}");
             return;
+        }
+        if ("count=exact".equals(prefer)) {
+            exchange.getResponseHeaders().set("Content-Range", "0-0/42");
         }
         writeJson(exchange, 200, "[{\"id\":1}]");
     }

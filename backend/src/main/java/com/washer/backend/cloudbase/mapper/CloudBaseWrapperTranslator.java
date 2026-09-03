@@ -16,6 +16,7 @@ final class CloudBaseWrapperTranslator {
 
     private static final Pattern ORDER_BY = Pattern.compile("(?i)(?:^|\\s+)ORDER BY\\s+(.+)$");
     private static final Pattern LIMIT = Pattern.compile("(?i)\\s+LIMIT\\s+(\\d+)(?:\\s+OFFSET\\s+(\\d+))?$");
+    private static final Pattern FOR_UPDATE = Pattern.compile("(?i)\\s+FOR\\s+UPDATE$");
     private static final Pattern PARAMETER = Pattern.compile("#\\{ew\\.paramNameValuePairs\\.([A-Za-z0-9_]+)}");
     private static final Pattern COMPARISON = Pattern.compile(
         "^([a-z][a-z0-9_]*?)\\s*(=|<>|>=|<=|>|<|LIKE|NOT LIKE)\\s*#\\{ew\\.paramNameValuePairs\\.([A-Za-z0-9_]+)}$",
@@ -33,7 +34,7 @@ final class CloudBaseWrapperTranslator {
         if (!(wrapper instanceof AbstractWrapper<?, ?, ?> abstractWrapper)) {
             throw new CloudBasePgException("CloudBase HTTP profile requires a MyBatis Lambda wrapper");
         }
-        String segment = abstractWrapper.getSqlSegment().trim();
+        String segment = stripTrailingForUpdate(abstractWrapper.getSqlSegment().trim());
         if (containsUnsupportedSyntax(segment)) {
             throw new CloudBasePgException("CloudBase HTTP profile does not support this MyBatis query expression");
         }
@@ -56,10 +57,10 @@ final class CloudBaseWrapperTranslator {
         if (segment.isBlank()) {
             return query;
         }
-        segment = stripOuterParentheses(segment);
-        for (String condition : segment.split("(?i)\\s+AND\\s+")) {
-            translateCondition(condition.trim(), abstractWrapper.getParamNameValuePairs(), query);
-        }
+        appendExpression(
+            parseExpression(stripOuterParentheses(segment), abstractWrapper.getParamNameValuePairs()),
+            query
+        );
         return query;
     }
 
@@ -90,16 +91,17 @@ final class CloudBaseWrapperTranslator {
         return body;
     }
 
-    private void translateCondition(String condition, Map<String, Object> parameters, Map<String, List<String>> query) {
+    private FilterTerm parseCondition(String condition, Map<String, Object> parameters) {
         Matcher nullCheck = NULL_CHECK.matcher(condition);
         if (nullCheck.matches()) {
-            add(query, columnName(nullCheck.group(1)), nullCheck.group(2) == null ? "is.null" : "not.is.null");
-            return;
+            return new FilterTerm(columnName(nullCheck.group(1)), nullCheck.group(2) == null ? "is.null" : "not.is.null");
         }
         Matcher comparison = COMPARISON.matcher(condition);
         if (comparison.matches()) {
-            add(query, columnName(comparison.group(1)), operator(comparison.group(2)) + "." + value(parameters.get(comparison.group(3))));
-            return;
+            return new FilterTerm(
+                columnName(comparison.group(1)),
+                operator(comparison.group(2)) + "." + value(parameters.get(comparison.group(3)))
+            );
         }
         Matcher in = IN.matcher(condition);
         if (in.matches()) {
@@ -111,10 +113,112 @@ final class CloudBaseWrapperTranslator {
             if (values.isEmpty()) {
                 throw new CloudBasePgException("CloudBase HTTP profile requires parameterized IN values");
             }
-            add(query, columnName(in.group(1)), (in.group(2) == null ? "in" : "not.in") + ".(" + String.join(",", values) + ")");
-            return;
+            return new FilterTerm(
+                columnName(in.group(1)),
+                (in.group(2) == null ? "in" : "not.in") + ".(" + String.join(",", values) + ")"
+            );
         }
         throw new CloudBasePgException("CloudBase HTTP profile does not support this MyBatis condition");
+    }
+
+    private FilterExpression parseExpression(String expression, Map<String, Object> parameters) {
+        String normalized = stripOuterParentheses(expression.trim());
+        List<String> orParts = splitTopLevel(normalized, "OR");
+        if (orParts.size() > 1) {
+            return new LogicalExpression("or", orParts.stream()
+                .map(part -> parseExpression(part, parameters))
+                .toList());
+        }
+        List<String> andParts = splitTopLevel(normalized, "AND");
+        if (andParts.size() > 1) {
+            return new LogicalExpression("and", andParts.stream()
+                .map(part -> parseExpression(part, parameters))
+                .toList());
+        }
+        return parseCondition(normalized, parameters);
+    }
+
+    private void appendExpression(FilterExpression expression, Map<String, List<String>> query) {
+        if (expression instanceof FilterTerm term) {
+            add(query, term.column(), term.value());
+            return;
+        }
+        LogicalExpression logical = (LogicalExpression) expression;
+        if ("and".equals(logical.operator())) {
+            List<LogicalExpression> groupedChildren = new ArrayList<>();
+            for (FilterExpression child : logical.children()) {
+                if (child instanceof FilterTerm) {
+                    appendExpression(child, query);
+                } else {
+                    groupedChildren.add((LogicalExpression) child);
+                }
+            }
+            if (groupedChildren.size() == 1) {
+                LogicalExpression groupedChild = groupedChildren.get(0);
+                add(query, groupedChild.operator(), "(" + formatLogicalArguments(groupedChild) + ")");
+            } else if (groupedChildren.size() > 1) {
+                add(query, "and", "(" + groupedChildren.stream()
+                    .map(this::formatExpression)
+                    .collect(java.util.stream.Collectors.joining(",")) + ")");
+            }
+            return;
+        }
+        add(query, "or", "(" + formatLogicalArguments(logical) + ")");
+    }
+
+    private String formatExpression(FilterExpression expression) {
+        if (expression instanceof FilterTerm term) {
+            return term.column() + "." + term.value();
+        }
+        LogicalExpression logical = (LogicalExpression) expression;
+        return logical.operator() + "(" + formatLogicalArguments(logical) + ")";
+    }
+
+    private String formatLogicalArguments(LogicalExpression logical) {
+        return logical.children().stream()
+            .map(this::formatExpression)
+            .collect(java.util.stream.Collectors.joining(","));
+    }
+
+    private List<String> splitTopLevel(String value, String operator) {
+        List<String> parts = new ArrayList<>();
+        int depth = 0;
+        int partStart = 0;
+        for (int index = 0; index < value.length(); index++) {
+            char current = value.charAt(index);
+            if (current == '(') {
+                depth++;
+                continue;
+            }
+            if (current == ')') {
+                depth--;
+                if (depth < 0) {
+                    throw new CloudBasePgException("CloudBase HTTP profile received an invalid MyBatis condition");
+                }
+                continue;
+            }
+            if (depth == 0 && matchesOperator(value, index, operator)) {
+                parts.add(value.substring(partStart, index).trim());
+                index += operator.length() - 1;
+                partStart = index + 1;
+            }
+        }
+        if (depth != 0) {
+            throw new CloudBasePgException("CloudBase HTTP profile received an invalid MyBatis condition");
+        }
+        if (parts.isEmpty()) {
+            return List.of(value.trim());
+        }
+        parts.add(value.substring(partStart).trim());
+        return parts;
+    }
+
+    private boolean matchesOperator(String value, int index, String operator) {
+        int end = index + operator.length();
+        return end <= value.length()
+            && value.regionMatches(true, index, operator, 0, operator.length())
+            && (index == 0 || Character.isWhitespace(value.charAt(index - 1)))
+            && (end == value.length() || Character.isWhitespace(value.charAt(end)));
     }
 
     private String translateOrder(String order) {
@@ -152,15 +256,38 @@ final class CloudBaseWrapperTranslator {
 
     private String stripOuterParentheses(String value) {
         String stripped = value;
-        while (stripped.startsWith("(") && stripped.endsWith(")")) {
+        while (isOuterParenthesized(stripped)) {
             stripped = stripped.substring(1, stripped.length() - 1).trim();
         }
         return stripped;
     }
 
+    private boolean isOuterParenthesized(String value) {
+        if (!value.startsWith("(") || !value.endsWith(")")) {
+            return false;
+        }
+        int depth = 0;
+        for (int index = 0; index < value.length(); index++) {
+            char current = value.charAt(index);
+            if (current == '(') {
+                depth++;
+            } else if (current == ')') {
+                depth--;
+                if (depth == 0 && index < value.length() - 1) {
+                    return false;
+                }
+            }
+        }
+        return depth == 0;
+    }
+
+    private String stripTrailingForUpdate(String segment) {
+        return FOR_UPDATE.matcher(segment).replaceFirst("").trim();
+    }
+
     private boolean containsUnsupportedSyntax(String segment) {
         String upper = segment.toUpperCase(java.util.Locale.ROOT);
-        return upper.contains(" OR ") || upper.contains(" EXISTS ") || upper.contains(" APPLY ")
+        return upper.contains(" EXISTS ") || upper.contains(" APPLY ")
             || upper.contains("SELECT ") || upper.contains(";" ) || upper.contains(" + ") || upper.contains(" - ");
     }
 
@@ -170,5 +297,14 @@ final class CloudBaseWrapperTranslator {
 
     private String columnName(String value) {
         return value.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private interface FilterExpression {
+    }
+
+    private record FilterTerm(String column, String value) implements FilterExpression {
+    }
+
+    private record LogicalExpression(String operator, List<FilterExpression> children) implements FilterExpression {
     }
 }

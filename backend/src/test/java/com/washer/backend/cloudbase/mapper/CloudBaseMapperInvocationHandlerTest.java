@@ -2,12 +2,17 @@ package com.washer.backend.cloudbase.mapper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.washer.backend.cloudbase.CloudBasePgClient;
 import com.washer.backend.entity.UserInfo;
+import com.washer.backend.entity.UserCard;
 import com.washer.backend.entity.WalletTransaction;
+import com.washer.backend.entity.WashOrder;
 import com.washer.backend.mapper.UserInfoMapper;
+import com.washer.backend.mapper.UserCardMapper;
 import com.washer.backend.mapper.WalletTransactionMapper;
+import com.washer.backend.mapper.WashOrderMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -126,5 +131,103 @@ class CloudBaseMapperInvocationHandlerTest {
         assertEquals(List.of("eq.recharge"), query.getValue().get("biz_type"));
         assertEquals(List.of("eq.in"), query.getValue().get("change_type"));
         assertEquals(List.of("created_at.desc"), query.getValue().get("order"));
+    }
+
+    @Test
+    void selectRunningOrdersForStoreUsesOnlyCloudBaseSafeConditions() throws Exception {
+        CloudBasePgClient client = mock(CloudBasePgClient.class);
+        when(client.select(eq("wash_order"), any())).thenReturn(objectMapper.readTree("[]"));
+        WashOrderMapper mapper = CloudBaseMapperFactory.create(WashOrderMapper.class, client, objectMapper);
+
+        mapper.selectList(new LambdaQueryWrapper<WashOrder>()
+            .eq(WashOrder::getStoreId, 2L)
+            .eq(WashOrder::getOrderStatus, "running"));
+
+        ArgumentCaptor<Map<String, List<String>>> query = ArgumentCaptor.forClass(Map.class);
+        verify(client).select(eq("wash_order"), query.capture());
+        assertEquals(List.of("eq.2"), query.getValue().get("store_id"));
+        assertEquals(List.of("eq.running"), query.getValue().get("order_status"));
+    }
+
+    @Test
+    void selectListTranslatesGroupedOrConditionAndIgnoresCloudBaseRowLock() throws Exception {
+        CloudBasePgClient client = mock(CloudBasePgClient.class);
+        when(client.select(eq("wash_order"), any())).thenReturn(objectMapper.readTree("[]"));
+        WashOrderMapper mapper = CloudBaseMapperFactory.create(WashOrderMapper.class, client, objectMapper);
+
+        mapper.selectList(new LambdaQueryWrapper<WashOrder>()
+            .eq(WashOrder::getStoreId, 2L)
+            .and(wrapper -> wrapper.eq(WashOrder::getDeviceId, 3L).or().eq(WashOrder::getBayId, 9L))
+            .last("limit 1 for update"));
+
+        ArgumentCaptor<Map<String, List<String>>> query = ArgumentCaptor.forClass(Map.class);
+        verify(client).select(eq("wash_order"), query.capture());
+        assertEquals(List.of("eq.2"), query.getValue().get("store_id"));
+        assertEquals(List.of("(device_id.eq.3,bay_id.eq.9)"), query.getValue().get("or"));
+        assertEquals(List.of("1"), query.getValue().get("limit"));
+    }
+
+    @Test
+    void selectListTranslatesActiveCardTimeWindow() throws Exception {
+        CloudBasePgClient client = mock(CloudBasePgClient.class);
+        when(client.select(eq("user_card"), any())).thenReturn(objectMapper.readTree("[]"));
+        UserCardMapper mapper = CloudBaseMapperFactory.create(UserCardMapper.class, client, objectMapper);
+        LocalDateTime now = LocalDateTime.of(2026, 9, 3, 18, 30, 0);
+
+        mapper.selectList(new LambdaQueryWrapper<UserCard>()
+            .eq(UserCard::getStatus, "active")
+            .and(wrapper -> wrapper.isNull(UserCard::getEffectiveTime).or().le(UserCard::getEffectiveTime, now))
+            .and(wrapper -> wrapper.isNull(UserCard::getExpireTime).or().gt(UserCard::getExpireTime, now)));
+
+        ArgumentCaptor<Map<String, List<String>>> query = ArgumentCaptor.forClass(Map.class);
+        verify(client).select(eq("user_card"), query.capture());
+        assertEquals(List.of("eq.active"), query.getValue().get("status"));
+        assertEquals(
+            List.of("(or(effective_time.is.null,effective_time.lte.2026-09-03T18:30),or(expire_time.is.null,expire_time.gt.2026-09-03T18:30))"),
+            query.getValue().get("and")
+        );
+    }
+
+    @Test
+    void selectListTranslatesDashboardFallbackTimeWindow() throws Exception {
+        CloudBasePgClient client = mock(CloudBasePgClient.class);
+        when(client.select(eq("wash_order"), any())).thenReturn(objectMapper.readTree("[]"));
+        WashOrderMapper mapper = CloudBaseMapperFactory.create(WashOrderMapper.class, client, objectMapper);
+        LocalDateTime start = LocalDateTime.of(2026, 9, 3, 0, 0, 0);
+        LocalDateTime end = LocalDateTime.of(2026, 9, 4, 0, 0, 0);
+
+        mapper.selectList(new LambdaQueryWrapper<WashOrder>()
+            .and(wrapper -> wrapper
+                .ge(WashOrder::getStartTime, start)
+                .lt(WashOrder::getStartTime, end)
+                .or(inner -> inner
+                    .isNull(WashOrder::getStartTime)
+                    .ge(WashOrder::getCreatedAt, start)
+                    .lt(WashOrder::getCreatedAt, end))));
+
+        ArgumentCaptor<Map<String, List<String>>> query = ArgumentCaptor.forClass(Map.class);
+        verify(client).select(eq("wash_order"), query.capture());
+        assertEquals(
+            List.of("(and(start_time.gte.2026-09-03T00:00,start_time.lt.2026-09-04T00:00),and(start_time.is.null,created_at.gte.2026-09-03T00:00,created_at.lt.2026-09-04T00:00))"),
+            query.getValue().get("or")
+        );
+    }
+
+    @Test
+    void selectPageUsesServerReportedTotalWithoutUnpagedSelect() throws Exception {
+        CloudBasePgClient client = mock(CloudBasePgClient.class);
+        when(client.selectPage(eq("user_info"), any())).thenReturn(
+            new CloudBasePgClient.PageResult(objectMapper.readTree("[{\"id\":1,\"user_no\":\"U-1\"}]"), 42L)
+        );
+        UserInfoMapper mapper = CloudBaseMapperFactory.create(UserInfoMapper.class, client, objectMapper);
+
+        Page<UserInfo> result = mapper.selectPage(new Page<>(2, 10), new LambdaQueryWrapper<UserInfo>().orderByDesc(UserInfo::getId));
+
+        ArgumentCaptor<Map<String, List<String>>> query = ArgumentCaptor.forClass(Map.class);
+        verify(client).selectPage(eq("user_info"), query.capture());
+        assertEquals(List.of("10"), query.getValue().get("limit"));
+        assertEquals(List.of("10"), query.getValue().get("offset"));
+        assertEquals(42L, result.getTotal());
+        assertEquals("U-1", result.getRecords().get(0).getUserNo());
     }
 }
