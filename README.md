@@ -51,7 +51,7 @@ cd washer
 
 脚本会在缺少前端依赖时执行 `npm ci`，随后启动 Spring Boot 后端和 PC 管理后台。日志与进程 ID 写入 `.local/`。数据库连接也支持通过 `WASHER_DB_URL`、`WASHER_DB_USERNAME`、`WASHER_DB_PASSWORD` 环境变量覆盖。
 
-小程序请求地址位于 `config/url.ts`，本地微信开发者工具调试时保持为 `http://127.0.0.1:18080`。
+小程序请求传输配置位于 `config/url.ts`。测试云开发环境默认使用 `wx.cloud.callContainer` 调用同环境的 `washer-api`，不需要把 CloudBase 默认域名填入小程序的服务器域名；本地调试时将 `API_TRANSPORT` 改为 `local`。
 
 ## 质量检查
 

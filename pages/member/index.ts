@@ -85,6 +85,10 @@ Page({
     this.setData({ submitting: true });
     try {
       const current = await requireCurrentUser();
+      console.info('membership order submit started', {
+        userId: Number(current.costomerId),
+        planId,
+      });
       const result = await createMembershipOrder({
         userId: Number(current.costomerId),
         planId,
@@ -98,6 +102,11 @@ Page({
         }
       }
       if (result.payStatus === 'paid' || payParams) {
+        console.info('membership order completed', {
+          planId,
+          orderNo: result.orderNo,
+          payStatus: result.payStatus,
+        });
         wx.showToast({ title: '会员已开通', icon: 'success' });
         await this.loadOverview();
       } else {
@@ -105,7 +114,11 @@ Page({
       }
     } catch (error) {
       wx.showToast({ title: '会员充值未完成', icon: 'none' });
-      console.error('membership purchase failed:', error);
+      console.error('membership purchase failed:', {
+        planId,
+        message: error instanceof Error ? error.message : String(error || ''),
+        error,
+      });
     } finally {
       this.setData({ submitting: false });
     }

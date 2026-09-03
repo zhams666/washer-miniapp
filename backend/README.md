@@ -103,6 +103,7 @@ WASHER_POINT_MALL_FULFILLMENT_MODE=provider
 
 1. `sql/postgresql/001_cloudbase_init.sql`：空测试环境的完整表结构、索引、演示数据和 `updated_at` 触发器。
 2. `sql/postgresql/002_cloudbase_http_rpc.sql`：用户合并与积分兑换所需的原子 RPC。
+3. `sql/postgresql/003_cloudbase_user_info_columns.sql`：为已按旧版本脚本创建的 `user_info` 表补齐登录与会员字段；新环境执行最新版 `001` 后也可安全执行。
 
 在云托管服务的环境变量中配置以下值：
 
@@ -118,6 +119,8 @@ WECHAT_PAY_ENABLED=false
 
 云开发 HTTP profile 会默认关闭依赖数据库行锁的“订单超时自动完成”定时任务，避免在免费环境中执行非原子资金操作。测试期间不要打开微信支付；付款、退款、卡支付和设备正式控制仍应在对应 RPC 完成后再启用。
 
-在微信开发者工具的“云开发 -> 云托管”中创建测试服务后，选择 Git 平台部署，目标目录填写 `backend`，Dockerfile 路径填写 `Dockerfile`，服务端口填写 `8080`。首次联调建议关闭自动部署，待 `/ping`、登录和积分兑换验证完成后再开启。部署完成后，通过服务 HTTPS 地址访问 `/ping`；返回 `code=0` 后，再将该 HTTPS 地址加入小程序 request 合法域名并配置到 `config/url.ts` 的测试环境。
+在微信开发者工具的“云开发 -> 云托管”中创建测试服务后，选择 Git 平台部署，目标目录填写 `backend`，Dockerfile 路径填写 `Dockerfile`，服务端口填写 `8080`。首次联调建议关闭自动部署，待 `/ping`、登录和积分兑换验证完成后再开启。
+
+测试小程序调用此服务使用 `wx.cloud.callContainer`，要求小程序 AppID 与该云开发环境关联，服务名为 `washer-api`。不要把 `*.run.tcloudbase.com` 默认域名填入微信公众平台的 `request` 或 `uploadFile` 合法域名字段，该默认域名只用于开发测试且会被公众平台拒绝。头像上传目前仍使用 HTTP 文件上传，因此在 CloudBase 私有测试调用模式下会明确提示不可用；正式上线应改用云存储上传或绑定已备案的自定义 HTTPS 域名。
 
 云开发免费环境只用于测试。不要在其中保存唯一的生产数据库、生产支付密钥或正式用户资金；到期前必须导出测试数据库和部署配置。

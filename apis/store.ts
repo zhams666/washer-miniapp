@@ -1,37 +1,17 @@
-import { REQUEST_URL } from '../config/url';
 import { BaseEnum } from '../config/enums';
 import type { IObject } from 'typings/interface.d';
+import { apiRequest } from '../utils/container-request';
 
 const silentGet = (_url: string, _data?: IObject): Promise<IObject> => {
-  return new Promise((resolve, reject) => {
-    const requestData = Object.keys(_data || {}).reduce((acc: IObject, key) => {
-      const value = (_data || {})[key];
-      if (value !== undefined && value !== null) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {});
-
-    wx.request({
-      url: REQUEST_URL + _url,
-      data: { ...requestData, wxAppId: BaseEnum.APP_ID },
-      header: {
-        'content-type': 'application/json',
-      },
-      method: 'GET',
-      success({ statusCode, data }) {
-        const response = (data || {}) as Record<string, any>;
-        if (statusCode === 200 && response.code === 0) {
-          resolve((response.data || {}) as IObject);
-          return;
-        }
-        reject(response);
-      },
-      fail(err) {
-        reject(err);
-      },
-    });
-  });
+  const requestData = Object.keys(_data || {}).reduce((acc: IObject, key) => {
+    const value = (_data || {})[key];
+    if (value !== undefined && value !== null) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {});
+  return apiRequest<IObject>('GET', _url, { ...requestData, wxAppId: BaseEnum.APP_ID })
+    .then((response) => response.code === 0 ? (response.data || {}) : Promise.reject(response));
 };
 
 /**

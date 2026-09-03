@@ -1,6 +1,7 @@
 import { BaseEnum } from '../config/enums';
-import { REQUEST_URL } from '../config/url';
+import { LOCAL_REQUEST_URL } from '../config/url';
 import { GET, POST } from '../utils/request';
+import { apiRequest, isCloudBaseTransport } from '../utils/container-request';
 import type { IObject, ResponseData } from 'typings/interface.d';
 
 type UserProfileQuery =
@@ -53,28 +54,11 @@ const requestSilently = <T>(
   url: string,
   data?: IObject
 ): Promise<ResponseData<T>> => {
-  return new Promise((resolve, reject) => {
-    wx.request({
-      url: REQUEST_URL + url,
-      data: data
-        ? { ...data, wxAppId: BaseEnum.APP_ID }
-        : { wxAppId: BaseEnum.APP_ID },
-      header: {
-        'content-type': 'application/json',
-      },
-      method,
-      timeout: 8000,
-      success({ statusCode, data: response }) {
-        const responseData = response as ResponseData<T>;
-        if (statusCode === 200 && responseData && responseData.code === 0) {
-          resolve(responseData);
-          return;
-        }
-        reject(responseData);
-      },
-      fail: reject,
-    });
-  });
+  return apiRequest<T>(
+    method,
+    url,
+    data ? { ...data, wxAppId: BaseEnum.APP_ID } : { wxAppId: BaseEnum.APP_ID }
+  ).then((response) => response.code === 0 ? response : Promise.reject(response));
 };
 
 export const getOpenId = async (_code?: string): Promise<string> => {
@@ -225,9 +209,13 @@ export const uploadAvatar = (filePath: string): Promise<string> => {
       reject(new Error('avatar file path is required'));
       return;
     }
+    if (isCloudBaseTransport()) {
+      reject(new Error('Avatar upload is unavailable in the CloudBase test transport'));
+      return;
+    }
 
     wx.uploadFile({
-      url: REQUEST_URL + '/costomer/uploadAvatar',
+      url: LOCAL_REQUEST_URL + '/costomer/uploadAvatar',
       filePath: path,
       name: 'file',
       timeout: 10000,

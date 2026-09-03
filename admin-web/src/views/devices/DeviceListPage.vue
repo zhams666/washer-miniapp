@@ -336,6 +336,13 @@ const getDeviceStatus = (device: DeviceItem) => {
   return String(device.deviceStatus || device.status || '').trim().toLowerCase();
 };
 
+const resolveRequestErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim();
+  }
+  return fallback;
+};
+
 const loadStoreOptions = async () => {
   try {
     storeOptions.value = await fetchAdminStoreOptions();
@@ -421,7 +428,13 @@ const handleSubmit = async () => {
     formVisible.value = false;
     await loadDevices();
   } catch (error) {
-    ElMessage.error(t('devices.messages.saveFailed'));
+    console.error('device save failed', {
+      deviceId: editingId.value,
+      targetStatus: deviceForm.deviceStatus,
+      message: resolveRequestErrorMessage(error, t('devices.messages.saveFailed')),
+      error,
+    });
+    ElMessage.error(resolveRequestErrorMessage(error, t('devices.messages.saveFailed')));
   } finally {
     submitting.value = false;
   }
@@ -438,7 +451,12 @@ const handleMockStart = async (id: number) => {
     ElMessage.success(t('devices.messages.mockStartSuccess'));
     await loadDevices();
   } catch (error) {
-    ElMessage.error(t('devices.messages.mockActionFailed'));
+    console.error('device simulated start failed', {
+      deviceId: id,
+      message: resolveRequestErrorMessage(error, t('devices.messages.mockActionFailed')),
+      error,
+    });
+    ElMessage.error(resolveRequestErrorMessage(error, t('devices.messages.mockActionFailed')));
   } finally {
     mockingDeviceId.value = null;
   }
@@ -455,7 +473,12 @@ const handleMockStop = async (id: number) => {
     ElMessage.success(t('devices.messages.mockStopSuccess'));
     await loadDevices();
   } catch (error) {
-    ElMessage.error(t('devices.messages.mockActionFailed'));
+    console.error('device simulated stop failed', {
+      deviceId: id,
+      message: resolveRequestErrorMessage(error, t('devices.messages.mockActionFailed')),
+      error,
+    });
+    ElMessage.error(resolveRequestErrorMessage(error, t('devices.messages.mockActionFailed')));
   } finally {
     mockingDeviceId.value = null;
   }

@@ -1,7 +1,7 @@
 import { BaseEnum } from '../config/enums';
-import { REQUEST_URL } from '../config/url';
 import type { IObject, ResponseData } from '../typings/interface.d';
 import { getAdminToken } from '../utils/admin-auth';
+import { apiRequest } from '../utils/container-request';
 
 type HttpMethod = 'GET' | 'POST';
 
@@ -24,35 +24,18 @@ const cleanParams = (_data?: IObject): IObject => {
 };
 
 const request = <T>(_method: HttpMethod, _url: string, _data?: IObject): Promise<T> => {
-  return new Promise((resolve, reject) => {
-    const token = getAdminToken();
-    wx.request({
-      url: REQUEST_URL + _url,
-      method: _method,
-      data: {
-        ...cleanParams(_data),
-        wxAppId: BaseEnum.APP_ID,
-      },
-      header: {
-        'content-type': 'application/json',
-        ...(token ? { 'X-Washer-Admin-Token': token } : {}),
-      },
-      success({ statusCode, data }) {
-        const response = (data || {}) as ResponseData<T>;
-        if (statusCode === 200 && response.code === 0) {
-          resolve(response.data);
-          return;
-        }
-        wx.showToast({
-          title: response.message || response.msg || '请求失败',
-          icon: 'none',
-        });
-        reject(response);
-      },
-      fail(error) {
-        reject(error);
-      },
-    });
+  const token = getAdminToken();
+  return apiRequest<T>(
+    _method,
+    _url,
+    { ...cleanParams(_data), wxAppId: BaseEnum.APP_ID },
+    token ? { 'X-Washer-Admin-Token': token } : {}
+  ).then((response: ResponseData<T>) => {
+    if (response.code === 0) {
+      return response.data;
+    }
+    wx.showToast({ title: response.message || response.msg || '请求失败', icon: 'none' });
+    return Promise.reject(response);
   });
 };
 

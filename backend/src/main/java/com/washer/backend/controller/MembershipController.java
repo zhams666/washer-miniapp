@@ -3,6 +3,8 @@ package com.washer.backend.controller;
 import com.washer.backend.common.ApiResponse;
 import com.washer.backend.service.MembershipService;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/membership")
 public class MembershipController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MembershipController.class);
 
     private final MembershipService membershipService;
 
@@ -31,7 +35,27 @@ public class MembershipController {
         Long userId = parseLong(payload, "userId");
         Long planId = parseLong(payload, "planId", "membershipPlanId");
         String openId = text(payload, "openId", "openid");
-        return ApiResponse.success(membershipService.createOrder(userId, planId, openId));
+        LOGGER.info("membership_order_started userId={}, planId={}", userId, planId);
+        try {
+            Map<String, Object> result = membershipService.createOrder(userId, planId, openId);
+            LOGGER.info(
+                "membership_order_completed userId={}, planId={}, orderNo={}, status={}",
+                userId,
+                planId,
+                result.get("orderNo"),
+                result.get("payStatus")
+            );
+            return ApiResponse.success(result);
+        } catch (RuntimeException exception) {
+            LOGGER.error(
+                "membership_order_failed userId={}, planId={}, reason={}",
+                userId,
+                planId,
+                exception.getMessage(),
+                exception
+            );
+            throw exception;
+        }
     }
 
     @GetMapping("/orders/{orderNo}")

@@ -536,6 +536,11 @@ Page({
 
     this.setData({ loading: true });
     try {
+      console.info('recharge submit started', {
+        storeId: this.data.storeId,
+        rechargeProductId,
+        amount,
+      });
       const result = await createRechargeOrder({
         storeId: this.data.storeId || undefined,
         rechargeProductId,
@@ -545,6 +550,10 @@ Page({
       if (!rechargeOrderNo) {
         throw new Error(TEXT_RECHARGE_RESULT_MISSING);
       }
+      console.info('recharge order created', {
+        rechargeOrderNo,
+        payStatus: result.payStatus,
+      });
 
       const paymentResult = await this.requestWechatPayment(result);
       const principalAmount =
@@ -577,7 +586,12 @@ Page({
         title: this.extractErrorMessage(error) || TEXT_RECHARGE_FAILED,
         icon: 'none',
       });
-      console.error('handleRecharge error:', error);
+      console.error('recharge submit failed:', {
+        storeId: this.data.storeId,
+        rechargeProductId,
+        message: this.extractErrorMessage(error),
+        error,
+      });
     } finally {
       this.setData({ loading: false });
     }

@@ -257,8 +257,9 @@ Page({
         icon: 'none',
       });
     } catch (error) {
+      const errorMessage = this.resolveRequestErrorMessage(error);
       wx.showToast({
-        title: '登录失败，请检查网络',
+        title: errorMessage || '登录失败，请检查网络',
         icon: 'none',
       });
       console.error('handlePhoneLogin error:', error);
@@ -404,7 +405,22 @@ Page({
     if (!text) {
       return '';
     }
-    if (text.indexOf('fail') >= 0 || text.indexOf('timeout') >= 0) {
+    const normalizedText = text.toLowerCase();
+    if (normalizedText.includes('callcontainer') || normalizedText.includes('service')) {
+      return '云托管连接失败';
+    }
+    if (normalizedText.includes('cloudbase') || normalizedText.includes('postgresql')) {
+      const status = normalizedText.match(/http\s*(\d{3})/)?.[1];
+      return status ? `数据库 HTTP ${status}` : '数据库服务异常';
+    }
+    if (
+      normalizedText.includes('jscode2session') ||
+      normalizedText.includes('access_token') ||
+      normalizedText.includes('get phone number')
+    ) {
+      return '微信密钥或手机号接口异常';
+    }
+    if (normalizedText.includes('fail') || normalizedText.includes('timeout')) {
       return '请检查后端连接';
     }
     if (text.length > 12) {

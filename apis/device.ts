@@ -1,53 +1,15 @@
-import { REQUEST_URL } from '../config/url';
 import { BaseEnum } from '../config/enums';
 import type { IObject } from 'typings/interface.d';
+import { apiRequest } from '../utils/container-request';
 
 const silentGet = (_url: string, _data?: IObject): Promise<IObject> => {
-  return new Promise((resolve, reject) => {
-    wx.request({
-      url: REQUEST_URL + _url,
-      data: { ..._data, wxAppId: BaseEnum.APP_ID },
-      header: {
-        'content-type': 'application/json',
-      },
-      method: 'GET',
-      success({ statusCode, data }) {
-        const response = (data || {}) as Record<string, any>;
-        if (statusCode === 200 && response.code === 0) {
-          resolve((response.data || {}) as IObject);
-          return;
-        }
-        reject(response);
-      },
-      fail(err) {
-        reject(err);
-      },
-    });
-  });
+  return apiRequest<IObject>('GET', _url, { ..._data, wxAppId: BaseEnum.APP_ID })
+    .then((response) => response.code === 0 ? (response.data || {}) : Promise.reject(response));
 };
 
 const silentPost = (_url: string, _data?: IObject): Promise<IObject> => {
-  return new Promise((resolve, reject) => {
-    wx.request({
-      url: REQUEST_URL + _url,
-      data: { ..._data, wxAppId: BaseEnum.APP_ID },
-      header: {
-        'content-type': 'application/json',
-      },
-      method: 'POST',
-      success({ statusCode, data }) {
-        const response = (data || {}) as Record<string, any>;
-        if (statusCode === 200 && response.code === 0) {
-          resolve((response.data || {}) as IObject);
-          return;
-        }
-        reject(response);
-      },
-      fail(err) {
-        reject(err);
-      },
-    });
-  });
+  return apiRequest<IObject>('POST', _url, { ..._data, wxAppId: BaseEnum.APP_ID })
+    .then((response) => response.code === 0 ? (response.data || {}) : Promise.reject(response));
 };
 
 export const getDeviceList = async (

@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -47,6 +49,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping
 public class MiniWalletController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MiniWalletController.class);
 
     private static final List<DefaultRechargeProductTemplate> DEFAULT_RECHARGE_PRODUCTS = List.of(
         new DefaultRechargeProductTemplate("充值58元", new BigDecimal("58.00"), new BigDecimal("58.00"), BigDecimal.ZERO, 0),
@@ -128,13 +132,39 @@ public class MiniWalletController {
             throw new IllegalArgumentException("rechargeProductId is required");
         }
 
+        LOGGER.info(
+            "recharge_create_started userId={}, storeId={}, rechargeProductId={}",
+            userId,
+            storeId,
+            rechargeProductId
+        );
         AdminWalletRechargeRequest request = new AdminWalletRechargeRequest();
         request.setUserId(userId);
         request.setStoreId(storeId);
         request.setRechargeProductId(rechargeProductId);
         request.setRemark("miniapp recharge order");
 
-        return ApiResponse.success(adminWalletRechargeService.createMiniappRechargeOrder(request));
+        try {
+            AdminWalletRechargeResult result = adminWalletRechargeService.createMiniappRechargeOrder(request);
+            LOGGER.info(
+                "recharge_create_completed userId={}, rechargeOrderNo={}, walletId={}, status={}",
+                userId,
+                result.getRechargeOrderNo(),
+                result.getWalletId(),
+                result.getPayStatus()
+            );
+            return ApiResponse.success(result);
+        } catch (RuntimeException exception) {
+            LOGGER.error(
+                "recharge_create_failed userId={}, storeId={}, rechargeProductId={}, reason={}",
+                userId,
+                storeId,
+                rechargeProductId,
+                exception.getMessage(),
+                exception
+            );
+            throw exception;
+        }
     }
 
     @GetMapping("/wallet/recharges/{rechargeOrderNo}")

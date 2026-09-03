@@ -7,6 +7,8 @@ import com.washer.backend.service.DeviceService;
 import com.washer.backend.service.WashOrderService;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/devices")
 public class DeviceController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DeviceController.class);
 
     private final DeviceService deviceService;
     private final WashOrderService washOrderService;
@@ -82,14 +86,32 @@ public class DeviceController {
     @PutMapping("/{id}")
     public ApiResponse<Device> update(@PathVariable Long id, @RequestBody Device device) {
         device.setId(id);
-        if (shouldStopRunningOrders(device.getDeviceStatus())) {
-            washOrderService.cancelRunningOrdersForDevice(id, "管理员更新设备状态");
+        LOGGER.info(
+            "device_update_started deviceId={}, targetStatus={}, storeId={}",
+            id,
+            device.getDeviceStatus(),
+            device.getStoreId()
+        );
+        try {
+            if (shouldStopRunningOrders(device.getDeviceStatus())) {
+                washOrderService.cancelRunningOrdersForDevice(id, "管理员更新设备状态");
+            }
+            boolean updated = deviceService.updateById(device);
+            if (!updated) {
+                throw new IllegalArgumentException("device update failed");
+            }
+            LOGGER.info("device_update_completed deviceId={}, targetStatus={}", id, device.getDeviceStatus());
+            return ApiResponse.success("updated", deviceService.getById(id));
+        } catch (RuntimeException exception) {
+            LOGGER.error(
+                "device_update_failed deviceId={}, targetStatus={}, reason={}",
+                id,
+                device.getDeviceStatus(),
+                exception.getMessage(),
+                exception
+            );
+            throw exception;
         }
-        boolean updated = deviceService.updateById(device);
-        if (!updated) {
-            throw new IllegalArgumentException("device update failed");
-        }
-        return ApiResponse.success("updated", deviceService.getById(id));
     }
 
     private boolean shouldStopRunningOrders(String deviceStatus) {
