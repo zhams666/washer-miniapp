@@ -376,11 +376,9 @@ public class AdminWalletRechargeServiceImpl implements AdminWalletRechargeServic
                 .eq(WalletRechargeProduct::getId, rechargeProductId)
                 .eq(WalletRechargeProduct::getStoreId, storeId)
                 .eq(WalletRechargeProduct::getStatus, 1)
-                .and(wrapper -> wrapper.isNull(WalletRechargeProduct::getEffectiveTime).or().le(WalletRechargeProduct::getEffectiveTime, now))
-                .and(wrapper -> wrapper.isNull(WalletRechargeProduct::getExpireTime).or().gt(WalletRechargeProduct::getExpireTime, now))
                 .last("limit 1")
         );
-        if (product == null) {
+        if (!isRechargeProductActive(product, now)) {
             throw new IllegalArgumentException("recharge product not found or off shelf");
         }
         validateRechargeProductSnapshot(product);
@@ -416,12 +414,22 @@ public class AdminWalletRechargeServiceImpl implements AdminWalletRechargeServic
         }
     }
 
+    private boolean isRechargeProductActive(WalletRechargeProduct product, LocalDateTime now) {
+        if (product == null || !Integer.valueOf(1).equals(product.getStatus())) {
+            return false;
+        }
+        if (product.getEffectiveTime() != null && product.getEffectiveTime().isAfter(now)) {
+            return false;
+        }
+        return product.getExpireTime() == null || product.getExpireTime().isAfter(now);
+    }
+
     private UserStoreWallet loadOrCreateWalletForUpdate(Long userId, Long storeId) {
         UserStoreWallet wallet = userStoreWalletMapper.selectOne(
             new LambdaQueryWrapper<UserStoreWallet>()
                 .eq(UserStoreWallet::getUserId, userId)
                 .eq(UserStoreWallet::getStoreId, storeId)
-                .last("limit 1 for update")
+                .last("limit 1")
         );
 
         if (wallet == null) {
@@ -433,7 +441,7 @@ public class AdminWalletRechargeServiceImpl implements AdminWalletRechargeServic
                     new LambdaQueryWrapper<UserStoreWallet>()
                         .eq(UserStoreWallet::getUserId, userId)
                         .eq(UserStoreWallet::getStoreId, storeId)
-                        .last("limit 1 for update")
+                        .last("limit 1")
                 );
             }
         }
@@ -526,13 +534,21 @@ public class AdminWalletRechargeServiceImpl implements AdminWalletRechargeServic
             return;
         }
 
-        userInfoService.update(
+        UserInfo user = userInfoService.getById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("user not found");
+        }
+        int currentPoints = user.getPoints() != null ? user.getPoints() : 0;
+        boolean updated = userInfoService.update(
             null,
             new LambdaUpdateWrapper<UserInfo>()
                 .eq(UserInfo::getId, userId)
-                .setSql("points = COALESCE(points, 0) + " + points)
+                .set(UserInfo::getPoints, currentPoints + points)
                 .set(UserInfo::getUpdatedAt, LocalDateTime.now())
         );
+        if (!updated) {
+            throw new IllegalStateException("recharge points update failed");
+        }
     }
 
     private AdminWalletRechargeResult createWechatPayRechargeOrder(RechargeExecutionContext context) {

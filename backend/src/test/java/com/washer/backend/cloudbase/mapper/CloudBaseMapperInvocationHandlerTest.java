@@ -76,6 +76,22 @@ class CloudBaseMapperInvocationHandlerTest {
     }
 
     @Test
+    void updateSerializesTimestampAssignmentsAsIsoStrings() throws Exception {
+        CloudBasePgClient client = mock(CloudBasePgClient.class);
+        when(client.update(eq("user_info"), any(), any())).thenReturn(objectMapper.readTree("[{\"id\":1}]"));
+        UserInfoMapper mapper = CloudBaseMapperFactory.create(UserInfoMapper.class, client, objectMapper);
+        LocalDateTime timestamp = LocalDateTime.of(2026, 9, 3, 9, 43, 23, 858_741_358);
+
+        mapper.update(null, new LambdaUpdateWrapper<UserInfo>()
+            .eq(UserInfo::getId, 1L)
+            .set(UserInfo::getLastLoginTime, timestamp));
+
+        ArgumentCaptor<Map<String, Object>> body = ArgumentCaptor.forClass(Map.class);
+        verify(client).update(eq("user_info"), any(), body.capture());
+        assertEquals("2026-09-03T09:43:23.858741358", body.getValue().get("last_login_time"));
+    }
+
+    @Test
     void insertSerializesLocalDateTimesAsPostgrestTimestampStrings() throws Exception {
         CloudBasePgClient client = mock(CloudBasePgClient.class);
         when(client.insert(eq("user_info"), any())).thenReturn(objectMapper.readTree("[{\"id\":1}]"));

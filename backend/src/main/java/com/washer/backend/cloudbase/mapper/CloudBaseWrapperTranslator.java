@@ -82,7 +82,10 @@ final class CloudBaseWrapperTranslator {
             if (!matcher.matches()) {
                 throw new CloudBasePgException("CloudBase HTTP profile does not support this MyBatis update expression");
             }
-            body.put(columnName(matcher.group(1)), updateWrapper.getParamNameValuePairs().get(matcher.group(2)));
+            body.put(
+                columnName(matcher.group(1)),
+                metadata.postgrestValue(updateWrapper.getParamNameValuePairs().get(matcher.group(2)))
+            );
         }
         return body;
     }

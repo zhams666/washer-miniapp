@@ -98,12 +98,24 @@ public class MiniWalletController {
 
     @GetMapping("/wallet/recharge-products")
     public ApiResponse<List<Map<String, Object>>> rechargeProducts(@RequestParam Long storeId) {
-        Store store = requireStore(storeId);
-        List<WalletRechargeProduct> products = findActiveRechargeProducts(store.getId());
-        if (products.isEmpty() && countRechargeProducts(store.getId()) == 0) {
-            products = createDefaultRechargeProducts(store.getId());
+        LOGGER.info("recharge_products_load_started storeId={}", storeId);
+        try {
+            Store store = requireStore(storeId);
+            List<WalletRechargeProduct> products = findActiveRechargeProducts(store.getId());
+            if (products.isEmpty() && countRechargeProducts(store.getId()) == 0) {
+                products = createDefaultRechargeProducts(store.getId());
+            }
+            LOGGER.info("recharge_products_load_completed storeId={}, productCount={}", store.getId(), products.size());
+            return ApiResponse.success(products.stream().map(this::toRechargeProductResult).toList());
+        } catch (RuntimeException exception) {
+            LOGGER.error(
+                "recharge_products_load_failed storeId={}, reason={}",
+                storeId,
+                exception.getMessage(),
+                exception
+            );
+            throw exception;
         }
-        return ApiResponse.success(products.stream().map(this::toRechargeProductResult).toList());
     }
 
     @PostMapping("/pay/recharge")
@@ -685,11 +697,19 @@ public class MiniWalletController {
             new LambdaQueryWrapper<WalletRechargeProduct>()
                 .eq(WalletRechargeProduct::getStoreId, storeId)
                 .eq(WalletRechargeProduct::getStatus, 1)
-                .and(wrapper -> wrapper.isNull(WalletRechargeProduct::getEffectiveTime).or().le(WalletRechargeProduct::getEffectiveTime, now))
-                .and(wrapper -> wrapper.isNull(WalletRechargeProduct::getExpireTime).or().gt(WalletRechargeProduct::getExpireTime, now))
                 .orderByAsc(WalletRechargeProduct::getPayAmount)
                 .orderByAsc(WalletRechargeProduct::getId)
-        );
+        ).stream().filter(product -> isRechargeProductActive(product, now)).toList();
+    }
+
+    private boolean isRechargeProductActive(WalletRechargeProduct product, LocalDateTime now) {
+        if (product == null || !Integer.valueOf(1).equals(product.getStatus())) {
+            return false;
+        }
+        if (product.getEffectiveTime() != null && product.getEffectiveTime().isAfter(now)) {
+            return false;
+        }
+        return product.getExpireTime() == null || product.getExpireTime().isAfter(now);
     }
 
     private long countRechargeProducts(Long storeId) {

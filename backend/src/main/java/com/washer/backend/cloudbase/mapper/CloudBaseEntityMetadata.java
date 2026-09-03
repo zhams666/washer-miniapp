@@ -108,7 +108,7 @@ final class CloudBaseEntityMetadata<T> {
         return fieldName.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase(java.util.Locale.ROOT);
     }
 
-    private Object postgrestValue(Object value) {
+    Object postgrestValue(Object value) {
         if (value instanceof LocalDateTime dateTime) {
             return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(dateTime);
         }
