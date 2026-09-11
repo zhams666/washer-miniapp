@@ -66,6 +66,38 @@
         "type": "folder"
       },
       {
+        "value": ".agents",
+        "type": "folder"
+      },
+      {
+        "value": ".local",
+        "type": "folder"
+      },
+      {
+        "value": "node_modules",
+        "type": "folder"
+      },
+      {
+        "value": "docs",
+        "type": "folder"
+      },
+      {
+        "value": "scripts",
+        "type": "folder"
+      },
+      {
+        "value": "test",
+        "type": "folder"
+      },
+      {
+        "value": "assets/images/home-wash-hero.png",
+        "type": "file"
+      },
+      {
+        "value": "微信图片_20260801174942_450_631.jpg",
+        "type": "file"
+      },
+      {
         "value": ".eslintrc.js",
         "type": "file"
       },
