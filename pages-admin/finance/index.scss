@@ -53,6 +53,19 @@
 .finance-card {
   min-height: 156rpx;
   padding: 24rpx;
+  position: relative;
+}
+
+.finance-card::after {
+  content: "";
+  position: absolute;
+  top: 22rpx;
+  right: 22rpx;
+  width: 12rpx;
+  height: 12rpx;
+  border-top: 3rpx solid rgba(47, 154, 165, 0.5);
+  border-right: 3rpx solid rgba(47, 154, 165, 0.5);
+  transform: rotate(45deg);
 }
 
 .finance-card__title,
@@ -92,23 +105,49 @@
   margin-top: 18rpx;
 }
 
-.activity-item {
+.activity-item,
+.detail-item {
   min-height: 96rpx;
   margin-bottom: 14rpx;
   padding: 20rpx 22rpx;
 }
 
-.activity-item__title {
+.activity-item__title,
+.detail-item__title {
   color: $color-text-primary;
   font-size: $font-body;
   font-weight: 800;
 }
 
-.activity-item__amount {
+.activity-item__amount,
+.detail-item__amount {
   margin-left: 16rpx;
   color: $color-primary;
   font-size: $font-body;
   font-weight: 800;
+}
+
+.detail-list {
+  margin-top: 18rpx;
+}
+
+.detail-item {
+  @include card;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-item__meta,
+.detail-item__status {
+  margin-top: 8rpx;
+  color: $color-text-secondary;
+  font-size: $font-micro;
+}
+
+.detail-item__side {
+  margin-left: 16rpx;
+  text-align: right;
 }
 
 .empty-text {

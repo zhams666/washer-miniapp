@@ -1,52 +1,121 @@
 <view class="page">
   <Navbar title="设备管理" customBackPath="/pages-admin/home/index" customBackPathIsTabbar="{{false}}"></Navbar>
 
-  <view class="container">
-    <view class="filter-card">
-      <picker mode="selector" range="{{storePickerOptions}}" value="{{selectedStoreIndex}}" bindchange="handleStoreChange">
-        <view class="picker-row">
-          <text>{{storePickerOptions[selectedStoreIndex]}}</text>
-          <label>切换门店</label>
+  <view class="search-band">
+    <picker mode="selector" range="{{storePickerOptions}}" value="{{selectedStoreIndex}}" bindchange="handleStoreChange">
+      <view class="store-picker">
+        <text>{{storePickerOptions[selectedStoreIndex]}}</text>
+        <text class="store-picker__arrow">切换</text>
+      </view>
+    </picker>
+    <view class="search-row">
+      <input value="{{keyword}}" placeholder="设备编号或名称" bindinput="handleKeywordInput" confirm-type="search" bindconfirm="handleSearch" />
+      <button class="search-button" bindtap="handleSearch">搜索</button>
+    </view>
+  </view>
+
+  <view class="device-list">
+    <view wx:for="{{devices}}" wx:key="id" class="device-card">
+      <view class="device-info">
+        <view class="info-line">
+          <text class="label">设备名称：</text>
+          <text class="value strong">{{item.deviceName || '未命名设备'}}</text>
         </view>
-      </picker>
-      <view class="search-row">
-        <input value="{{keyword}}" placeholder="设备名称或编码" bindinput="handleKeywordInput" confirm-type="search" bindconfirm="handleSearch" />
-        <view class="search-button" bindtap="handleSearch">搜索</view>
+        <view class="info-line">
+          <text class="label label--blue">设备号：</text>
+          <text class="value value--blue">{{item.deviceCode || '--'}}</text>
+        </view>
+        <view class="info-line">
+          <text class="label">代理等级：</text>
+          <text class="value">{{item.agentLevel || '1级代理'}}</text>
+        </view>
+        <view class="info-line">
+          <text class="label">联系人：</text>
+          <text class="value">{{item.contactName || item.storeName || '--'}}</text>
+        </view>
+        <view class="info-line">
+          <text class="label">联系电话：</text>
+          <text class="value">{{item.contactPhone || '--'}}</text>
+        </view>
+        <view class="info-line">
+          <text class="label">状态：</text>
+          <text class="value">{{item.displayStatus}}</text>
+        </view>
+        <view class="status-row">
+          <text class="status-tag status-{{item.statusClass}}">{{item.displayStatus}}</text>
+          <text class="status-tag">{{item.doorStateLabel}}</text>
+          <text class="status-tag">{{item.powerStateLabel}}</text>
+          <text class="status-tag">{{item.maintenanceLabel}}</text>
+        </view>
+      </view>
+
+      <view class="device-actions">
+        <view class="action-row">
+          <button class="action-button" data-id="{{item.id}}" bindtap="openEdit">编辑</button>
+          <button class="action-button action-button--wide" data-id="{{item.id}}" bindtap="showCabinetList">柜子列表</button>
+        </view>
+        <button class="action-button action-button--wide action-button--full" loading="{{operatingId === item.id}}" data-id="{{item.id}}" data-action="open_door" bindtap="handleDeviceAction">一键开门</button>
+        <button class="action-button action-button--wide action-button--full" loading="{{operatingId === item.id}}" data-id="{{item.id}}" data-action="close_door" bindtap="handleDeviceAction">一键关门</button>
+        <view class="action-row action-row--bottom">
+          <button class="action-button action-button--wide" data-id="{{item.id}}" bindtap="showRecognizerInfo">识别器信息</button>
+          <button class="action-button" loading="{{operatingId === item.id}}" data-id="{{item.id}}" data-action="power_on" bindtap="handleDeviceAction">开电</button>
+        </view>
+        <view class="action-row">
+          <button class="action-button" loading="{{operatingId === item.id}}" data-id="{{item.id}}" data-action="power_off" bindtap="handleDeviceAction">关电</button>
+          <button class="action-button" loading="{{operatingId === item.id}}" data-id="{{item.id}}" data-action="maintenance" bindtap="handleDeviceAction">维护</button>
+        </view>
       </view>
     </view>
 
-    <view class="device-list">
-      <view wx:for="{{devices}}" wx:key="id" class="device-card">
-        <view class="device-card__top">
-          <view>
-            <view class="device-card__title">{{item.deviceName || item.deviceCode || '未命名设备'}}</view>
-            <view class="device-card__meta">{{item.storeName || '未知门店'}} · {{item.deviceCode || '--'}}</view>
-          </view>
-          <view class="status-pill status-{{item.statusClass}}">{{item.displayStatus}}</view>
-        </view>
-        <view class="device-card__info">
-          <text>{{item.deviceType || 'washer'}}</text>
-          <text>{{item.protocolType || '协议待补充'}}</text>
-          <text>{{item.firmwareVersion || '版本未知'}}</text>
-        </view>
-        <view class="device-card__actions">
-          <button
-            class="action-button action-button--primary"
-            wx:if="{{item.statusClass !== 'running'}}"
-            loading="{{operatingId === item.id}}"
-            data-id="{{item.id}}"
-            bindtap="handleStart"
-          >启动</button>
-          <button
-            class="action-button action-button--warning"
-            wx:if="{{item.statusClass === 'running'}}"
-            loading="{{operatingId === item.id}}"
-            data-id="{{item.id}}"
-            bindtap="handleStop"
-          >停止</button>
-        </view>
+    <view wx:if="{{!devices.length && !loading}}" class="empty-text">暂无设备</view>
+  </view>
+
+  <view wx:if="{{editVisible}}" class="drawer-mask" bindtap="closeEdit">
+    <view class="drawer" catchtap="noop">
+      <view class="drawer-head">
+        <text>修改</text>
+        <view class="drawer-close" bindtap="closeEdit">X</view>
       </view>
-      <view wx:if="{{!devices.length && !loading}}" class="empty-text">暂无设备</view>
+      <scroll-view scroll-y class="drawer-body">
+        <view class="form-row required">
+          <text class="form-label">设备号</text>
+          <input class="form-input" value="{{editForm.deviceCode}}" data-field="deviceCode" bindinput="handleEditInput" placeholder="请输入设备号" />
+        </view>
+        <view class="form-row required">
+          <text class="form-label">设备名称</text>
+          <input class="form-input" value="{{editForm.deviceName}}" data-field="deviceName" bindinput="handleEditInput" placeholder="请输入设备名称" />
+        </view>
+        <view class="form-row required">
+          <text class="form-label">基础时间</text>
+          <input class="form-input" type="number" value="{{editForm.baseTimeMinutes}}" data-field="baseTimeMinutes" bindinput="handleEditInput" placeholder="10" />
+          <text class="form-unit">分钟</text>
+        </view>
+        <view class="form-row required">
+          <text class="form-label">基础价格</text>
+          <input class="form-input" type="digit" value="{{editForm.basePrice}}" data-field="basePrice" bindinput="handleEditInput" placeholder="6" />
+          <text class="form-unit">元</text>
+        </view>
+        <view class="form-row required">
+          <text class="form-label">超时价格</text>
+          <input class="form-input" type="digit" value="{{editForm.overtimePrice}}" data-field="overtimePrice" bindinput="handleEditInput" placeholder="0.5" />
+          <text class="form-unit">元</text>
+        </view>
+        <view class="form-row required">
+          <text class="form-label">云音响SN</text>
+          <input class="form-input" value="{{editForm.speakerSn}}" data-field="speakerSn" bindinput="handleEditInput" placeholder="请输入云音响SN" />
+        </view>
+        <view class="form-row required">
+          <text class="form-label">云音响版本</text>
+          <input class="form-input" value="{{editForm.speakerVersion}}" data-field="speakerVersion" bindinput="handleEditInput" placeholder="请输入云音响版本" />
+        </view>
+        <view class="form-row required">
+          <text class="form-label">绑定柜子</text>
+          <input class="form-input" value="{{editForm.cabinetName}}" data-field="cabinetName" bindinput="handleEditInput" placeholder="请选择绑定柜子" />
+        </view>
+      </scroll-view>
+      <view class="drawer-footer">
+        <button class="save-button" loading="{{saving}}" bindtap="handleSaveEdit">确认保存</button>
+      </view>
     </view>
   </view>
 </view>

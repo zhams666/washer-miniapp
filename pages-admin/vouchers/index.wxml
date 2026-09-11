@@ -1,0 +1,63 @@
+<view class="page">
+  <Navbar title="兑换券列表" customBackPath="/pages-admin/home/index" customBackPathIsTabbar="{{false}}"></Navbar>
+
+  <view class="container">
+    <view class="filter-card">
+      <view class="filter-grid">
+        <picker mode="selector" range="{{storePickerOptions}}" value="{{selectedStoreIndex}}" bindchange="handleStoreChange">
+          <view class="filter-item">
+            <text>{{storePickerOptions[selectedStoreIndex]}}</text>
+            <label>门店</label>
+          </view>
+        </picker>
+        <picker mode="selector" range="{{statusOptions}}" value="{{selectedStatusIndex}}" bindchange="handleStatusChange">
+          <view class="filter-item">
+            <text>{{statusOptions[selectedStatusIndex]}}</text>
+            <label>状态</label>
+          </view>
+        </picker>
+      </view>
+      <view class="search-row">
+        <input value="{{keyword}}" placeholder="序列号/批次号" bindinput="handleKeywordInput" confirm-type="search" bindconfirm="handleSearch" />
+        <view class="search-button" bindtap="handleSearch">搜索</view>
+      </view>
+    </view>
+
+    <view class="generate-button" bindtap="goGenerate">批量生成兑换卡券</view>
+
+    <view class="voucher-list">
+      <view wx:for="{{vouchers}}" wx:key="id" class="voucher-card">
+        <view class="voucher-card__top">
+          <view>
+            <view class="voucher-card__no">{{item.serialNo}}</view>
+            <view class="voucher-card__meta">{{item.batchNo}} / {{item.storeName || '未知门店'}}</view>
+          </view>
+          <view class="voucher-card__status {{item.status}}">{{item.statusText}}</view>
+        </view>
+        <view class="voucher-card__body">
+          <view>
+            <text>{{item.amountText}}</text>
+            <label>兑换金额</label>
+          </view>
+          <view>
+            <text>{{item.userText}}</text>
+            <label>核销用户</label>
+          </view>
+        </view>
+        <view class="voucher-card__foot">
+          <text>生成 {{item.createdText}}</text>
+          <text>核销 {{item.redeemedText}}</text>
+        </view>
+        <view class="voucher-card__tx" wx:if="{{item.redeemTransactionNo}}">
+          流水号 {{item.redeemTransactionNo}}
+        </view>
+        <view class="copy-code" data-code="{{item.serialNo}}" bindtap="copyCode">复制序列号</view>
+      </view>
+      <view wx:if="{{!vouchers.length && !loading}}" class="empty-text">暂无兑换券</view>
+      <view wx:if="{{hasMore && vouchers.length}}" class="load-more" bindtap="handleLoadMore">
+        {{loading ? '加载中...' : '加载更多'}}
+      </view>
+      <view wx:if="{{!hasMore && vouchers.length}}" class="empty-text">已到底</view>
+    </view>
+  </view>
+</view>

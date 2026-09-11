@@ -4,7 +4,7 @@ page {
   background: $color-bg;
   color: $color-text-primary;
   font-size: 28rpx;
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", Helvetica, Arial, sans-serif;
   letter-spacing: 0;
 }
 
@@ -28,4 +28,9 @@ button {
 
 button::after {
   border: 0;
+}
+
+button,
+view[bindtap] {
+  -webkit-tap-highlight-color: transparent;
 }

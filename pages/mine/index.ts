@@ -246,7 +246,8 @@ Page({
 
     this.setData({ phoneLoginSubmitting: true });
     try {
-      const result = await loginCurrentUserWithPhoneCode(phoneCode, null);
+      const wechatProfile = await this.collectWechatUserProfile();
+      const result = await loginCurrentUserWithPhoneCode(phoneCode, wechatProfile);
       if (result && result.status === 0) {
         this.finishPhoneLoginSuccess();
         return;
@@ -328,7 +329,9 @@ Page({
   async loginWithMobile(mobile: string, actionName: string) {
     this.setData({ phoneLoginSubmitting: true });
     try {
-      const result = await loginCurrentUserWithMobile(mobile, null);
+      const wechatProfile =
+        actionName === 'handleTestAccountLogin' ? null : await this.collectWechatUserProfile();
+      const result = await loginCurrentUserWithMobile(mobile, wechatProfile);
       if (result && result.status === 0) {
         this.finishPhoneLoginSuccess();
         return;
@@ -427,6 +430,36 @@ Page({
       return text.slice(0, 12);
     }
     return text;
+  },
+
+  collectWechatUserProfile(): Promise<Record<string, any> | null> {
+    const getUserProfile = (wx as any).getUserProfile;
+    if (typeof getUserProfile !== 'function') {
+      return Promise.resolve(null);
+    }
+    return new Promise((resolve) => {
+      getUserProfile({
+        desc: '用于同步微信昵称和头像',
+        lang: 'zh_CN',
+        success: (res: Record<string, any>) => {
+          const userInfo = (res && res.userInfo) || {};
+          const nickname = String(userInfo.nickName || '').trim();
+          const avatarUrl = String(userInfo.avatarUrl || '').trim();
+          if (!nickname && !avatarUrl) {
+            resolve(null);
+            return;
+          }
+          resolve({
+            nickname,
+            nickName: nickname,
+            avatarUrl,
+          });
+        },
+        fail: () => {
+          resolve(null);
+        },
+      });
+    });
   },
 
   onChooseAvatar(e: WechatMiniprogram.CustomEvent) {

@@ -3,6 +3,7 @@ package com.washer.backend.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.washer.backend.dto.device.DeviceSimpleItem;
+import com.washer.backend.dto.miniadmin.MiniAdminDeviceConfigRequest;
 import com.washer.backend.entity.Device;
 import com.washer.backend.integration.device.DeviceCommand;
 import com.washer.backend.integration.device.DeviceCommandResult;
@@ -11,6 +12,9 @@ import com.washer.backend.entity.Store;
 import com.washer.backend.mapper.DeviceMapper;
 import com.washer.backend.service.DeviceService;
 import com.washer.backend.service.StoreService;
+import com.washer.backend.support.DeviceManagementRemark;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +125,85 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         return toSimpleItem(device, buildStoreMap(List.of(device)));
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DeviceSimpleItem updateMiniAdminConfig(Long id, MiniAdminDeviceConfigRequest request) {
+        Device device = getRequiredDevice(id);
+        if (request == null) {
+            throw new IllegalArgumentException("request is required");
+        }
+        String deviceCode = normalizeText(request.getDeviceCode());
+        if (!StringUtils.hasText(deviceCode)) {
+            throw new IllegalArgumentException("deviceCode is required");
+        }
+        String deviceName = normalizeText(request.getDeviceName());
+        if (!StringUtils.hasText(deviceName)) {
+            throw new IllegalArgumentException("deviceName is required");
+        }
+
+        Map<String, Object> config = DeviceManagementRemark.parse(device.getRemark());
+        put(config, "baseTimeMinutes", normalizeInteger(request.getBaseTimeMinutes(), 0, 24 * 60));
+        put(config, "basePrice", normalizeAmount(request.getBasePrice()));
+        put(config, "overtimePrice", normalizeAmount(request.getOvertimePrice()));
+        put(config, "speakerSn", limitText(request.getSpeakerSn(), 64));
+        put(config, "speakerVersion", limitText(request.getSpeakerVersion(), 50));
+        put(config, "cabinetName", limitText(request.getCabinetName(), 80));
+
+        Device update = new Device();
+        update.setId(device.getId());
+        update.setDeviceCode(deviceCode);
+        update.setDeviceName(deviceName);
+        update.setFirmwareVersion(limitText(request.getSpeakerVersion(), 50));
+        update.setRemark(DeviceManagementRemark.serialize(config));
+        if (!this.updateById(update)) {
+            throw new IllegalArgumentException("device update failed");
+        }
+        return getSimpleDeviceById(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DeviceSimpleItem applyManagementAction(Long id, String action) {
+        Device device = getRequiredDevice(id);
+        String normalizedAction = normalizeAction(action);
+        Map<String, Object> config = DeviceManagementRemark.parse(device.getRemark());
+        Device update = new Device();
+        update.setId(device.getId());
+        LocalDateTime now = LocalDateTime.now();
+        put(config, "lastAction", normalizedAction);
+        put(config, "lastActionAt", now.toString());
+
+        switch (normalizedAction) {
+            case "open_door" -> put(config, "doorState", "open");
+            case "close_door" -> put(config, "doorState", "closed");
+            case "power_on" -> {
+                put(config, "powerState", "on");
+                put(config, "maintenanceMode", false);
+                update.setDeviceStatus(STATUS_IDLE);
+                update.setLastHeartbeatTime(now);
+                update.setLastOnlineTime(now);
+            }
+            case "power_off" -> {
+                put(config, "powerState", "off");
+                update.setDeviceStatus("offline");
+                update.setLastHeartbeatTime(now);
+            }
+            case "maintenance" -> {
+                put(config, "maintenanceMode", true);
+                put(config, "powerState", "on");
+                update.setDeviceStatus("paused");
+                update.setLastHeartbeatTime(now);
+            }
+            default -> throw new IllegalArgumentException("unsupported device action");
+        }
+
+        update.setRemark(DeviceManagementRemark.serialize(config));
+        if (!this.updateById(update)) {
+            throw new IllegalArgumentException("device update failed");
+        }
+        return getSimpleDeviceById(id);
+    }
+
     private Map<Long, Store> buildStoreMap(List<Device> devices) {
         List<Long> storeIds = devices.stream()
             .map(Device::getStoreId)
@@ -153,6 +236,7 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
 
     private DeviceSimpleItem toSimpleItem(Device device, Map<Long, Store> storeMap) {
         Store store = storeMap.get(device.getStoreId());
+        Map<String, Object> config = DeviceManagementRemark.parse(device.getRemark());
 
         return new DeviceSimpleItem(
             device.getId(),
@@ -167,8 +251,76 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
             device.getProtocolType(),
             device.getFirmwareVersion(),
             device.getRemark(),
+            resolveAgentLevel(store),
+            store != null ? store.getContactName() : "",
+            store != null ? store.getContactPhone() : "",
+            DeviceManagementRemark.integer(config, "baseTimeMinutes"),
+            DeviceManagementRemark.decimal(config, "basePrice"),
+            DeviceManagementRemark.decimal(config, "overtimePrice"),
+            DeviceManagementRemark.text(config, "speakerSn"),
+            StringUtils.hasText(DeviceManagementRemark.text(config, "speakerVersion"))
+                ? DeviceManagementRemark.text(config, "speakerVersion")
+                : device.getFirmwareVersion(),
+            DeviceManagementRemark.text(config, "cabinetName"),
+            DeviceManagementRemark.text(config, "doorState"),
+            DeviceManagementRemark.text(config, "powerState"),
+            Boolean.TRUE.equals(DeviceManagementRemark.bool(config, "maintenanceMode")),
             device.getCreatedAt(),
             device.getUpdatedAt()
         );
+    }
+
+    private String resolveAgentLevel(Store store) {
+        if (store == null || store.getFranchiseeId() == null || store.getFranchiseeId() <= 0) {
+            return "直营";
+        }
+        return "1级代理";
+    }
+
+    private String normalizeAction(String action) {
+        String value = normalizeText(action).replace("-", "_").toLowerCase();
+        return switch (value) {
+            case "opendoor", "open_door" -> "open_door";
+            case "closedoor", "close_door" -> "close_door";
+            case "poweron", "power_on" -> "power_on";
+            case "poweroff", "power_off" -> "power_off";
+            case "maintenance", "maintain" -> "maintenance";
+            default -> value;
+        };
+    }
+
+    private String normalizeText(String value) {
+        return value != null ? value.trim() : "";
+    }
+
+    private String limitText(String value, int maxLength) {
+        String text = normalizeText(value);
+        return text.length() <= maxLength ? text : text.substring(0, maxLength);
+    }
+
+    private Integer normalizeInteger(Integer value, int min, int max) {
+        if (value == null) {
+            return null;
+        }
+        return Math.max(min, Math.min(value, max));
+    }
+
+    private BigDecimal normalizeAmount(BigDecimal value) {
+        if (value == null) {
+            return null;
+        }
+        BigDecimal amount = value.setScale(2, RoundingMode.HALF_UP);
+        return amount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : amount;
+    }
+
+    private void put(Map<String, Object> config, String key, Object value) {
+        if (config == null) {
+            return;
+        }
+        if (value == null) {
+            config.remove(key);
+            return;
+        }
+        config.put(key, value);
     }
 }

@@ -36,7 +36,11 @@ Page({
     orders: [] as any[],
   },
 
-  onLoad() {
+  onLoad(options?: Record<string, string | undefined>) {
+    this.setData({
+      selectedStoreId: String((options && options.storeId) || '').trim(),
+      keyword: String((options && options.keyword) || '').trim(),
+    });
     this.loadInitial();
   },
 
@@ -47,9 +51,14 @@ Page({
       return;
     }
     const stores = await getMiniAdminStores().catch(() => []);
+    const preselectedStoreIndex = this.data.selectedStoreId
+      ? stores.findIndex((store) => String(store.id) === this.data.selectedStoreId) + 1
+      : 0;
     this.setData({
       stores,
       storePickerOptions: ['全部门店'].concat(stores.map((store) => store.storeName || `门店${store.id}`)),
+      selectedStoreIndex: Math.max(0, preselectedStoreIndex),
+      selectedStoreId: preselectedStoreIndex > 0 ? this.data.selectedStoreId : '',
     });
     this.reloadOrders();
   },
@@ -126,5 +135,13 @@ Page({
 
   handleLoadMore() {
     this.loadOrders();
+  },
+
+  handleOrderTap(e: WechatMiniprogram.TouchEvent) {
+    const id = Number(e.currentTarget.dataset.id || 0);
+    if (!id) {
+      return;
+    }
+    wx.navigateTo({ url: `/pages/detail/index?id=${id}` });
   },
 });

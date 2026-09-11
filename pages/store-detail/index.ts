@@ -91,6 +91,12 @@ Page({
     currentLatitude: 0,
     currentLongitude: 0,
     pricingRuleText: WASH_PRICING_RULE_TEXT,
+    activityIntro: '',
+    hasActivityIntro: false,
+    rechargeDescription: '',
+    hasRechargeDescription: false,
+    memberDescription: '',
+    hasMemberDescription: false,
     pricingBadgeText: '',
     hasVipMonthlyCard: false,
     isMember: false,
@@ -398,6 +404,11 @@ Page({
       : memberDayDiscountApplied
       ? '会员日价'
       : '';
+    const activityIntro = String(detail.activityIntro || detail.activity_intro || '').trim();
+    const rechargeDescription = String(
+      detail.rechargeDescription || detail.recharge_description || ''
+    ).trim();
+    const memberDescription = String(detail.memberDescription || detail.member_description || '').trim();
 
     this.setData({
       coverImage: detail.coverImage || detail.image || '/assets/images/washing.png',
@@ -411,6 +422,12 @@ Page({
       latitude: storeLocation.latitude,
       longitude: storeLocation.longitude,
       pricingRuleText,
+      activityIntro,
+      hasActivityIntro: Boolean(activityIntro),
+      rechargeDescription,
+      hasRechargeDescription: Boolean(rechargeDescription),
+      memberDescription,
+      hasMemberDescription: Boolean(memberDescription),
       pricingBadgeText,
       hasVipMonthlyCard,
       isMember,
@@ -860,6 +877,19 @@ Page({
 
   handleCard() {
     this.navigateToCardPurchase();
+  },
+
+  handleExchangeVoucher() {
+    const params = [
+      'mode=exchange',
+      this.data.storeId ? `storeId=${this.data.storeId}` : '',
+      this.data.name ? `storeName=${encodeURIComponent(this.data.name)}` : '',
+    ]
+      .filter(Boolean)
+      .join('&');
+    wx.navigateTo({
+      url: `/pages/voucher-redeem/index${params ? `?${params}` : ''}`,
+    });
   },
 
   async handleStartWash() {

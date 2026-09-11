@@ -50,3 +50,11 @@ export const redeemVoucher = async (_data: IObject): Promise<IObject> => {
   }
   return {};
 };
+
+export const redeemExchangeVoucher = async (_data: IObject): Promise<IObject> => {
+  const { code, data } = await POST('/api/cards/exchange-vouchers/redeem', _data);
+  if (code == 0) {
+    return data;
+  }
+  return {};
+};

@@ -1,40 +1,40 @@
-$color-primary: #2f9aa5;
-$color-primary-light: #e8f7f8;
-$color-primary-soft: #f4fbfb;
-$color-primary-deep: #237b84;
+$color-primary: #1598a8;
+$color-primary-light: #e5f6f7;
+$color-primary-soft: #f3fbfb;
+$color-primary-deep: #0f7381;
 
-$color-cta: #237b84;
-$color-cta-hover: #2f9aa5;
-$color-cta-soft: #e8f7f8;
-$color-cta-border: #98d5da;
+$color-cta: #0f7381;
+$color-cta-hover: #1598a8;
+$color-cta-soft: #e5f6f7;
+$color-cta-border: #8bcfd5;
 
-$color-success: #16a36a;
-$color-success-soft: #e8f7ef;
-$color-warning: #a66f1f;
-$color-warning-soft: #fff8e6;
+$color-success: #16876d;
+$color-success-soft: #e7f6f0;
+$color-warning: #a96814;
+$color-warning-soft: #fff4dc;
 $color-danger: #ef4444;
 $color-danger-soft: #fff1f2;
 
-$color-bg: #f6f8fa;
+$color-bg: #f1f6f7;
 $color-card: #ffffff;
-$color-surface: #f9fbfd;
-$color-border: #e5e7eb;
-$color-border-light: #edf1f5;
+$color-surface: #eaf1f2;
+$color-border: #d9e6e8;
+$color-border-light: #e5eff0;
 
-$color-text-primary: #1f2933;
-$color-text-secondary: #6b7280;
-$color-text-tertiary: #98a2b3;
+$color-text-primary: #102a31;
+$color-text-secondary: #5d7076;
+$color-text-tertiary: #87999e;
 $color-text-inverse: #ffffff;
 
-$radius-card: 24rpx;
-$radius-card-sm: 20rpx;
-$radius-control: 18rpx;
-$radius-icon: 22rpx;
+$radius-card: 20rpx;
+$radius-card-sm: 16rpx;
+$radius-control: 14rpx;
+$radius-icon: 16rpx;
 $radius-pill: 999rpx;
 
-$shadow-card: 0 10rpx 28rpx rgba(31, 41, 51, 0.06);
-$shadow-card-soft: 0 6rpx 18rpx rgba(31, 41, 51, 0.04);
-$shadow-cta: 0 10rpx 22rpx rgba(35, 123, 132, 0.18);
+$shadow-card: 0 12rpx 30rpx rgba(19, 62, 70, 0.08);
+$shadow-card-soft: 0 8rpx 22rpx rgba(19, 62, 70, 0.06);
+$shadow-cta: 0 12rpx 24rpx rgba(15, 115, 129, 0.22);
 
 $font-page-title: 34rpx;
 $font-section-title: 32rpx;
@@ -100,6 +100,15 @@ $fixed-action-height: 118rpx;
   color: $color-text-inverse;
   font-weight: 700;
   box-shadow: $shadow-cta;
+}
+
+@mixin tap-feedback {
+  transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+
+  &:active {
+    transform: scale(0.98);
+    filter: brightness(0.98);
+  }
 }
 
 @mixin outline-button {

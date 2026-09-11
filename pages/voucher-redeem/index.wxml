@@ -1,6 +1,6 @@
 <view class="page">
   <Navbar
-    title="券号核销"
+    title="{{pageTitle}}"
     titleColor="#211a14"
     backgroundColor="#fff8ef"
     borderBottom="{{false}}"
@@ -10,9 +10,9 @@
   <view class="content">
     <view class="hero-card">
       <view class="hero-copy">
-        <view class="hero-kicker">第三方平台券</view>
-        <view class="hero-title">核销抖音 / 美团次卡券</view>
-        <view class="hero-desc">输入券号或扫码核销，成功后会生成本门店可用单次卡。</view>
+        <view class="hero-kicker">{{heroKicker}}</view>
+        <view class="hero-title">{{heroTitle}}</view>
+        <view class="hero-desc">{{heroDesc}}</view>
       </view>
       <view class="hero-badge">
         <view class="hero-badge__scan"></view>
@@ -20,8 +20,8 @@
     </view>
 
     <view class="panel">
-      <view class="panel-title">选择平台</view>
-      <view class="platform-row">
+      <view class="panel-title" wx:if="{{!isExchangeMode}}">选择平台</view>
+      <view class="platform-row" wx:if="{{!isExchangeMode}}">
         <view
           wx:for="{{platforms}}"
           wx:key="key"
@@ -51,11 +51,11 @@
       </view>
 
       <view class="field-group">
-        <view class="field-label">券号</view>
+        <view class="field-label">{{codeLabel}}</view>
         <input
           class="field-input"
           value="{{voucherCode}}"
-          placeholder="请输入券号"
+          placeholder="{{codePlaceholder}}"
           confirm-type="done"
           bindinput="handleVoucherCodeInput"
           bindconfirm="handleSubmit"
@@ -73,8 +73,15 @@
       <view wx:if="{{resultVisible}}" class="result-card">
         <view class="result-title">核销成功</view>
         <view class="result-line">门店：{{resultStoreName}}</view>
-        <view class="result-line">发放单次卡：{{resultTimes}} 张</view>
-        <view class="result-line">首张卡号：{{resultCardNo}}</view>
+        <block wx:if="{{isExchangeMode}}">
+          <view class="result-line">兑换金额：{{resultAmount}} 元</view>
+          <view class="result-line">赠送余额：{{resultBalance}} 元</view>
+          <view class="result-line">流水号：{{resultTransactionNo || '--'}}</view>
+        </block>
+        <block wx:else>
+          <view class="result-line">发放单次卡：{{resultTimes}} 张</view>
+          <view class="result-line">首张卡号：{{resultCardNo}}</view>
+        </block>
       </view>
     </view>
   </view>

@@ -1,0 +1,53 @@
+<view class="page">
+  <Navbar title="批量生成兑换券" customBackPath="/pages-admin/home/index" customBackPathIsTabbar="{{false}}"></Navbar>
+
+  <view class="container">
+    <view class="panel">
+      <picker mode="selector" range="{{storePickerOptions}}" value="{{selectedStoreIndex}}" bindchange="handleStoreChange">
+        <view class="picker-row">
+          <text>{{storePickerOptions[selectedStoreIndex]}}</text>
+          <label>发放门店</label>
+        </view>
+      </picker>
+
+      <view class="form-row">
+        <view class="form-label">兑换金额</view>
+        <input class="form-input" type="digit" value="{{amount}}" placeholder="例如 20" bindinput="onAmountInput" />
+      </view>
+
+      <view class="form-row">
+        <view class="form-label">生成张数</view>
+        <input class="form-input" type="number" value="{{count}}" placeholder="例如 50" bindinput="onCountInput" />
+      </view>
+
+      <view class="form-row">
+        <view class="form-label">备注</view>
+        <input class="form-input" value="{{remark}}" maxlength="80" placeholder="可填写活动名称" bindinput="onRemarkInput" />
+      </view>
+
+      <button class="submit-button" loading="{{submitting}}" bindtap="submitGenerate">批量生成兑换卡券</button>
+    </view>
+
+    <view class="result-section" wx:if="{{generatedCards.length}}">
+      <view class="section-head">
+        <view>
+          <view class="section-title">本批次券码</view>
+          <view class="section-subtitle">{{batchNo}} / 共 {{generatedCards.length}} 张</view>
+        </view>
+        <view class="copy-button" bindtap="copyGeneratedCodes">复制全部</view>
+      </view>
+
+      <view class="code-list">
+        <view wx:for="{{generatedCards}}" wx:key="serialNo" class="code-card">
+          <view>
+            <view class="code-card__no">{{item.serialNo}}</view>
+            <view class="code-card__meta">{{item.storeName}} / {{item.status}}</view>
+          </view>
+          <view class="code-card__amount">{{item.amountText}}元</view>
+        </view>
+      </view>
+
+      <view class="list-button" bindtap="goVoucherList">查看兑换券列表</view>
+    </view>
+  </view>
+</view>

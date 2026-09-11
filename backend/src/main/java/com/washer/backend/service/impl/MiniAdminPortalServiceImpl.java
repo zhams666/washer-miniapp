@@ -4,14 +4,18 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.washer.backend.dto.device.DeviceSimpleItem;
 import com.washer.backend.dto.miniadmin.MiniAdminDashboardOverview;
+import com.washer.backend.dto.miniadmin.MiniAdminDeviceConfigRequest;
 import com.washer.backend.dto.miniadmin.MiniAdminDeviceAlertItem;
 import com.washer.backend.dto.miniadmin.MiniAdminDeviceStatusSummary;
+import com.washer.backend.dto.miniadmin.MiniAdminMetricDetailItem;
 import com.washer.backend.dto.miniadmin.MiniAdminMetricItem;
 import com.washer.backend.dto.miniadmin.MiniAdminOrderItem;
 import com.washer.backend.dto.miniadmin.MiniAdminOperationOverview;
 import com.washer.backend.dto.miniadmin.MiniAdminRecentActivityItem;
 import com.washer.backend.dto.miniadmin.MiniAdminScopeSummaryItem;
 import com.washer.backend.dto.miniadmin.MiniAdminSessionContext;
+import com.washer.backend.dto.miniadmin.MiniAdminStoreSettingsItem;
+import com.washer.backend.dto.miniadmin.MiniAdminStoreSettingsRequest;
 import com.washer.backend.dto.miniadmin.MiniAdminStoreOption;
 import com.washer.backend.dto.miniadmin.MiniAdminStoreRankingItem;
 import com.washer.backend.entity.CardUsageRecord;
@@ -19,6 +23,7 @@ import com.washer.backend.entity.Device;
 import com.washer.backend.entity.Franchisee;
 import com.washer.backend.entity.RechargeOrder;
 import com.washer.backend.entity.Store;
+import com.washer.backend.entity.UserInfo;
 import com.washer.backend.entity.WalletTransaction;
 import com.washer.backend.entity.WashOrder;
 import com.washer.backend.mapper.CardUsageRecordMapper;
@@ -27,11 +32,14 @@ import com.washer.backend.mapper.FranchiseeMapper;
 import com.washer.backend.mapper.MiniAdminStaffMapper;
 import com.washer.backend.mapper.RechargeOrderMapper;
 import com.washer.backend.mapper.StoreMapper;
+import com.washer.backend.mapper.UserInfoMapper;
 import com.washer.backend.mapper.WalletTransactionMapper;
 import com.washer.backend.mapper.WashOrderMapper;
 import com.washer.backend.service.DeviceService;
 import com.washer.backend.service.MiniAdminPortalService;
+import com.washer.backend.support.DeviceManagementRemark;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -60,6 +68,7 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
     private final CardUsageRecordMapper cardUsageRecordMapper;
     private final MiniAdminStaffMapper miniAdminStaffMapper;
     private final FranchiseeMapper franchiseeMapper;
+    private final UserInfoMapper userInfoMapper;
     private final DeviceService deviceService;
 
     public MiniAdminPortalServiceImpl(
@@ -71,6 +80,7 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
         CardUsageRecordMapper cardUsageRecordMapper,
         MiniAdminStaffMapper miniAdminStaffMapper,
         FranchiseeMapper franchiseeMapper,
+        UserInfoMapper userInfoMapper,
         DeviceService deviceService
     ) {
         this.storeMapper = storeMapper;
@@ -81,6 +91,7 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
         this.cardUsageRecordMapper = cardUsageRecordMapper;
         this.miniAdminStaffMapper = miniAdminStaffMapper;
         this.franchiseeMapper = franchiseeMapper;
+        this.userInfoMapper = userInfoMapper;
         this.deviceService = deviceService;
     }
 
@@ -203,6 +214,108 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
     }
 
     @Override
+    public List<MiniAdminMetricDetailItem> listMetricDetails(
+        MiniAdminSessionContext context,
+        LocalDate bizDate,
+        Long storeId,
+        String metricKey
+    ) {
+        StoreScope scope = resolveScope(context, storeId);
+        if (scope.isEmpty()) {
+            return List.of();
+        }
+        LocalDate date = bizDate != null ? bizDate : LocalDate.now();
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.plusDays(1).atStartOfDay();
+        Map<Long, Store> storeMap = buildStoreMap(scope);
+        String key = normalizeStatus(metricKey);
+
+        if ("rechargeamount".equals(key)) {
+            List<RechargeOrder> records = loadRecharges(scope, start, end);
+            Map<Long, UserInfo> userMap = buildUserMapFromIds(records.stream().map(RechargeOrder::getUserId).toList());
+            return records.stream()
+                .map(order -> new MiniAdminMetricDetailItem(
+                    "recharge",
+                    "充值订单",
+                    order.getRechargeOrderNo(),
+                    order.getUserId(),
+                    resolveUserNickname(userMap, order.getUserId()),
+                    resolveUserMobile(userMap, order.getUserId()),
+                    order.getStoreId(),
+                    resolveStoreName(storeMap, order.getStoreId()),
+                    normalizeAmount(order.getPayAmount()),
+                    0L,
+                    order.getPayStatus(),
+                    order.getPayTime() != null ? order.getPayTime() : order.getCreatedAt()
+                ))
+                .toList();
+        }
+
+        if ("consumeamount".equals(key)) {
+            List<WalletTransaction> records = loadWalletConsumes(scope, start, end);
+            Map<Long, UserInfo> userMap = buildUserMapFromIds(records.stream().map(WalletTransaction::getUserId).toList());
+            return records.stream()
+                .map(tx -> new MiniAdminMetricDetailItem(
+                    "consume",
+                    "钱包消费",
+                    StringUtils.hasText(tx.getRelatedOrderNo()) ? tx.getRelatedOrderNo() : tx.getTransactionNo(),
+                    tx.getUserId(),
+                    resolveUserNickname(userMap, tx.getUserId()),
+                    resolveUserMobile(userMap, tx.getUserId()),
+                    tx.getStoreId(),
+                    resolveStoreName(storeMap, tx.getStoreId()),
+                    normalizeAmount(tx.getAmount()),
+                    0L,
+                    tx.getChangeType(),
+                    tx.getCreatedAt()
+                ))
+                .toList();
+        }
+
+        if ("cardusagetimes".equals(key)) {
+            List<CardUsageRecord> records = loadCardUsages(scope, start, end);
+            Map<Long, UserInfo> userMap = buildUserMapFromIds(records.stream().map(CardUsageRecord::getUserId).toList());
+            return records.stream()
+                .map(record -> new MiniAdminMetricDetailItem(
+                    "card",
+                    "次卡核销",
+                    StringUtils.hasText(record.getOrderNo()) ? record.getOrderNo() : record.getUsageNo(),
+                    record.getUserId(),
+                    resolveUserNickname(userMap, record.getUserId()),
+                    resolveUserMobile(userMap, record.getUserId()),
+                    record.getStoreId(),
+                    resolveStoreName(storeMap, record.getStoreId()),
+                    BigDecimal.ZERO,
+                    record.getUsedTimes() != null ? record.getUsedTimes().longValue() : 0L,
+                    record.getOperatorType(),
+                    record.getUsageTime()
+                ))
+                .toList();
+        }
+
+        List<WashOrder> records = loadWashOrders(scope, start, end).stream()
+            .filter(this::isCountedWashOrder)
+            .toList();
+        Map<Long, UserInfo> userMap = buildUserMapFromIds(records.stream().map(WashOrder::getUserId).toList());
+        return records.stream()
+            .map(order -> new MiniAdminMetricDetailItem(
+                "wash",
+                "洗车订单",
+                order.getOrderNo(),
+                order.getUserId(),
+                resolveUserNickname(userMap, order.getUserId()),
+                resolveUserMobile(userMap, order.getUserId()),
+                order.getStoreId(),
+                resolveStoreName(storeMap, order.getStoreId()),
+                normalizeAmount(order.getFinalAmount()),
+                1L,
+                order.getOrderStatus(),
+                order.getCreatedAt()
+            ))
+            .toList();
+    }
+
+    @Override
     public List<DeviceSimpleItem> listDevices(MiniAdminSessionContext context, Long storeId, String keyword) {
         StoreScope scope = resolveScope(context, storeId);
         if (scope.isEmpty()) {
@@ -227,6 +340,92 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
         ensureDeviceControlPermission(context);
         Device device = getAccessibleDevice(context, deviceId);
         return deviceService.mockStopDevice(device.getId());
+    }
+
+    @Override
+    public DeviceSimpleItem operateDevice(MiniAdminSessionContext context, Long deviceId, String action) {
+        ensureDeviceControlPermission(context);
+        Device device = getAccessibleDevice(context, deviceId);
+        return deviceService.applyManagementAction(device.getId(), action);
+    }
+
+    @Override
+    public DeviceSimpleItem updateDeviceConfig(
+        MiniAdminSessionContext context,
+        Long deviceId,
+        MiniAdminDeviceConfigRequest request
+    ) {
+        ensureDeviceControlPermission(context);
+        Device device = getAccessibleDevice(context, deviceId);
+        return deviceService.updateMiniAdminConfig(device.getId(), request);
+    }
+
+    @Override
+    public MiniAdminStoreSettingsItem getStoreSettings(MiniAdminSessionContext context, Long storeId) {
+        return toStoreSettingsItem(getAccessibleStore(context, storeId));
+    }
+
+    @Override
+    public MiniAdminStoreSettingsItem updateStoreSettings(
+        MiniAdminSessionContext context,
+        Long storeId,
+        MiniAdminStoreSettingsRequest request
+    ) {
+        Store store = getAccessibleStore(context, storeId);
+        if (request == null) {
+            throw new IllegalArgumentException("request is required");
+        }
+        String storeName = limitText(request.getStoreName(), 100);
+        if (!StringUtils.hasText(storeName)) {
+            throw new IllegalArgumentException("storeName is required");
+        }
+
+        Store update = new Store();
+        update.setId(store.getId());
+        update.setStoreName(storeName);
+        update.setProvince(limitText(request.getProvince(), 60));
+        update.setCity(limitText(request.getCity(), 60));
+        update.setDistrict(limitText(request.getDistrict(), 60));
+        update.setAddress(limitText(request.getAddress(), 255));
+        update.setContactName(limitText(request.getContactName(), 80));
+        update.setContactPhone(limitText(request.getContactPhone(), 30));
+        update.setCoverImage(limitText(request.getCoverImage(), 500));
+        update.setDoorCloseIntervalOneStart(normalizeMinute(request.getDoorCloseIntervalOneStart()));
+        update.setDoorCloseIntervalOneEnd(normalizeMinute(request.getDoorCloseIntervalOneEnd()));
+        update.setDoorCloseIntervalTwoStart(normalizeMinute(request.getDoorCloseIntervalTwoStart()));
+        update.setDoorCloseIntervalTwoEnd(normalizeMinute(request.getDoorCloseIntervalTwoEnd()));
+        update.setRegisterRewardAmount(normalizeOptionalAmount(request.getRegisterRewardAmount()));
+        update.setInviteRewardAmount(normalizeOptionalAmount(request.getInviteRewardAmount()));
+        update.setActivityIntro(limitText(request.getActivityIntro(), 1000));
+        update.setRechargeDescription(limitText(request.getRechargeDescription(), 1000));
+        update.setMemberDescription(limitText(request.getMemberDescription(), 1000));
+        update.setCabinetMinRechargeAmount(normalizeOptionalAmount(request.getCabinetMinRechargeAmount()));
+        update.setCabinetMinBalanceAmount(normalizeOptionalAmount(request.getCabinetMinBalanceAmount()));
+
+        if (storeMapper.updateById(update) <= 0) {
+            throw new IllegalArgumentException("store update failed");
+        }
+        return toStoreSettingsItem(storeMapper.selectById(store.getId()));
+    }
+
+    @Override
+    public MiniAdminStoreSettingsItem updateStoreCoverImage(
+        MiniAdminSessionContext context,
+        Long storeId,
+        String coverImage
+    ) {
+        Store store = getAccessibleStore(context, storeId);
+        String image = limitText(coverImage, 500);
+        if (!StringUtils.hasText(image)) {
+            throw new IllegalArgumentException("coverImage is required");
+        }
+        Store update = new Store();
+        update.setId(store.getId());
+        update.setCoverImage(image);
+        if (storeMapper.updateById(update) <= 0) {
+            throw new IllegalArgumentException("store update failed");
+        }
+        return toStoreSettingsItem(storeMapper.selectById(store.getId()));
     }
 
     @Override
@@ -648,6 +847,24 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
         return device;
     }
 
+    private Store getAccessibleStore(MiniAdminSessionContext context, Long storeId) {
+        if (storeId == null) {
+            throw new IllegalArgumentException("storeId is required");
+        }
+        if (context == null) {
+            throw new IllegalArgumentException("管理端登录已失效，请重新登录");
+        }
+        if (!context.isPlatformScope()
+            && context.getStores().stream().noneMatch(store -> storeId.equals(store.getId()))) {
+            throw new IllegalArgumentException("无权访问该门店");
+        }
+        Store store = storeMapper.selectById(storeId);
+        if (store == null) {
+            throw new IllegalArgumentException("store not found");
+        }
+        return store;
+    }
+
     private void ensureDeviceControlPermission(MiniAdminSessionContext context) {
         if (context == null || !context.getPermissions().contains(PERMISSION_DEVICE_CONTROL)) {
             throw new IllegalArgumentException("无设备控制权限");
@@ -682,6 +899,37 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
             .collect(Collectors.toMap(Device::getId, Function.identity(), (left, right) -> left));
     }
 
+    private Map<Long, UserInfo> buildUserMapFromIds(List<Long> userIds) {
+        List<Long> ids = userIds.stream()
+            .filter(id -> id != null)
+            .distinct()
+            .toList();
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return userInfoMapper.selectBatchIds(ids).stream()
+            .collect(Collectors.toMap(UserInfo::getId, Function.identity(), (left, right) -> left));
+    }
+
+    private String resolveUserNickname(Map<Long, UserInfo> userMap, Long userId) {
+        if (userId == null) {
+            return "";
+        }
+        UserInfo user = userMap.get(userId);
+        if (user == null || !StringUtils.hasText(user.getNickname())) {
+            return "用户" + userId;
+        }
+        return user.getNickname();
+    }
+
+    private String resolveUserMobile(Map<Long, UserInfo> userMap, Long userId) {
+        if (userId == null) {
+            return "";
+        }
+        UserInfo user = userMap.get(userId);
+        return user != null && StringUtils.hasText(user.getMobile()) ? user.getMobile() : "";
+    }
+
     private MiniAdminOrderItem toOrderItem(WashOrder order, Map<Long, Store> storeMap, Map<Long, Device> deviceMap) {
         Device device = deviceMap.get(order.getDeviceId());
         return new MiniAdminOrderItem(
@@ -704,6 +952,7 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
 
     private DeviceSimpleItem toDeviceItem(Device device, Map<Long, Store> storeMap) {
         Store store = storeMap.get(device.getStoreId());
+        Map<String, Object> config = DeviceManagementRemark.parse(device.getRemark());
         return new DeviceSimpleItem(
             device.getId(),
             device.getDeviceCode(),
@@ -717,8 +966,58 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
             device.getProtocolType(),
             device.getFirmwareVersion(),
             device.getRemark(),
+            resolveAgentLevel(store),
+            store != null ? store.getContactName() : "",
+            store != null ? store.getContactPhone() : "",
+            DeviceManagementRemark.integer(config, "baseTimeMinutes"),
+            DeviceManagementRemark.decimal(config, "basePrice"),
+            DeviceManagementRemark.decimal(config, "overtimePrice"),
+            DeviceManagementRemark.text(config, "speakerSn"),
+            StringUtils.hasText(DeviceManagementRemark.text(config, "speakerVersion"))
+                ? DeviceManagementRemark.text(config, "speakerVersion")
+                : device.getFirmwareVersion(),
+            DeviceManagementRemark.text(config, "cabinetName"),
+            DeviceManagementRemark.text(config, "doorState"),
+            DeviceManagementRemark.text(config, "powerState"),
+            Boolean.TRUE.equals(DeviceManagementRemark.bool(config, "maintenanceMode")),
             device.getCreatedAt(),
             device.getUpdatedAt()
+        );
+    }
+
+    private String resolveAgentLevel(Store store) {
+        if (store == null || store.getFranchiseeId() == null || store.getFranchiseeId() <= 0) {
+            return "直营";
+        }
+        return "1级代理";
+    }
+
+    private MiniAdminStoreSettingsItem toStoreSettingsItem(Store store) {
+        if (store == null) {
+            return null;
+        }
+        return new MiniAdminStoreSettingsItem(
+            store.getId(),
+            store.getStoreName(),
+            store.getProvince(),
+            store.getCity(),
+            store.getDistrict(),
+            store.getAddress(),
+            store.getContactName(),
+            store.getContactPhone(),
+            store.getCoverImage(),
+            store.getDoorCloseIntervalOneStart(),
+            store.getDoorCloseIntervalOneEnd(),
+            store.getDoorCloseIntervalTwoStart(),
+            store.getDoorCloseIntervalTwoEnd(),
+            store.getRegisterRewardAmount(),
+            store.getInviteRewardAmount(),
+            store.getActivityIntro(),
+            store.getRechargeDescription(),
+            store.getMemberDescription(),
+            store.getCabinetMinRechargeAmount(),
+            store.getCabinetMinBalanceAmount(),
+            store.getUpdatedAt()
         );
     }
 
@@ -750,6 +1049,7 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
         return switch (normalizeStatus(bizType)) {
             case "recharge" -> "钱包充值";
             case "consume" -> "钱包消费";
+            case "exchange_voucher" -> "兑换券核销";
             case "refund" -> "钱包退款";
             case "fine" -> "余额罚款";
             default -> "钱包流水";
@@ -776,6 +1076,26 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
 
     private BigDecimal normalizeAmount(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
+    }
+
+    private BigDecimal normalizeOptionalAmount(BigDecimal value) {
+        if (value == null) {
+            return null;
+        }
+        BigDecimal amount = value.setScale(2, RoundingMode.HALF_UP);
+        return amount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : amount;
+    }
+
+    private Integer normalizeMinute(Integer value) {
+        if (value == null) {
+            return null;
+        }
+        return Math.max(0, Math.min(value, 24 * 60));
+    }
+
+    private String limitText(String value, int maxLength) {
+        String text = value != null ? value.trim() : "";
+        return text.length() <= maxLength ? text : text.substring(0, maxLength);
     }
 
     private record StoreScope(boolean allStores, List<Long> storeIds, Long singleStoreId) {

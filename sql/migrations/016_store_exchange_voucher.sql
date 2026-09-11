@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS `store_exchange_voucher` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `batch_no` VARCHAR(64) NOT NULL,
+  `serial_no` VARCHAR(64) NOT NULL,
+  `store_id` BIGINT NOT NULL,
+  `amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'unused',
+  `redeemed_user_id` BIGINT DEFAULT NULL,
+  `redeemed_wallet_transaction_id` BIGINT DEFAULT NULL,
+  `created_by_staff_id` BIGINT DEFAULT NULL,
+  `created_by_role_code` VARCHAR(40) DEFAULT NULL,
+  `redeemed_at` DATETIME DEFAULT NULL,
+  `remark` VARCHAR(255) DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_store_exchange_voucher_serial` (`serial_no`),
+  KEY `idx_store_exchange_voucher_batch` (`batch_no`),
+  KEY `idx_store_exchange_voucher_store_status` (`store_id`, `status`, `created_at`),
+  KEY `idx_store_exchange_voucher_redeemed_user` (`redeemed_user_id`, `redeemed_at`),
+  KEY `idx_store_exchange_voucher_transaction` (`redeemed_wallet_transaction_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='门店兑换券码';

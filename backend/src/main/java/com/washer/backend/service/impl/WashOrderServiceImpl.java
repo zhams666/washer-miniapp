@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.washer.backend.dto.admin.AdminRankingDurationItem;
 import com.washer.backend.dto.admin.AdminOrderDetail;
 import com.washer.backend.dto.admin.AdminOrderListItem;
 import com.washer.backend.dto.order.SimpleOrderCreateRequest;
@@ -21,6 +22,7 @@ import com.washer.backend.entity.WashOrder;
 import com.washer.backend.entity.WashOrderPaymentDetail;
 import com.washer.backend.entity.WashOrderStatusLog;
 import com.washer.backend.entity.WalletTransaction;
+import com.washer.backend.entity.RankingDisplayAdjustment;
 import com.washer.backend.mapper.CardUsageRecordMapper;
 import com.washer.backend.mapper.StoreSettlementDetailMapper;
 import com.washer.backend.mapper.UserCardMapper;
@@ -31,10 +33,12 @@ import com.washer.backend.mapper.WashOrderPaymentDetailMapper;
 import com.washer.backend.mapper.WashOrderStatusLogMapper;
 import com.washer.backend.mapper.WalletTransactionMapper;
 import com.washer.backend.service.DeviceService;
+import com.washer.backend.service.RankingDisplayAdjustmentService;
 import com.washer.backend.service.StoreService;
 import com.washer.backend.service.UserInfoService;
 import com.washer.backend.service.WashPricingService;
 import com.washer.backend.service.WashOrderService;
+import com.washer.backend.support.DeviceManagementRemark;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
@@ -74,6 +78,7 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
     private static final String AUTO_STOP_BALANCE_NOT_ENOUGH = "余额不足自动停止";
     private static final int CARD_ORDER_LIMIT_MINUTES = 30;
     private static final String CARD_AUTO_STOP_REMARK = "次卡30分钟到期自动停止";
+    private static final int AUTO_CLOSE_SCAN_LIMIT = 100;
 
     private final StoreService storeService;
     private final DeviceService deviceService;
@@ -87,6 +92,7 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
     private final StoreSettlementDetailMapper storeSettlementDetailMapper;
     private final WashPricingService washPricingService;
     private final UserInfoService userInfoService;
+    private final RankingDisplayAdjustmentService rankingDisplayAdjustmentService;
     private final Environment environment;
 
     public WashOrderServiceImpl(
@@ -102,6 +108,7 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         StoreSettlementDetailMapper storeSettlementDetailMapper,
         WashPricingService washPricingService,
         UserInfoService userInfoService,
+        RankingDisplayAdjustmentService rankingDisplayAdjustmentService,
         Environment environment
     ) {
         this.storeService = storeService;
@@ -116,6 +123,7 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         this.storeSettlementDetailMapper = storeSettlementDetailMapper;
         this.washPricingService = washPricingService;
         this.userInfoService = userInfoService;
+        this.rankingDisplayAdjustmentService = rankingDisplayAdjustmentService;
         this.environment = environment;
     }
 
@@ -280,6 +288,7 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
 
         WashOrder updatedOrder = getRequiredOrder(id);
         insertStatusLog(updatedOrder, fromStatus, STATUS_RUNNING, "start", "user", updatedOrder.getUserId(), "开始洗车，按时长计费");
+        triggerAutoCloseDoorIfConfigured(updatedOrder, device, LocalDateTime.now());
         return updatedOrder;
     }
 
@@ -435,6 +444,27 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
             if (STATUS_RUNNING.equals(lockedOrder.getOrderStatus())
                 && shouldAutoStopCardOrder(lockedOrder, now)) {
                 completeCardOrder(lockedOrder, CARD_AUTO_STOP_REMARK);
+            }
+        }
+    }
+
+    @Scheduled(fixedDelay = 30000)
+    @Transactional(rollbackFor = Exception.class)
+    public void autoCloseDoorsForConfiguredIntervals() {
+        LocalDateTime now = LocalDateTime.now();
+        List<WashOrder> runningOrders = this.list(
+            new LambdaQueryWrapper<WashOrder>()
+                .eq(WashOrder::getOrderStatus, STATUS_RUNNING)
+                .isNotNull(WashOrder::getStartTime)
+                .orderByAsc(WashOrder::getStartTime)
+                .last("limit " + AUTO_CLOSE_SCAN_LIMIT)
+        );
+        for (WashOrder order : runningOrders) {
+            try {
+                Device device = lockDeviceForOrder(order);
+                triggerAutoCloseDoorIfConfigured(order, device, now);
+            } catch (RuntimeException ignored) {
+                // Continue checking the remaining orders even if one device cannot be updated.
             }
         }
     }
@@ -605,10 +635,34 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
                 orderUserId,
                 DurationRankAggregate::new
             );
+            aggregate.realSeconds += seconds;
             aggregate.totalSeconds += seconds;
             aggregate.orderCount += 1;
             if (aggregate.latestEndTime == null || order.getEndTime().isAfter(aggregate.latestEndTime)) {
                 aggregate.latestEndTime = order.getEndTime();
+            }
+        }
+
+        for (RankingDisplayAdjustment adjustment : rankingDisplayAdjustmentService.listForRanking(resolvedScope, fromTime, now)) {
+            Long adjustmentUserId = adjustment.getUserId();
+            long seconds = adjustment.getDisplayDurationSeconds() != null
+                ? adjustment.getDisplayDurationSeconds()
+                : 0L;
+            if (adjustmentUserId == null || seconds == 0) {
+                continue;
+            }
+
+            DurationRankAggregate aggregate = aggregateMap.computeIfAbsent(
+                adjustmentUserId,
+                DurationRankAggregate::new
+            );
+            aggregate.totalSeconds = Math.max(0L, aggregate.totalSeconds + seconds);
+            aggregate.displayAdjustmentSeconds += seconds;
+            if (
+                adjustment.getOccurredAt() != null
+                    && (aggregate.latestEndTime == null || adjustment.getOccurredAt().isAfter(aggregate.latestEndTime))
+            ) {
+                aggregate.latestEndTime = adjustment.getOccurredAt();
             }
         }
 
@@ -642,6 +696,112 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         result.put("rows", rows);
         result.put("myRank", myRank);
         return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminRankingDurationItem> listAdminDurationRanking(String scope, int limit) {
+        String resolvedScope = resolveRankingScope(scope);
+        int rowLimit = Math.max(1, Math.min(limit, 500));
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime fromTime = resolveRankingStartTime(resolvedScope, now);
+
+        LambdaQueryWrapper<WashOrder> wrapper = new LambdaQueryWrapper<WashOrder>()
+            .eq(WashOrder::getOrderStatus, STATUS_COMPLETED)
+            .isNotNull(WashOrder::getUserId)
+            .isNotNull(WashOrder::getStartTime)
+            .isNotNull(WashOrder::getEndTime)
+            .ge(fromTime != null, WashOrder::getEndTime, fromTime)
+            .le(WashOrder::getEndTime, now)
+            .orderByDesc(WashOrder::getEndTime);
+
+        List<WashOrder> orders = this.list(wrapper);
+        Map<Long, DurationRankAggregate> aggregateMap = new HashMap<>();
+        for (WashOrder order : orders) {
+            Long orderUserId = order.getUserId();
+            long seconds = calculateOrderDurationSeconds(order);
+            if (orderUserId == null || seconds <= 0) {
+                continue;
+            }
+
+            DurationRankAggregate aggregate = aggregateMap.computeIfAbsent(
+                orderUserId,
+                DurationRankAggregate::new
+            );
+            aggregate.realSeconds += seconds;
+            aggregate.totalSeconds += seconds;
+            aggregate.orderCount += 1;
+            if (aggregate.latestEndTime == null || order.getEndTime().isAfter(aggregate.latestEndTime)) {
+                aggregate.latestEndTime = order.getEndTime();
+            }
+        }
+
+        for (RankingDisplayAdjustment adjustment : rankingDisplayAdjustmentService.listForRanking(resolvedScope, fromTime, now)) {
+            Long adjustmentUserId = adjustment.getUserId();
+            long seconds = adjustment.getDisplayDurationSeconds() != null
+                ? adjustment.getDisplayDurationSeconds()
+                : 0L;
+            if (adjustmentUserId == null || seconds == 0) {
+                continue;
+            }
+
+            DurationRankAggregate aggregate = aggregateMap.computeIfAbsent(
+                adjustmentUserId,
+                DurationRankAggregate::new
+            );
+            aggregate.totalSeconds = Math.max(0L, aggregate.totalSeconds + seconds);
+            aggregate.displayAdjustmentSeconds += seconds;
+            if (
+                adjustment.getOccurredAt() != null
+                    && (aggregate.latestEndTime == null || adjustment.getOccurredAt().isAfter(aggregate.latestEndTime))
+            ) {
+                aggregate.latestEndTime = adjustment.getOccurredAt();
+            }
+        }
+
+        List<DurationRankAggregate> sortedAggregates = aggregateMap.values().stream()
+            .sorted(
+                Comparator.comparingLong(DurationRankAggregate::getTotalSeconds).reversed()
+                    .thenComparing(DurationRankAggregate::getLatestEndTime, Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(DurationRankAggregate::getUserId)
+            )
+            .toList();
+
+        Map<Long, UserInfo> userMap = buildRankingUserMap(sortedAggregates);
+        List<AdminRankingDurationItem> rows = new ArrayList<>();
+        int rank = 1;
+        for (DurationRankAggregate aggregate : sortedAggregates) {
+            if (rank > rowLimit) {
+                break;
+            }
+            rows.add(toAdminDurationRankItem(rank, aggregate, userMap.get(aggregate.userId)));
+            rank++;
+        }
+        return rows;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long sumUserCompletedDurationSeconds(String scope, Long userId) {
+        if (userId == null) {
+            return 0L;
+        }
+        String resolvedScope = resolveRankingScope(scope);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime fromTime = resolveRankingStartTime(resolvedScope, now);
+        List<WashOrder> orders = this.list(
+            new LambdaQueryWrapper<WashOrder>()
+                .eq(WashOrder::getOrderStatus, STATUS_COMPLETED)
+                .eq(WashOrder::getUserId, userId)
+                .isNotNull(WashOrder::getStartTime)
+                .isNotNull(WashOrder::getEndTime)
+                .ge(fromTime != null, WashOrder::getEndTime, fromTime)
+                .le(WashOrder::getEndTime, now)
+        );
+        return orders.stream()
+            .mapToLong(this::calculateOrderDurationSeconds)
+            .filter(seconds -> seconds > 0)
+            .sum();
     }
 
     @Override
@@ -1433,6 +1593,45 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         device.setDeviceStatus(status);
     }
 
+    private void triggerAutoCloseDoorIfConfigured(WashOrder order, Device device, LocalDateTime now) {
+        if (order == null || device == null || device.getId() == null || order.getStartTime() == null) {
+            return;
+        }
+        if (!STATUS_RUNNING.equals(order.getOrderStatus())) {
+            return;
+        }
+        Store store = storeService.getById(order.getStoreId());
+        if (!isAutoCloseMinute(store, order.getStartTime(), now)) {
+            return;
+        }
+        String doorState = DeviceManagementRemark.text(
+            DeviceManagementRemark.parse(device.getRemark()),
+            "doorState"
+        );
+        if ("closed".equalsIgnoreCase(doorState)) {
+            return;
+        }
+        deviceService.applyManagementAction(device.getId(), "close_door");
+    }
+
+    private boolean isAutoCloseMinute(Store store, LocalDateTime startTime, LocalDateTime now) {
+        if (store == null || startTime == null || now == null || now.isBefore(startTime)) {
+            return false;
+        }
+        long elapsedMinutes = Duration.between(startTime, now).toMinutes();
+        return isMinuteInRange(elapsedMinutes, store.getDoorCloseIntervalOneStart(), store.getDoorCloseIntervalOneEnd())
+            || isMinuteInRange(elapsedMinutes, store.getDoorCloseIntervalTwoStart(), store.getDoorCloseIntervalTwoEnd());
+    }
+
+    private boolean isMinuteInRange(long minute, Integer start, Integer end) {
+        if (start == null || end == null) {
+            return false;
+        }
+        int min = Math.min(start, end);
+        int max = Math.max(start, end);
+        return minute >= min && minute <= max;
+    }
+
     private String buildCommandNo(String commandType, WashOrder order) {
         String type = StringUtils.hasText(commandType) ? commandType.trim().toUpperCase() : "CMD";
         String orderPart = order != null && order.getId() != null ? String.valueOf(order.getId()) : "0";
@@ -1956,11 +2155,43 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         item.put("name", resolveRankingNickname(user, aggregate.userId));
         item.put("avatarUrl", user != null ? user.getAvatarUrl() : null);
         item.put("durationSeconds", aggregate.totalSeconds);
-        item.put("durationMinutes", Math.max(1L, (aggregate.totalSeconds + 59L) / 60L));
+        item.put("durationMinutes", aggregate.totalSeconds <= 0 ? 0L : (aggregate.totalSeconds + 59L) / 60L);
         item.put("durationText", formatDurationText(aggregate.totalSeconds));
+        item.put("displayAdjustmentSeconds", aggregate.displayAdjustmentSeconds);
+        item.put("displayAdjustmentMinutes", toSignedDisplayMinutes(aggregate.displayAdjustmentSeconds));
+        item.put("displayAdjustmentText", formatSignedDurationText(aggregate.displayAdjustmentSeconds));
         item.put("orderCount", aggregate.orderCount);
         item.put("latestEndTime", aggregate.latestEndTime);
         return item;
+    }
+
+    private AdminRankingDurationItem toAdminDurationRankItem(
+        int rank,
+        DurationRankAggregate aggregate,
+        UserInfo user
+    ) {
+        long durationMinutes = aggregate.totalSeconds <= 0 ? 0L : (aggregate.totalSeconds + 59L) / 60L;
+        long realDurationMinutes = aggregate.realSeconds <= 0 ? 0L : (aggregate.realSeconds + 59L) / 60L;
+        long adjustmentMinutes = toSignedDisplayMinutes(aggregate.displayAdjustmentSeconds);
+        return new AdminRankingDurationItem(
+            rank,
+            aggregate.userId,
+            user != null ? user.getUserNo() : "",
+            resolveRankingNickname(user, aggregate.userId),
+            user != null ? user.getMobile() : "",
+            user != null ? user.getAvatarUrl() : "",
+            aggregate.realSeconds,
+            realDurationMinutes,
+            formatDurationText(aggregate.realSeconds),
+            aggregate.totalSeconds,
+            durationMinutes,
+            formatDurationText(aggregate.totalSeconds),
+            aggregate.displayAdjustmentSeconds,
+            adjustmentMinutes,
+            formatSignedDurationText(aggregate.displayAdjustmentSeconds),
+            aggregate.orderCount,
+            aggregate.latestEndTime
+        );
     }
 
     private String resolveRankingNickname(UserInfo user, Long userId) {
@@ -1974,7 +2205,7 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
     }
 
     private String formatDurationText(long seconds) {
-        long minutes = Math.max(1L, (seconds + 59L) / 60L);
+        long minutes = seconds <= 0 ? 0L : (seconds + 59L) / 60L;
         long hours = minutes / 60L;
         long remainMinutes = minutes % 60L;
         if (hours > 0) {
@@ -1983,9 +2214,26 @@ public class WashOrderServiceImpl extends ServiceImpl<WashOrderMapper, WashOrder
         return String.format("%02d分", remainMinutes);
     }
 
+    private long toSignedDisplayMinutes(long seconds) {
+        if (seconds == 0) {
+            return 0L;
+        }
+        long minutes = (Math.abs(seconds) + 59L) / 60L;
+        return seconds < 0 ? -minutes : minutes;
+    }
+
+    private String formatSignedDurationText(long seconds) {
+        if (seconds < 0) {
+            return "-" + formatDurationText(Math.abs(seconds));
+        }
+        return formatDurationText(seconds);
+    }
+
     private static class DurationRankAggregate {
         private final Long userId;
+        private long realSeconds;
         private long totalSeconds;
+        private long displayAdjustmentSeconds;
         private int orderCount;
         private LocalDateTime latestEndTime;
 

@@ -2,6 +2,7 @@ import http from './http';
 import type {
   AdminCardUsageCenterItem,
   AdminCardUsagePageResult,
+  AdminExchangeVoucherPageResult,
   AdminPaymentDetailItem,
   AdminPaymentDetailPageResult,
   AdminSettlementDetailPageResult,
@@ -13,6 +14,7 @@ import type {
   AdminWalletTransactionCenterItem,
   AdminWalletTransactionPageResult,
   CardUsageQueryParams,
+  ExchangeVoucherQueryParams,
   PaymentDetailQueryParams,
   WalletTransactionQueryParams,
 } from '@/types/payment-center';
@@ -25,6 +27,9 @@ export const fetchWalletTransactionPage = (params: WalletTransactionQueryParams)
 
 export const fetchCardUsagePage = (params: CardUsageQueryParams) =>
   http.get<AdminCardUsagePageResult>('/api/admin/card-usages', { params });
+
+export const fetchExchangeVoucherPage = (params: ExchangeVoucherQueryParams) =>
+  http.get<AdminExchangeVoucherPageResult>('/api/admin/exchange-vouchers', { params });
 
 export const fetchSettlementDetailPage = (params: SettlementDetailQueryParams) =>
   http.get<AdminSettlementDetailPageResult>('/api/admin/settlement-details', { params });

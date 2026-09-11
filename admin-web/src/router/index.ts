@@ -3,6 +3,7 @@ import CardUsagePage from '@/views/cards/CardUsagePage.vue';
 import DashboardActivityPage from '@/views/dashboard/DashboardActivityPage.vue';
 import DashboardPage from '@/views/dashboard/DashboardPage.vue';
 import DeviceListPage from '@/views/devices/DeviceListPage.vue';
+import ExchangeVoucherPage from '@/views/vouchers/ExchangeVoucherPage.vue';
 import FranchiseContactPage from '@/views/franchise/FranchiseContactPage.vue';
 import AdminLayout from '@/layout/AdminLayout.vue';
 import OrderListPage from '@/views/orders/OrderListPage.vue';
@@ -10,6 +11,7 @@ import PaymentDetailPage from '@/views/payments/PaymentDetailPage.vue';
 import MiniAdminPermissionPage from '@/views/permissions/MiniAdminPermissionPage.vue';
 import MembershipSettingsPage from '@/views/membership/MembershipSettingsPage.vue';
 import PointMallProductPage from '@/views/points-mall/PointMallProductPage.vue';
+import RankingDisplayAdjustmentPage from '@/views/ranking/RankingDisplayAdjustmentPage.vue';
 import SettlementBillPage from '@/views/settlements/SettlementBillPage.vue';
 import SettlementDetailPage from '@/views/settlements/SettlementDetailPage.vue';
 import StoreListPage from '@/views/stores/StoreListPage.vue';
@@ -128,6 +130,16 @@ const router = createRouter({
           },
         },
         {
+          path: 'ranking-management',
+          name: 'ranking-management',
+          component: RankingDisplayAdjustmentPage,
+          meta: {
+            title: '排行榜管理',
+            eyebrow: 'Ranking Operations',
+            description: '查看 24 小时榜、30 日榜、总榜，并调整用户榜单展示时长。',
+          },
+        },
+        {
           path: 'payment-details',
           name: 'payment-details',
           component: PaymentDetailPage,
@@ -175,6 +187,16 @@ const router = createRouter({
             title: 'Card Usages',
             eyebrow: 'Payment Center',
             description: 'Card usage records and linked orders',
+          },
+        },
+        {
+          path: 'exchange-vouchers',
+          name: 'exchange-vouchers',
+          component: ExchangeVoucherPage,
+          meta: {
+            title: '兑换券核销',
+            eyebrow: 'Voucher Center',
+            description: '查看门店兑换券序列号、核销用户和钱包流水。',
           },
         },
       ],

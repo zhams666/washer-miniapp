@@ -74,6 +74,18 @@ class DeviceControllerTest {
             "",
             "",
             "",
+            "",
+            "",
+            "",
+            null,
+            null,
+            null,
+            "",
+            "",
+            "",
+            "",
+            "",
+            false,
             LocalDateTime.now(),
             LocalDateTime.now()
         );

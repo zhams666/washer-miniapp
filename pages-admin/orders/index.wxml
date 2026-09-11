@@ -24,7 +24,7 @@
     </view>
 
     <view class="order-list">
-      <view wx:for="{{orders}}" wx:key="id" class="order-card">
+      <view wx:for="{{orders}}" wx:key="id" class="order-card" data-id="{{item.id}}" bindtap="handleOrderTap">
         <view class="order-card__top">
           <view>
             <view class="order-card__no">{{item.orderNo}}</view>

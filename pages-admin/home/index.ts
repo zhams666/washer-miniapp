@@ -1,8 +1,35 @@
-import { getMiniAdminCurrent, getMiniAdminOperationOverview } from '../../apis/admin';
+import {
+  getMiniAdminCurrent,
+  getMiniAdminOperationOverview,
+  getMiniAdminStoreSettings,
+  updateMiniAdminStoreSettings,
+  uploadMiniAdminStoreImage,
+} from '../../apis/admin';
 import { clearAdminSession, ensureAdminToken, setAdminProfile } from '../../utils/admin-auth';
 
 const formatMoney = (value: any) => Number(value || 0).toFixed(2);
 const formatCount = (value: any) => String(Number(value || 0));
+const emptySettingsForm = () => ({
+  storeName: '',
+  province: '',
+  city: '',
+  district: '',
+  address: '',
+  contactName: '',
+  contactPhone: '',
+  coverImage: '',
+  doorCloseIntervalOneStart: '',
+  doorCloseIntervalOneEnd: '',
+  doorCloseIntervalTwoStart: '',
+  doorCloseIntervalTwoEnd: '',
+  registerRewardAmount: '',
+  inviteRewardAmount: '',
+  activityIntro: '',
+  rechargeDescription: '',
+  memberDescription: '',
+  cabinetMinRechargeAmount: '',
+  cabinetMinBalanceAmount: '',
+});
 
 Page({
   data: {
@@ -26,6 +53,12 @@ Page({
     storeRankings: [] as any[],
     recentActivities: [] as any[],
     quickActions: [] as any[],
+    settingsVisible: false,
+    settingsLoading: false,
+    settingsSaving: false,
+    uploadingStoreImage: false,
+    settingsStoreId: 0,
+    settingsForm: emptySettingsForm(),
   },
 
   onLoad() {
@@ -141,6 +174,8 @@ Page({
         { key: 'orders', title: '订单总览', desc: '全部门店订单', icon: '/assets/icons/order.png' },
         { key: 'assets', title: '用户资产', desc: '余额、罚款、次卡', icon: '/assets/icons/wallet.png' },
         { key: 'finance', title: '经营流水', desc: '总部财务视角', icon: '/assets/icons/wallet.png' },
+        { key: 'voucherGenerate', title: '生成兑换券', desc: '批量生成金额券码', icon: '/assets/icons/home-voucher.png' },
+        { key: 'vouchers', title: '兑换券列表', desc: '查询核销和流水', icon: '/assets/icons/discount.png' },
         { key: 'features', title: '功能整理', desc: '需求和接入状态', icon: '/assets/icons/question.png' },
         { key: 'profile', title: '权限账号', desc: '总部管理权限', icon: '/assets/icons/user.png' },
       ];
@@ -151,6 +186,8 @@ Page({
         { key: 'orders', title: '订单排行', desc: '门店订单对比', icon: '/assets/icons/order.png' },
         { key: 'assets', title: '用户资产', desc: '加款、罚款、次卡', icon: '/assets/icons/wallet.png' },
         { key: 'finance', title: '分账流水', desc: '加盟财务概览', icon: '/assets/icons/wallet.png' },
+        { key: 'voucherGenerate', title: '生成兑换券', desc: '批量生成金额券码', icon: '/assets/icons/home-voucher.png' },
+        { key: 'vouchers', title: '兑换券列表', desc: '查询核销和流水', icon: '/assets/icons/discount.png' },
         { key: 'features', title: '功能整理', desc: '需求和接入状态', icon: '/assets/icons/question.png' },
         { key: 'profile', title: '加盟权限', desc: '账号与门店范围', icon: '/assets/icons/user.png' },
       ];
@@ -160,6 +197,8 @@ Page({
       { key: 'orders', title: '订单查询', desc: '本店订单和支付', icon: '/assets/icons/order.png' },
       { key: 'assets', title: '用户资产', desc: '加钱、罚款、次卡', icon: '/assets/icons/wallet.png' },
       { key: 'finance', title: '流水中心', desc: '充值、消费、核销', icon: '/assets/icons/wallet.png' },
+      { key: 'voucherGenerate', title: '生成兑换券', desc: '批量生成金额券码', icon: '/assets/icons/home-voucher.png' },
+      { key: 'vouchers', title: '兑换券列表', desc: '查询核销和流水', icon: '/assets/icons/discount.png' },
       { key: 'features', title: '功能整理', desc: '需求和接入状态', icon: '/assets/icons/question.png' },
       { key: 'profile', title: '我的权限', desc: '账号、门店、角色', icon: '/assets/icons/user.png' },
     ];
@@ -187,6 +226,117 @@ Page({
     this.loadPage();
   },
 
+  async openStoreSettings() {
+    const storeId = this.resolveEditableStoreId();
+    if (!storeId) {
+      wx.showToast({ title: '请先切换到具体门店', icon: 'none' });
+      return;
+    }
+    this.setData({
+      settingsVisible: true,
+      settingsLoading: true,
+      settingsStoreId: storeId,
+      settingsForm: emptySettingsForm(),
+    });
+    try {
+      const settings = await getMiniAdminStoreSettings(storeId);
+      this.setData({
+        settingsForm: this.mapSettingsForm(settings),
+      });
+    } catch (error) {
+      console.error('load store settings failed:', error);
+    } finally {
+      this.setData({ settingsLoading: false });
+    }
+  },
+
+  closeStoreSettings() {
+    if (this.data.settingsSaving || this.data.uploadingStoreImage) return;
+    this.setData({
+      settingsVisible: false,
+      settingsStoreId: 0,
+      settingsForm: emptySettingsForm(),
+    });
+  },
+
+  noop() {},
+
+  handleSettingsInput(e: WechatMiniprogram.Input) {
+    const field = String(e.currentTarget.dataset.field || '');
+    if (!field) return;
+    this.setData({
+      [`settingsForm.${field}`]: e.detail.value,
+    });
+  },
+
+  chooseStoreImage() {
+    const storeId = Number(this.data.settingsStoreId || 0);
+    if (!storeId) return;
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera'],
+      success: async (res) => {
+        const path = res.tempFilePaths && res.tempFilePaths[0];
+        if (!path) return;
+        this.setData({ uploadingStoreImage: true });
+        try {
+          const coverImage = await uploadMiniAdminStoreImage(storeId, path);
+          this.setData({
+            'settingsForm.coverImage': coverImage,
+          });
+          wx.showToast({ title: '图片已上传', icon: 'success' });
+        } catch (error) {
+          wx.showToast({ title: '当前环境暂不支持上传', icon: 'none' });
+          console.error('upload store image failed:', error);
+        } finally {
+          this.setData({ uploadingStoreImage: false });
+        }
+      },
+    });
+  },
+
+  async handleSaveStoreSettings() {
+    const storeId = Number(this.data.settingsStoreId || 0);
+    const form = this.data.settingsForm;
+    if (!storeId) return;
+    if (!String(form.storeName || '').trim()) {
+      wx.showToast({ title: '请填写场所名称', icon: 'none' });
+      return;
+    }
+    this.setData({ settingsSaving: true });
+    try {
+      await updateMiniAdminStoreSettings(storeId, {
+        storeName: String(form.storeName || '').trim(),
+        province: String(form.province || '').trim(),
+        city: String(form.city || '').trim(),
+        district: String(form.district || '').trim(),
+        address: String(form.address || '').trim(),
+        contactName: String(form.contactName || '').trim(),
+        contactPhone: String(form.contactPhone || '').trim(),
+        coverImage: String(form.coverImage || '').trim(),
+        doorCloseIntervalOneStart: this.toOptionalNumber(form.doorCloseIntervalOneStart),
+        doorCloseIntervalOneEnd: this.toOptionalNumber(form.doorCloseIntervalOneEnd),
+        doorCloseIntervalTwoStart: this.toOptionalNumber(form.doorCloseIntervalTwoStart),
+        doorCloseIntervalTwoEnd: this.toOptionalNumber(form.doorCloseIntervalTwoEnd),
+        registerRewardAmount: this.toOptionalNumber(form.registerRewardAmount),
+        inviteRewardAmount: this.toOptionalNumber(form.inviteRewardAmount),
+        activityIntro: String(form.activityIntro || '').trim(),
+        rechargeDescription: String(form.rechargeDescription || '').trim(),
+        memberDescription: String(form.memberDescription || '').trim(),
+        cabinetMinRechargeAmount: this.toOptionalNumber(form.cabinetMinRechargeAmount),
+        cabinetMinBalanceAmount: this.toOptionalNumber(form.cabinetMinBalanceAmount),
+      });
+      wx.showToast({ title: '门店设置已保存', icon: 'success' });
+      this.closeStoreSettings();
+      await this.loadPage();
+    } catch (error) {
+      console.error('save store settings failed:', error);
+    } finally {
+      this.setData({ settingsSaving: false });
+    }
+  },
+
   handleQuickTap(e: WechatMiniprogram.TouchEvent) {
     const key = e.currentTarget.dataset.key;
     const map: Record<string, string> = {
@@ -194,6 +344,8 @@ Page({
       orders: '/pages-admin/orders/index',
       assets: '/pages-admin/assets/index',
       finance: '/pages-admin/finance/index',
+      voucherGenerate: '/pages-admin/voucher-generate/index',
+      vouchers: '/pages-admin/vouchers/index',
       features: '/pages-admin/features/index',
       profile: '/pages-admin/profile/index',
     };
@@ -201,6 +353,57 @@ Page({
     if (url) {
       wx.navigateTo({ url });
     }
+  },
+
+  handleMetricTap(e: WechatMiniprogram.TouchEvent) {
+    const key = String(e.currentTarget.dataset.key || '');
+    if (!key) {
+      return;
+    }
+    const params = [
+      `metricKey=${key}`,
+      this.data.selectedStoreId ? `storeId=${this.data.selectedStoreId}` : '',
+    ]
+      .filter(Boolean)
+      .join('&');
+    wx.navigateTo({ url: `/pages-admin/finance/index?${params}` });
+  },
+
+  handleScopeTap(e: WechatMiniprogram.TouchEvent) {
+    const key = String(e.currentTarget.dataset.key || '');
+    const deviceKeys = ['devices', 'abnormalDevices'];
+    if (deviceKeys.includes(key)) {
+      wx.navigateTo({ url: '/pages-admin/devices/index' });
+      return;
+    }
+    if (key === 'stores') {
+      wx.navigateTo({ url: '/pages-admin/orders/index' });
+      return;
+    }
+    wx.navigateTo({ url: '/pages-admin/profile/index' });
+  },
+
+  handleDeviceTap() {
+    wx.navigateTo({ url: '/pages-admin/devices/index' });
+  },
+
+  handleRankingTap(e: WechatMiniprogram.TouchEvent) {
+    const storeId = String(e.currentTarget.dataset.storeId || '');
+    wx.navigateTo({
+      url: `/pages-admin/orders/index${storeId ? `?storeId=${storeId}` : ''}`,
+    });
+  },
+
+  handleActivityTap(e: WechatMiniprogram.TouchEvent) {
+    const type = String(e.currentTarget.dataset.type || '');
+    const referenceNo = String(e.currentTarget.dataset.referenceNo || '');
+    if (type === 'order') {
+      wx.navigateTo({
+        url: `/pages-admin/orders/index${referenceNo ? `?keyword=${encodeURIComponent(referenceNo)}` : ''}`,
+      });
+      return;
+    }
+    wx.navigateTo({ url: '/pages-admin/finance/index' });
   },
 
   refresh() {
@@ -218,5 +421,48 @@ Page({
     wx.switchTab({
       url: '/pages/home/index',
     });
+  },
+
+  resolveEditableStoreId() {
+    const selectedStoreId = Number(this.data.selectedStoreId || 0);
+    if (selectedStoreId > 0) {
+      return selectedStoreId;
+    }
+    if (this.data.stores.length === 1 && this.data.stores[0].id) {
+      return Number(this.data.stores[0].id);
+    }
+    return 0;
+  },
+
+  mapSettingsForm(settings: any) {
+    const toText = (value: any) => (value === undefined || value === null ? '' : String(value));
+    return {
+      storeName: toText(settings.storeName),
+      province: toText(settings.province),
+      city: toText(settings.city),
+      district: toText(settings.district),
+      address: toText(settings.address),
+      contactName: toText(settings.contactName),
+      contactPhone: toText(settings.contactPhone),
+      coverImage: toText(settings.coverImage),
+      doorCloseIntervalOneStart: toText(settings.doorCloseIntervalOneStart),
+      doorCloseIntervalOneEnd: toText(settings.doorCloseIntervalOneEnd),
+      doorCloseIntervalTwoStart: toText(settings.doorCloseIntervalTwoStart),
+      doorCloseIntervalTwoEnd: toText(settings.doorCloseIntervalTwoEnd),
+      registerRewardAmount: toText(settings.registerRewardAmount),
+      inviteRewardAmount: toText(settings.inviteRewardAmount),
+      activityIntro: toText(settings.activityIntro),
+      rechargeDescription: toText(settings.rechargeDescription),
+      memberDescription: toText(settings.memberDescription),
+      cabinetMinRechargeAmount: toText(settings.cabinetMinRechargeAmount),
+      cabinetMinBalanceAmount: toText(settings.cabinetMinBalanceAmount),
+    };
+  },
+
+  toOptionalNumber(value: string) {
+    const text = String(value || '').trim();
+    if (!text) return undefined;
+    const number = Number(text);
+    return Number.isFinite(number) ? number : undefined;
   },
 });

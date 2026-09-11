@@ -157,6 +157,9 @@ public class StoreController {
             item.put("coverImage", resolveStoreCover(store));
             item.put("address", resolveStoreAddress(store));
             item.put("phone", store.getContactPhone());
+            item.put("activityIntro", valueOrEmpty(store.getActivityIntro()));
+            item.put("rechargeDescription", valueOrEmpty(store.getRechargeDescription()));
+            item.put("memberDescription", valueOrEmpty(store.getMemberDescription()));
             item.put("latitude", store.getLatitude());
             item.put("longitude", store.getLongitude());
             item.put("distanceKm", resolveDistanceKm(store, userLat, userLng));
@@ -226,6 +229,11 @@ public class StoreController {
         result.put("coverImage", resolveStoreCover(store));
         result.put("address", resolveStoreAddress(store));
         result.put("phone", store.getContactPhone());
+        result.put("activityIntro", valueOrEmpty(store.getActivityIntro()));
+        result.put("rechargeDescription", valueOrEmpty(store.getRechargeDescription()));
+        result.put("memberDescription", valueOrEmpty(store.getMemberDescription()));
+        result.put("cabinetMinRechargeAmount", store.getCabinetMinRechargeAmount());
+        result.put("cabinetMinBalanceAmount", store.getCabinetMinBalanceAmount());
         result.put("latitude", store.getLatitude());
         result.put("longitude", store.getLongitude());
         result.put("distanceKm", resolveDistanceKm(store, userLat, userLng));
@@ -335,6 +343,9 @@ public class StoreController {
     }
 
     private String resolveStoreCover(Store store) {
+        if (store != null && StringUtils.hasText(store.getCoverImage())) {
+            return store.getCoverImage();
+        }
         if (store != null && StringUtils.hasText(store.getRemark()) && store.getRemark().startsWith("http")) {
             return store.getRemark();
         }

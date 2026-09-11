@@ -16,3 +16,5 @@ When MySQL migrations change, regenerate the PostgreSQL initialization script fr
 ```powershell
 node scripts/convert-mysql-migrations-to-postgresql.mjs
 ```
+
+For an existing CloudBase PostgreSQL environment, run incremental scripts in numeric order. This feature requires running `004_ranking_display_adjustment.sql` before deploying the backend version that contains ranking display adjustments.

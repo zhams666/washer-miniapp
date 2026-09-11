@@ -7,8 +7,8 @@
   <Navbar
     showBackIcon="{{false}}"
     title="{{workspace.headline}}"
-    titleColor="#1F2933"
-    backgroundColor="#FFFFFF"
+    titleColor="#F6FBFB"
+    backgroundColor="#102A31"
     borderBottom="{{false}}"
     bottomShadow="{{false}}"
   ></Navbar>
@@ -23,6 +23,7 @@
         </view>
         <view class="hero-actions">
           <view class="refresh-button" bindtap="refresh">刷新</view>
+          <view class="settings-button" bindtap="openStoreSettings">门店设置</view>
           <view class="switch-button" bindtap="handleSwitchIdentity">切换</view>
         </view>
       </view>
@@ -39,7 +40,7 @@
     </view>
 
     <view class="scope-grid">
-      <view wx:for="{{scopeSummaryCards}}" wx:key="key" class="scope-card">
+      <view wx:for="{{scopeSummaryCards}}" wx:key="key" class="scope-card is-clickable" data-key="{{item.key}}" bindtap="handleScopeTap">
         <view class="scope-card__title">{{item.title}}</view>
         <view class="scope-card__value">{{item.value}}<text>{{item.unit}}</text></view>
         <view class="scope-card__desc">{{item.desc}}</view>
@@ -47,14 +48,14 @@
     </view>
 
     <view class="metric-grid">
-      <view wx:for="{{metricCards}}" wx:key="key" class="metric-card">
+      <view wx:for="{{metricCards}}" wx:key="key" class="metric-card is-clickable" data-key="{{item.key}}" bindtap="handleMetricTap">
         <view class="metric-card__title">{{item.title}}</view>
         <view class="metric-card__value">{{item.value}}<text>{{item.unit}}</text></view>
         <view class="metric-card__desc">{{item.desc}}</view>
       </view>
     </view>
 
-    <view class="device-card">
+    <view class="device-card is-clickable" bindtap="handleDeviceTap">
       <view class="section-head">
         <view>
           <view class="section-title">设备状态</view>
@@ -88,7 +89,7 @@
         </view>
       </view>
       <view class="ranking-list">
-        <view wx:for="{{storeRankings}}" wx:key="storeId" class="ranking-item">
+        <view wx:for="{{storeRankings}}" wx:key="storeId" class="ranking-item is-clickable" data-store-id="{{item.storeId}}" bindtap="handleRankingTap">
           <view class="ranking-item__index">{{item.rank}}</view>
           <view class="ranking-item__main">
             <view class="ranking-item__title">{{item.storeName || '未命名门店'}}</view>
@@ -128,7 +129,7 @@
         </view>
       </view>
       <view class="activity-list">
-        <view wx:for="{{recentActivities}}" wx:key="referenceNo" class="activity-item">
+        <view wx:for="{{recentActivities}}" wx:key="referenceNo" class="activity-item is-clickable" data-type="{{item.type}}" data-reference-no="{{item.referenceNo}}" bindtap="handleActivityTap">
           <view>
             <view class="activity-item__title">{{item.title}}</view>
             <view class="activity-item__meta">{{item.storeName}} / {{item.referenceNo || '--'}}</view>
@@ -136,6 +137,94 @@
           <view class="activity-item__amount">¥{{item.amountText}}</view>
         </view>
         <view wx:if="{{!recentActivities.length && !loading}}" class="empty-text">暂无动态</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{settingsVisible}}" class="settings-mask" bindtap="closeStoreSettings">
+    <view class="settings-drawer" catchtap="noop">
+      <view class="settings-head">
+        <text>修改</text>
+        <view class="settings-close" bindtap="closeStoreSettings">×</view>
+      </view>
+      <scroll-view scroll-y class="settings-body">
+        <view wx:if="{{settingsLoading}}" class="settings-loading">加载中...</view>
+        <block wx:else>
+          <view class="settings-row required">
+            <text class="settings-label">场所名称</text>
+            <input class="settings-input" value="{{settingsForm.storeName}}" data-field="storeName" bindinput="handleSettingsInput" placeholder="请输入场所名称" />
+          </view>
+          <view class="settings-row required">
+            <text class="settings-label">场所地区</text>
+            <input class="settings-input" value="{{settingsForm.province}}" data-field="province" bindinput="handleSettingsInput" placeholder="省/市/区" />
+          </view>
+          <view class="settings-row required">
+            <text class="settings-label">场所地段</text>
+            <input class="settings-input" value="{{settingsForm.address}}" data-field="address" bindinput="handleSettingsInput" placeholder="请输入详细地址" />
+          </view>
+          <view class="settings-row required">
+            <text class="settings-label">场所管理员</text>
+            <input class="settings-input" value="{{settingsForm.contactName}}" data-field="contactName" bindinput="handleSettingsInput" placeholder="请输入管理员" />
+          </view>
+          <view class="settings-title">关门洗车区间设置</view>
+          <view class="settings-row required">
+            <text class="settings-label">区间一</text>
+            <input class="settings-number" type="number" value="{{settingsForm.doorCloseIntervalOneStart}}" data-field="doorCloseIntervalOneStart" bindinput="handleSettingsInput" placeholder="0" />
+            <text class="settings-gap">-</text>
+            <input class="settings-number" type="number" value="{{settingsForm.doorCloseIntervalOneEnd}}" data-field="doorCloseIntervalOneEnd" bindinput="handleSettingsInput" placeholder="0" />
+          </view>
+          <view class="settings-row required">
+            <text class="settings-label">区间二</text>
+            <input class="settings-number" type="number" value="{{settingsForm.doorCloseIntervalTwoStart}}" data-field="doorCloseIntervalTwoStart" bindinput="handleSettingsInput" placeholder="0" />
+            <text class="settings-gap">-</text>
+            <input class="settings-number" type="number" value="{{settingsForm.doorCloseIntervalTwoEnd}}" data-field="doorCloseIntervalTwoEnd" bindinput="handleSettingsInput" placeholder="0" />
+          </view>
+          <view class="settings-row required">
+            <text class="settings-label">注册奖励金</text>
+            <input class="settings-input" type="digit" value="{{settingsForm.registerRewardAmount}}" data-field="registerRewardAmount" bindinput="handleSettingsInput" placeholder="0" />
+            <text class="settings-unit">元</text>
+          </view>
+          <view class="settings-row required">
+            <text class="settings-label">邀请奖励金</text>
+            <input class="settings-input" type="digit" value="{{settingsForm.inviteRewardAmount}}" data-field="inviteRewardAmount" bindinput="handleSettingsInput" placeholder="0" />
+            <text class="settings-unit">元</text>
+          </view>
+          <view class="settings-row settings-row--textarea required">
+            <text class="settings-label">活动介绍</text>
+            <textarea class="settings-textarea" value="{{settingsForm.activityIntro}}" data-field="activityIntro" bindinput="handleSettingsInput" placeholder="请输入活动介绍"></textarea>
+          </view>
+          <view class="settings-row settings-row--textarea required">
+            <text class="settings-label">充值说明</text>
+            <textarea class="settings-textarea" value="{{settingsForm.rechargeDescription}}" data-field="rechargeDescription" bindinput="handleSettingsInput" placeholder="请输入充值说明"></textarea>
+          </view>
+          <view class="settings-row settings-row--textarea required">
+            <text class="settings-label">会员说明</text>
+            <textarea class="settings-textarea" value="{{settingsForm.memberDescription}}" data-field="memberDescription" bindinput="handleSettingsInput" placeholder="请输入会员说明"></textarea>
+          </view>
+          <view class="settings-row required">
+            <text class="settings-label">管理员手机号</text>
+            <input class="settings-input" type="number" value="{{settingsForm.contactPhone}}" data-field="contactPhone" bindinput="handleSettingsInput" placeholder="请输入手机号" />
+          </view>
+          <view class="settings-row required">
+            <text class="settings-label">开柜最低单充金额</text>
+            <input class="settings-input" type="digit" value="{{settingsForm.cabinetMinRechargeAmount}}" data-field="cabinetMinRechargeAmount" bindinput="handleSettingsInput" placeholder="0" />
+          </view>
+          <view class="settings-row required">
+            <text class="settings-label">开柜最低剩余余额</text>
+            <input class="settings-input" type="digit" value="{{settingsForm.cabinetMinBalanceAmount}}" data-field="cabinetMinBalanceAmount" bindinput="handleSettingsInput" placeholder="0" />
+          </view>
+          <view class="settings-row settings-row--image required">
+            <text class="settings-label">场所图片</text>
+            <image wx:if="{{settingsForm.coverImage}}" class="settings-image" mode="aspectFill" src="{{settingsForm.coverImage}}"></image>
+            <button class="image-button" loading="{{uploadingStoreImage}}" bindtap="chooseStoreImage">
+              <text>上传图片</text>
+              <text class="image-button__plus">+</text>
+            </button>
+          </view>
+        </block>
+      </scroll-view>
+      <view class="settings-footer">
+        <button class="settings-save" loading="{{settingsSaving}}" bindtap="handleSaveStoreSettings">确认保存</button>
       </view>
     </view>
   </view>

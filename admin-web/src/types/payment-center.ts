@@ -26,6 +26,14 @@ export interface CardUsageQueryParams {
   orderNo?: string;
 }
 
+export interface ExchangeVoucherQueryParams {
+  page: number;
+  size: number;
+  storeId?: number;
+  status?: string;
+  keyword?: string;
+}
+
 export interface SettlementDetailQueryParams {
   page: number;
   size: number;
@@ -109,6 +117,23 @@ export interface AdminCardUsageCenterItem {
   createdAt?: string;
 }
 
+export interface AdminExchangeVoucherItem {
+  id: number;
+  batchNo?: string;
+  serialNo?: string;
+  storeId?: number | null;
+  storeName?: string;
+  amount?: number | null;
+  status?: string;
+  redeemedUserId?: number | null;
+  redeemedUserNickname?: string;
+  redeemedUserMobile?: string;
+  redeemTransactionNo?: string;
+  redeemedAt?: string;
+  remark?: string;
+  createdAt?: string;
+}
+
 export interface AdminSettlementDetailItem {
   id: number;
   orderId?: number | null;
@@ -153,6 +178,13 @@ export interface AdminWalletTransactionPageResult {
 
 export interface AdminCardUsagePageResult {
   records: AdminCardUsageCenterItem[];
+  total: number;
+  size: number;
+  current: number;
+}
+
+export interface AdminExchangeVoucherPageResult {
+  records: AdminExchangeVoucherItem[];
   total: number;
   size: number;
   current: number;

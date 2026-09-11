@@ -1,4 +1,4 @@
-import { redeemVoucher } from '../../apis/card';
+import { redeemExchangeVoucher, redeemVoucher } from '../../apis/card';
 import { getMiniStoreList, getStoreList } from '../../apis/store';
 import { requireCurrentUser } from '../../utils/user';
 
@@ -15,6 +15,8 @@ const TEXT_VOUCHER_EMPTY = '\u8bf7\u8f93\u5165\u6216\u626b\u63cf\u5238\u53f7';
 const TEXT_VOUCHER_REDEEMING = '\u6838\u9500\u4e2d...';
 const TEXT_VOUCHER_REDEEM_FAILED =
   '\u6838\u9500\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u5238\u53f7';
+const TEXT_EXCHANGE_REDEEM_FAILED =
+  '\u5151\u6362\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u5238\u7801';
 const TEXT_LOGIN_REQUIRED = '\u8bf7\u5148\u767b\u5f55\u540e\u518d\u6838\u9500';
 const TEXT_STORE_EMPTY = '\u8bf7\u5148\u9009\u62e9\u95e8\u5e97';
 
@@ -26,6 +28,15 @@ const PLATFORM_OPTIONS: Array<{ key: VoucherPlatform; label: string }> = [
 
 Page({
   data: {
+    redeemMode: 'platform',
+    isExchangeMode: false,
+    preselectedStoreId: 0,
+    pageTitle: '券号核销',
+    heroKicker: '第三方平台券',
+    heroTitle: '核销抖音 / 美团次卡券',
+    heroDesc: '输入券号或扫码核销，成功后会生成本门店可用单次卡。',
+    codeLabel: '券号',
+    codePlaceholder: '请输入券号',
     platforms: PLATFORM_OPTIONS,
     selectedPlatform: 'douyin' as VoucherPlatform,
     voucherCode: '',
@@ -40,9 +51,28 @@ Page({
     resultStoreName: '',
     resultTimes: 0,
     resultCardNo: '',
+    resultAmount: '0.00',
+    resultBalance: '0.00',
+    resultTransactionNo: '',
   },
 
-  onLoad() {
+  onLoad(options?: Record<string, string | undefined>) {
+    const mode = String((options && options.mode) || '').trim();
+    const isExchangeMode = mode === 'exchange';
+    const storeId = Number((options && options.storeId) || 0);
+    this.setData({
+      redeemMode: isExchangeMode ? 'exchange' : 'platform',
+      isExchangeMode,
+      preselectedStoreId: storeId,
+      pageTitle: isExchangeMode ? '兑换券核销' : '券号核销',
+      heroKicker: isExchangeMode ? '门店兑换券' : '第三方平台券',
+      heroTitle: isExchangeMode ? '核销门店金额兑换券' : '核销抖音 / 美团次卡券',
+      heroDesc: isExchangeMode
+        ? '输入店长生成的兑换券码，核销后进入本门店赠送余额。'
+        : '输入券号或扫码核销，成功后会生成本门店可用单次卡。',
+      codeLabel: isExchangeMode ? '兑换券码' : '券号',
+      codePlaceholder: isExchangeMode ? '请输入字母数字券码' : '请输入券号',
+    });
     void this.loadStores();
   },
 
@@ -54,8 +84,8 @@ Page({
         records = await this.loadBaseStoreRecords();
       }
 
-      const stores = records
-        .map((item) => this.normalizeStoreOption(item))
+      const stores = (records as Record<string, any>[])
+        .map((item: Record<string, any>) => this.normalizeStoreOption(item))
         .filter((item): item is StoreOption => item !== null);
 
       if (stores.length === 0) {
@@ -63,7 +93,7 @@ Page({
         return;
       }
 
-      this.setSelectedStore(stores, 0);
+      this.setSelectedStore(stores, this.resolveInitialStoreIndex(stores));
     } catch (error) {
       console.error('load voucher stores failed:', error);
       this.clearStores();
@@ -120,6 +150,15 @@ Page({
       selectedStoreName: store.label,
       resultVisible: false,
     });
+  },
+
+  resolveInitialStoreIndex(stores: StoreOption[]) {
+    const targetStoreId = Number(this.data.preselectedStoreId || 0);
+    if (!targetStoreId) {
+      return 0;
+    }
+    const index = stores.findIndex((store) => store.id === targetStoreId);
+    return index >= 0 ? index : 0;
   },
 
   selectPlatform(e: WechatMiniprogram.TouchEvent) {
@@ -206,12 +245,19 @@ Page({
     try {
       this.setData({ loading: true, resultVisible: false });
       wx.showLoading({ title: TEXT_VOUCHER_REDEEMING });
-      const card = await redeemVoucher({
-        userId,
-        voucherCode,
-        sourceChannel: this.data.selectedPlatform,
-        storeId: Number(this.data.selectedStoreId),
-      });
+      const card = this.data.isExchangeMode
+        ? await redeemExchangeVoucher({
+            userId,
+            serialNo: voucherCode,
+            voucherCode,
+            storeId: Number(this.data.selectedStoreId),
+          })
+        : await redeemVoucher({
+            userId,
+            voucherCode,
+            sourceChannel: this.data.selectedPlatform,
+            storeId: Number(this.data.selectedStoreId),
+          });
 
       wx.hideLoading();
       this.setData({
@@ -220,16 +266,27 @@ Page({
         resultStoreName: String((card && card.storeName) || '门店'),
         resultTimes: Number((card && (card.createdCount || card.remainingTimes)) || 1),
         resultCardNo: String((card && card.cardNo) || ''),
+        resultAmount: this.formatAmount(card && card.amount),
+        resultBalance: this.formatAmount(card && card.balanceAfter),
+        resultTransactionNo: String((card && card.transactionNo) || ''),
       });
     } catch (error) {
       wx.hideLoading();
       console.error('redeem voucher error:', error);
       wx.showToast({
-        title: TEXT_VOUCHER_REDEEM_FAILED,
+        title: this.data.isExchangeMode ? TEXT_EXCHANGE_REDEEM_FAILED : TEXT_VOUCHER_REDEEM_FAILED,
         icon: 'none',
       });
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  formatAmount(value: unknown) {
+    const amount = Number(value || 0);
+    if (Number.isNaN(amount)) {
+      return '0.00';
+    }
+    return amount.toFixed(2);
   },
 });

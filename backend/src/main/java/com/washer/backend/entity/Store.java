@@ -27,6 +27,18 @@ public class Store {
     private String contactPhone;
     private String businessHours;
     private String featureTags;
+    private String coverImage;
+    private Integer doorCloseIntervalOneStart;
+    private Integer doorCloseIntervalOneEnd;
+    private Integer doorCloseIntervalTwoStart;
+    private Integer doorCloseIntervalTwoEnd;
+    private BigDecimal registerRewardAmount;
+    private BigDecimal inviteRewardAmount;
+    private String activityIntro;
+    private String rechargeDescription;
+    private String memberDescription;
+    private BigDecimal cabinetMinRechargeAmount;
+    private BigDecimal cabinetMinBalanceAmount;
     private String remark;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

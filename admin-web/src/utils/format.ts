@@ -67,6 +67,7 @@ export const formatAmountType = (value?: string) => {
   const map: Record<string, string> = {
     principal: t('amountType.principal'),
     card: t('amountType.card'),
+    gift: '赠送余额',
   };
 
   return value ? (map[value] || value) : t('common.noData');
@@ -193,6 +194,7 @@ export const formatWalletBizType = (value?: string) => {
     refund: t('walletBizType.refund'),
     adjust: t('walletBizType.adjust'),
     clear_gift: t('walletBizType.clear_gift'),
+    exchange_voucher: '兑换券核销',
   };
 
   return value ? (map[value] || value) : t('common.noData');

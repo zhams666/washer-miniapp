@@ -1,40 +1,34 @@
 type TabItem = {
+  key: string;
   pagePath: string;
   text: string;
-  iconPath: string;
-  selectedIconPath: string;
 };
 
 const TAB_LIST: TabItem[] = [
   {
+    key: 'home',
     pagePath: 'pages/home/index',
     text: '首页',
-    iconPath: '/assets/icons/tab-home.png',
-    selectedIconPath: '/assets/icons/tab-home-active.png',
   },
   {
+    key: 'store',
     pagePath: 'pages/service/index',
     text: '门店',
-    iconPath: '/assets/icons/tab-store.png',
-    selectedIconPath: '/assets/icons/tab-store-active.png',
   },
   {
+    key: 'ranking',
     pagePath: 'pages/ranking/index',
     text: '榜单',
-    iconPath: '/assets/icons/tab-ranking.png',
-    selectedIconPath: '/assets/icons/tab-ranking-active.png',
   },
   {
+    key: 'order',
     pagePath: 'pages/order/index',
     text: '订单',
-    iconPath: '/assets/icons/tab-order.png',
-    selectedIconPath: '/assets/icons/tab-order-active.png',
   },
   {
+    key: 'mine',
     pagePath: 'pages/mine/index',
     text: '我的',
-    iconPath: '/assets/icons/tab-mine.png',
-    selectedIconPath: '/assets/icons/tab-mine-active.png',
   },
 ];
 

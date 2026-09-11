@@ -34,9 +34,14 @@ type NearbyStoreInfo = {
 
 Page({
   data: {
+    isLogin: false,
     nearbyStore: null as NearbyStoreInfo | null,
     hasNearbyStore: false,
     showNearbyEmpty: true,
+    rechargeModalVisible: false,
+    rechargeStoresLoading: false,
+    rechargeStores: [] as NearbyStoreInfo[],
+    selectedRechargeStoreId: 0,
     franchiseModalVisible: false,
     franchiseSubmitting: false,
     franchiseForm: {
@@ -44,22 +49,27 @@ Page({
       contactPhone: '',
     },
     quickActions: [
-      { key: 'storeRecharge', title: '门店充值', icon: '/assets/icons/home-store-recharge.png' },
-      { key: 'wallet', title: '通用充值', icon: '/assets/icons/home-wallet.png' },
-      { key: 'franchise', title: '加盟联系', icon: '/assets/icons/home-franchise.png' },
-      { key: 'tutorial', title: '洗车教程', icon: '/assets/icons/home-tutorial.png' },
+      { key: 'balanceRecharge', title: '余额充值' },
+      { key: 'franchise', title: '加盟联系' },
+      { key: 'tutorial', title: '洗车教程' },
     ],
   },
 
   onLoad() {
+    this.syncLoginState();
     this.loadNearbyStore();
   },
 
   onShow() {
+    this.syncLoginState();
     const tabBar = (this as any).getTabBar && (this as any).getTabBar();
     if (tabBar && tabBar.setData) {
       tabBar.setData({ selectedPath: 'pages/home/index' });
     }
+  },
+
+  syncLoginState() {
+    this.setData({ isLogin: isLoggedIn() });
   },
 
   async loadNearbyStore() {
@@ -274,18 +284,104 @@ Page({
     wx.navigateTo({ url: '/pages/voucher-redeem/index' });
   },
 
-  handleQuickAction(e: WechatMiniprogram.TouchEvent) {
-    const { key } = e.currentTarget.dataset;
+  goMine() {
+    wx.switchTab({ url: '/pages/mine/index' });
+  },
 
-    if (key === 'storeRecharge') {
-      const nearbyStore = this.data.nearbyStore as NearbyStoreInfo | null;
-      const params = nearbyStore && nearbyStore.id ? `?storeId=${nearbyStore.id}` : '';
-      wx.navigateTo({ url: `/pages/pay/index${params}` });
+  goWashGuide() {
+    wx.navigateTo({ url: '/pages/wash-docs/index' });
+  },
+
+  goOrderList() {
+    wx.switchTab({ url: '/pages/order/index' });
+  },
+
+  async openRechargeModal() {
+    if (!isLoggedIn()) {
+      wx.showToast({ title: '请先登录', icon: 'none' });
+      this.goMine();
       return;
     }
 
-    if (key === 'wallet') {
-      wx.navigateTo({ url: '/pages/wallet/index' });
+    this.setData({
+      rechargeModalVisible: true,
+      rechargeStoresLoading: true,
+      rechargeStores: [],
+      selectedRechargeStoreId: 0,
+    });
+
+    try {
+      const userLocation = await this.resolveUserLocation();
+      const userId = getCachedUserId() || undefined;
+      let records: Record<string, any>[] = [];
+
+      try {
+        const pageData = await getMiniStoreList(1, 20, userId, userLocation?.latitude, userLocation?.longitude);
+        records = pageData && Array.isArray(pageData.records) ? pageData.records : [];
+      } catch (error) {
+        console.warn('home recharge mini store list failed:', error);
+      }
+
+      if (records.length === 0) {
+        try {
+          const pageData = await getStoreList(1, 20);
+          records = pageData && Array.isArray(pageData.records) ? pageData.records : [];
+        } catch (error) {
+          console.warn('home recharge store list failed:', error);
+        }
+      }
+
+      const stores = records
+        .map((item) => this.mapNearbyStore(item, userLocation))
+        .filter((store) => store.id > 0 && store.name)
+        .filter((store, index, list) => list.findIndex((item) => item.id === store.id) === index);
+      const nearbyStore = this.data.nearbyStore as NearbyStoreInfo | null;
+      const fallbackStores = nearbyStore && nearbyStore.id ? [nearbyStore] : [];
+      const rechargeStores = stores.length > 0 ? stores : fallbackStores;
+      const selectedStore = rechargeStores.find((store) => store.id === nearbyStore?.id) || rechargeStores[0];
+
+      this.setData({
+        rechargeStores,
+        selectedRechargeStoreId: selectedStore ? selectedStore.id : 0,
+        rechargeStoresLoading: false,
+      });
+    } catch (error) {
+      console.warn('open recharge modal failed:', error);
+      const nearbyStore = this.data.nearbyStore as NearbyStoreInfo | null;
+      this.setData({
+        rechargeStores: nearbyStore && nearbyStore.id ? [nearbyStore] : [],
+        selectedRechargeStoreId: nearbyStore && nearbyStore.id ? nearbyStore.id : 0,
+        rechargeStoresLoading: false,
+      });
+    }
+  },
+
+  closeRechargeModal() {
+    if (this.data.rechargeStoresLoading) {
+      return;
+    }
+    this.setData({ rechargeModalVisible: false });
+  },
+
+  selectRechargeStore(e: WechatMiniprogram.TouchEvent) {
+    const storeId = Number(e.currentTarget.dataset.id || 0);
+    if (storeId > 0) {
+      this.setData({ selectedRechargeStoreId: storeId });
+    }
+  },
+
+  confirmRechargeStore() {
+    const storeId = Number(this.data.selectedRechargeStoreId || 0);
+    this.setData({ rechargeModalVisible: false });
+    const params = storeId > 0 ? `?storeId=${storeId}` : '';
+    wx.navigateTo({ url: `/pages/pay/index${params}` });
+  },
+
+  handleQuickAction(e: WechatMiniprogram.TouchEvent) {
+    const { key } = e.currentTarget.dataset;
+
+    if (key === 'balanceRecharge') {
+      void this.openRechargeModal();
       return;
     }
 

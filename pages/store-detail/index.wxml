@@ -41,6 +41,17 @@
       <view class="start-desc" wx:else>100米内可排队</view>
     </view>
 
+    <view class="exchange-strip" bindtap="handleExchangeVoucher">
+      <view class="exchange-strip__icon">
+        <image mode="aspectFit" src="/assets/icons/home-voucher.png"></image>
+      </view>
+      <view class="exchange-strip__copy">
+        <view class="exchange-strip__title">核销兑换券</view>
+        <view class="exchange-strip__desc">输入门店券码，兑换到本店赠送余额</view>
+      </view>
+      <view class="exchange-strip__action">核销</view>
+    </view>
+
     <view class="bay-grid">
       <view
         class="bay-tile is-{{item.stateClass}} {{item.selected ? 'is-selected' : ''}}"
@@ -64,6 +75,21 @@
 
     <view class="bay-empty" wx:if="{{bays.length == 0}}">
       暂无工位数据
+    </view>
+
+    <view wx:if="{{hasActivityIntro}}" class="detail-section">
+      <view class="detail-section__title">本店活动介绍</view>
+      <view class="detail-section__content">{{activityIntro}}</view>
+    </view>
+
+    <view wx:if="{{hasRechargeDescription}}" class="detail-section">
+      <view class="detail-section__title">充值说明</view>
+      <view class="detail-section__content">{{rechargeDescription}}</view>
+    </view>
+
+    <view wx:if="{{hasMemberDescription}}" class="detail-section">
+      <view class="detail-section__title">会员说明</view>
+      <view class="detail-section__content">{{memberDescription}}</view>
     </view>
   </view>
 </view>

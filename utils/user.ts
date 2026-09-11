@@ -242,6 +242,25 @@ const buildSaveUserPayload = (
   };
 };
 
+const buildWechatProfilePayload = (profile: IObject | null): IObject => {
+  if (!hasProfileData(profile)) {
+    return {};
+  }
+  const nickname = String(
+    (profile && (profile.nickname || profile.nickName)) || ''
+  ).trim();
+  const avatarUrl = String((profile && profile.avatarUrl) || '').trim();
+  const payload: IObject = {};
+  if (nickname) {
+    payload.nickname = nickname;
+    payload.nickName = nickname;
+  }
+  if (avatarUrl) {
+    payload.avatarUrl = avatarUrl;
+  }
+  return payload;
+};
+
 const resolveCurrentUserById = async (
   userId: number
 ): Promise<CurrentUserSnapshot | null> => {
@@ -502,7 +521,6 @@ export const loginCurrentUserWithPhoneCode = async (
   phoneCode: string,
   profile: IObject | null = null
 ): Promise<LoginResponse> => {
-  void profile;
   const normalizedPhoneCode = String(phoneCode || '').trim();
   if (!normalizedPhoneCode) {
     return buildLoginResponse(500, readCurrentUserSnapshot());
@@ -511,11 +529,13 @@ export const loginCurrentUserWithPhoneCode = async (
   ensureCurrentUserPromise = null;
   ensureLoginStorage();
   const currentSnapshot = readCurrentUserSnapshot();
+  const profilePayload = buildWechatProfilePayload(profile);
   const loginCode = await requestLoginCode();
   const result = await phoneLogin({
     loginCode,
     phoneCode: normalizedPhoneCode,
     openId: currentSnapshot.openId || undefined,
+    ...profilePayload,
   });
 
   if (!result || !result.userId) {
@@ -531,6 +551,7 @@ export const loginCurrentUserWithPhoneCode = async (
         openId: result.openId,
         openid: result.openId,
         mobile: result.mobile,
+        ...profilePayload,
       },
       normalizeUserId(result.userId),
       normalizeOpenId(result.openId) || currentSnapshot.openId
@@ -546,7 +567,6 @@ export const loginCurrentUserWithMobileCode = async (
   verifyCode: string,
   profile: IObject | null = null
 ): Promise<LoginResponse> => {
-  void profile;
   const normalizedMobile = normalizeMobileText(mobile);
   const normalizedVerifyCode = String(verifyCode || '').trim();
   if (!normalizedMobile || !normalizedVerifyCode) {
@@ -556,12 +576,14 @@ export const loginCurrentUserWithMobileCode = async (
   ensureCurrentUserPromise = null;
   ensureLoginStorage();
   const currentSnapshot = readCurrentUserSnapshot();
+  const profilePayload = buildWechatProfilePayload(profile);
   const loginCode = await requestLoginCode();
   const result = await mobileCodeLogin({
     loginCode,
     mobile: normalizedMobile,
     verifyCode: normalizedVerifyCode,
     openId: currentSnapshot.openId || undefined,
+    ...profilePayload,
   });
 
   if (!result || !result.userId) {
@@ -577,6 +599,7 @@ export const loginCurrentUserWithMobileCode = async (
         openId: result.openId,
         openid: result.openId,
         mobile: result.mobile || normalizedMobile,
+        ...profilePayload,
       },
       normalizeUserId(result.userId),
       normalizeOpenId(result.openId) || currentSnapshot.openId
@@ -591,7 +614,6 @@ export const loginCurrentUserWithMobile = async (
   mobile: string,
   profile: IObject | null = null
 ): Promise<LoginResponse> => {
-  void profile;
   const normalizedMobile = normalizeMobileText(mobile);
   if (!normalizedMobile) {
     return buildLoginResponse(500, readCurrentUserSnapshot());
@@ -600,12 +622,14 @@ export const loginCurrentUserWithMobile = async (
   ensureCurrentUserPromise = null;
   ensureLoginStorage();
   const currentSnapshot = readCurrentUserSnapshot();
+  const profilePayload = buildWechatProfilePayload(profile);
   const mockOpenId = resolveMockMobileLoginOpenId(normalizedMobile);
   const loginCode = mockOpenId ? '' : await requestLoginCode();
   const result = await mobileLogin({
     loginCode,
     mobile: normalizedMobile,
     openId: mockOpenId || currentSnapshot.openId || undefined,
+    ...profilePayload,
   });
 
   if (!result || !result.userId) {
@@ -621,6 +645,7 @@ export const loginCurrentUserWithMobile = async (
         openId: result.openId,
         openid: result.openId,
         mobile: result.mobile || normalizedMobile,
+        ...profilePayload,
       },
       normalizeUserId(result.userId),
       normalizeOpenId(result.openId) || mockOpenId || currentSnapshot.openId

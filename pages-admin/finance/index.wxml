@@ -12,10 +12,28 @@
     </view>
 
     <view class="finance-grid">
-      <view wx:for="{{financeCards}}" wx:key="key" class="finance-card">
+      <view wx:for="{{financeCards}}" wx:key="key" class="finance-card" data-key="{{item.key}}" bindtap="handleFinanceCardTap">
         <view class="finance-card__title">{{item.title}}</view>
         <view class="finance-card__value">{{item.value}}<text>{{item.unit}}</text></view>
         <view class="finance-card__desc">{{item.desc}}</view>
+      </view>
+    </view>
+
+    <view class="section" wx:if="{{detailMetricKey}}">
+      <view class="section-title">{{detailTitle}}</view>
+      <view class="detail-list">
+        <view wx:for="{{detailItems}}" wx:key="referenceNo" class="detail-item">
+          <view>
+            <view class="detail-item__title">{{item.referenceNo || item.title}}</view>
+            <view class="detail-item__meta">{{item.storeName}} · {{item.userText}} · {{item.occurredText}}</view>
+          </view>
+          <view class="detail-item__side">
+            <view wx:if="{{item.amount && item.amount != 0}}" class="detail-item__amount">¥{{item.amountText}}</view>
+            <view wx:else class="detail-item__amount">{{item.countText}}</view>
+            <view class="detail-item__status">{{item.status || item.type}}</view>
+          </view>
+        </view>
+        <view wx:if="{{!detailItems.length && !detailLoading}}" class="empty-text">暂无明细</view>
       </view>
     </view>
 

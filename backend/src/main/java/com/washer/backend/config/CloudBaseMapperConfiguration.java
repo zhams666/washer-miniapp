@@ -103,6 +103,11 @@ public class CloudBaseMapperConfiguration {
     }
 
     @Bean
+    RankingDisplayAdjustmentMapper rankingDisplayAdjustmentMapper(CloudBasePgClient client, ObjectMapper objectMapper) {
+        return CloudBaseMapperFactory.create(RankingDisplayAdjustmentMapper.class, client, objectMapper);
+    }
+
+    @Bean
     RechargeOrderMapper rechargeOrderMapper(CloudBasePgClient client, ObjectMapper objectMapper) {
         return CloudBaseMapperFactory.create(RechargeOrderMapper.class, client, objectMapper);
     }
@@ -110,6 +115,11 @@ public class CloudBaseMapperConfiguration {
     @Bean
     StoreMapper storeMapper(CloudBasePgClient client, ObjectMapper objectMapper) {
         return CloudBaseMapperFactory.create(StoreMapper.class, client, objectMapper);
+    }
+
+    @Bean
+    StoreExchangeVoucherMapper storeExchangeVoucherMapper(CloudBasePgClient client, ObjectMapper objectMapper) {
+        return CloudBaseMapperFactory.create(StoreExchangeVoucherMapper.class, client, objectMapper);
     }
 
     @Bean
@@ -177,4 +187,3 @@ public class CloudBaseMapperConfiguration {
         return CloudBaseMapperFactory.create(WashQueueMapper.class, client, objectMapper);
     }
 }
-

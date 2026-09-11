@@ -19,7 +19,7 @@
 }
 
 .summary-title {
-  color: #1f2933;
+  color: $color-text-primary;
   font-size: 36rpx;
   font-weight: 900;
   line-height: 1.25;
@@ -27,7 +27,7 @@
 
 .summary-desc {
   margin-top: 14rpx;
-  color: #6b7280;
+  color: $color-text-secondary;
   font-size: 26rpx;
   line-height: 1.55;
 }
@@ -41,7 +41,7 @@
 }
 
 .group-title {
-  color: #1f2933;
+  color: $color-text-primary;
   font-size: 32rpx;
   font-weight: 900;
   line-height: 1.3;
@@ -49,7 +49,7 @@
 
 .group-desc {
   margin-top: 8rpx;
-  color: #6b7280;
+  color: $color-text-secondary;
   font-size: 24rpx;
   line-height: 1.45;
 }
@@ -69,7 +69,7 @@
 }
 
 .feature-card.is-todo {
-  border-left-color: #8b5cf6;
+  border-left-color: $color-primary;
 }
 
 .feature-top {
@@ -82,7 +82,7 @@
 .feature-title {
   flex: 1;
   min-width: 0;
-  color: #1f2933;
+  color: $color-text-primary;
   font-size: 29rpx;
   font-weight: 900;
   line-height: 1.35;
@@ -109,8 +109,8 @@
 }
 
 .status-pill.is-todo {
-  color: #6d42c2;
-  background: #f1eaff;
+  color: $color-primary-deep;
+  background: $color-primary-light;
 }
 
 .feature-entry {
@@ -123,7 +123,7 @@
 
 .feature-logic {
   margin-top: 10rpx;
-  color: #4b5563;
+  color: $color-text-secondary;
   font-size: 25rpx;
   line-height: 1.55;
 }

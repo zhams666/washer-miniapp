@@ -36,6 +36,7 @@
             <el-option :label="t('walletBizType.refund')" value="refund" />
             <el-option :label="t('walletBizType.adjust')" value="adjust" />
             <el-option :label="t('walletBizType.clear_gift')" value="clear_gift" />
+            <el-option label="兑换券核销" value="exchange_voucher" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('paymentCenter.walletTransactions.filters.relatedOrderNo')">

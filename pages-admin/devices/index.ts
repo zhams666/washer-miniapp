@@ -1,8 +1,8 @@
 import {
   getMiniAdminDevices,
   getMiniAdminStores,
-  startMiniAdminDevice,
-  stopMiniAdminDevice,
+  operateMiniAdminDevice,
+  updateMiniAdminDeviceConfig,
 } from '../../apis/admin';
 import { ensureAdminToken } from '../../utils/admin-auth';
 
@@ -16,9 +16,39 @@ const statusMap: Record<string, string> = {
   disabled: '停用',
 };
 
+const doorMap: Record<string, string> = {
+  open: '门已开',
+  closed: '门已关',
+};
+
+const powerMap: Record<string, string> = {
+  on: '已开电',
+  off: '已关电',
+};
+
+const actionTitleMap: Record<string, string> = {
+  open_door: '一键开门',
+  close_door: '一键关门',
+  power_on: '开电',
+  power_off: '关电',
+  maintenance: '维护',
+};
+
+const emptyEditForm = () => ({
+  deviceCode: '',
+  deviceName: '',
+  baseTimeMinutes: '',
+  basePrice: '',
+  overtimePrice: '',
+  speakerSn: '',
+  speakerVersion: '',
+  cabinetName: '',
+});
+
 Page({
   data: {
     loading: false,
+    saving: false,
     operatingId: 0,
     stores: [] as any[],
     storePickerOptions: ['全部门店'] as string[],
@@ -26,6 +56,9 @@ Page({
     selectedStoreId: '',
     keyword: '',
     devices: [] as any[],
+    editVisible: false,
+    editDeviceId: 0,
+    editForm: emptyEditForm(),
   },
 
   onLoad() {
@@ -54,17 +87,33 @@ Page({
         keyword: this.data.keyword || undefined,
       });
       this.setData({
-        devices: devices.map((device) => ({
-          ...device,
-          displayStatus: statusMap[String(device.deviceStatus || device.status || '').toLowerCase()] || device.deviceStatus || '未知',
-          statusClass: String(device.deviceStatus || device.status || 'idle').toLowerCase(),
-        })),
+        devices: devices.map((device) => this.formatDevice(device)),
       });
     } catch (error) {
       console.error('load mini admin devices failed:', error);
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  formatDevice(device: any) {
+    const status = String(device.deviceStatus || device.status || 'idle').toLowerCase();
+    const doorState = String(device.doorState || '').toLowerCase();
+    const powerState = String(device.powerState || '').toLowerCase();
+    return {
+      ...device,
+      displayStatus: statusMap[status] || device.deviceStatus || '未知',
+      statusClass: status,
+      doorStateLabel: doorMap[doorState] || '门状态待同步',
+      powerStateLabel: powerMap[powerState] || '电源待同步',
+      maintenanceLabel: device.maintenanceMode ? '维护中' : '可服务',
+      agentLevel: device.agentLevel || '1级代理',
+      contactName: device.contactName || device.storeName || '',
+      contactPhone: device.contactPhone || '',
+      cabinetName: device.cabinetName || '',
+      speakerSn: device.speakerSn || '',
+      speakerVersion: device.speakerVersion || device.firmwareVersion || '',
+    };
   },
 
   handleStoreChange(e: WechatMiniprogram.PickerChange) {
@@ -87,33 +136,121 @@ Page({
     this.loadDevices();
   },
 
-  async handleStart(e: WechatMiniprogram.TouchEvent) {
+  async handleDeviceAction(e: WechatMiniprogram.TouchEvent) {
     const id = Number(e.currentTarget.dataset.id || 0);
-    if (!id) return;
+    const action = String(e.currentTarget.dataset.action || '');
+    if (!id || !action) return;
     this.setData({ operatingId: id });
     try {
-      await startMiniAdminDevice(id);
-      wx.showToast({ title: '已启动', icon: 'success' });
+      await operateMiniAdminDevice(id, action);
+      wx.showToast({ title: actionTitleMap[action] || '操作成功', icon: 'success' });
       await this.loadDevices();
     } catch (error) {
-      console.error('start device failed:', error);
+      console.error('operate device failed:', error);
     } finally {
       this.setData({ operatingId: 0 });
     }
   },
 
-  async handleStop(e: WechatMiniprogram.TouchEvent) {
+  openEdit(e: WechatMiniprogram.TouchEvent) {
     const id = Number(e.currentTarget.dataset.id || 0);
+    const device = this.data.devices.find((item) => Number(item.id) === id);
+    if (!device) return;
+    this.setData({
+      editVisible: true,
+      editDeviceId: id,
+      editForm: {
+        deviceCode: device.deviceCode || '',
+        deviceName: device.deviceName || '',
+        baseTimeMinutes: device.baseTimeMinutes === undefined || device.baseTimeMinutes === null
+          ? ''
+          : String(device.baseTimeMinutes),
+        basePrice: device.basePrice === undefined || device.basePrice === null ? '' : String(device.basePrice),
+        overtimePrice: device.overtimePrice === undefined || device.overtimePrice === null
+          ? ''
+          : String(device.overtimePrice),
+        speakerSn: device.speakerSn || '',
+        speakerVersion: device.speakerVersion || '',
+        cabinetName: device.cabinetName || '',
+      },
+    });
+  },
+
+  closeEdit() {
+    if (this.data.saving) return;
+    this.setData({
+      editVisible: false,
+      editDeviceId: 0,
+      editForm: emptyEditForm(),
+    });
+  },
+
+  noop() {},
+
+  handleEditInput(e: WechatMiniprogram.Input) {
+    const field = String(e.currentTarget.dataset.field || '');
+    if (!field) return;
+    this.setData({
+      [`editForm.${field}`]: e.detail.value,
+    });
+  },
+
+  async handleSaveEdit() {
+    const id = Number(this.data.editDeviceId || 0);
+    const form = this.data.editForm;
     if (!id) return;
-    this.setData({ operatingId: id });
+    if (!String(form.deviceCode || '').trim() || !String(form.deviceName || '').trim()) {
+      wx.showToast({ title: '请填写设备号和设备名称', icon: 'none' });
+      return;
+    }
+    this.setData({ saving: true });
     try {
-      await stopMiniAdminDevice(id);
-      wx.showToast({ title: '已停止', icon: 'success' });
+      await updateMiniAdminDeviceConfig(id, {
+        deviceCode: String(form.deviceCode || '').trim(),
+        deviceName: String(form.deviceName || '').trim(),
+        baseTimeMinutes: this.toOptionalNumber(form.baseTimeMinutes),
+        basePrice: this.toOptionalNumber(form.basePrice),
+        overtimePrice: this.toOptionalNumber(form.overtimePrice),
+        speakerSn: String(form.speakerSn || '').trim(),
+        speakerVersion: String(form.speakerVersion || '').trim(),
+        cabinetName: String(form.cabinetName || '').trim(),
+      });
+      wx.showToast({ title: '已保存', icon: 'success' });
+      this.closeEdit();
       await this.loadDevices();
     } catch (error) {
-      console.error('stop device failed:', error);
+      console.error('save device config failed:', error);
     } finally {
-      this.setData({ operatingId: 0 });
+      this.setData({ saving: false });
     }
+  },
+
+  showCabinetList(e: WechatMiniprogram.TouchEvent) {
+    const id = Number(e.currentTarget.dataset.id || 0);
+    const device = this.data.devices.find((item) => Number(item.id) === id);
+    wx.showModal({
+      title: '柜子列表',
+      content: device && device.cabinetName ? `已绑定：${device.cabinetName}` : '暂未绑定柜子',
+      showCancel: false,
+    });
+  },
+
+  showRecognizerInfo(e: WechatMiniprogram.TouchEvent) {
+    const id = Number(e.currentTarget.dataset.id || 0);
+    const device = this.data.devices.find((item) => Number(item.id) === id);
+    wx.showModal({
+      title: '识别器信息',
+      content: device
+        ? `协议：${device.protocolType || '未填写'}\n版本：${device.speakerVersion || device.firmwareVersion || '未填写'}`
+        : '暂无识别器信息',
+      showCancel: false,
+    });
+  },
+
+  toOptionalNumber(value: string) {
+    const text = String(value || '').trim();
+    if (!text) return undefined;
+    const number = Number(text);
+    return Number.isFinite(number) ? number : undefined;
   },
 });

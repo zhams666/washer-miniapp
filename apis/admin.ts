@@ -1,7 +1,8 @@
 import { BaseEnum } from '../config/enums';
+import { LOCAL_REQUEST_URL } from '../config/url';
 import type { IObject, ResponseData } from '../typings/interface.d';
 import { getAdminToken } from '../utils/admin-auth';
-import { apiRequest } from '../utils/container-request';
+import { apiRequest, isCloudBaseTransport } from '../utils/container-request';
 
 type HttpMethod = 'GET' | 'POST';
 
@@ -91,6 +92,9 @@ export const getMiniAdminDashboard = (_params?: IObject) =>
 export const getMiniAdminOperationOverview = (_params?: IObject) =>
   request<IObject>('GET', '/api/mini-admin/operation/overview', _params);
 
+export const getMiniAdminFinanceDetails = (_params?: IObject) =>
+  request<IObject[]>('GET', '/api/mini-admin/finance/details', _params);
+
 export const getMiniAdminDevices = (_params?: IObject) =>
   request<IObject[]>('GET', '/api/mini-admin/devices', _params);
 
@@ -100,8 +104,106 @@ export const startMiniAdminDevice = (_id: number) =>
 export const stopMiniAdminDevice = (_id: number) =>
   request<IObject>('POST', `/api/mini-admin/devices/${_id}/stop`);
 
+export const operateMiniAdminDevice = (_id: number, _action: string) =>
+  request<IObject>('POST', `/api/mini-admin/devices/${_id}/action`, { action: _action });
+
+export const updateMiniAdminDeviceConfig = (_id: number, _data: IObject) =>
+  request<IObject>('POST', `/api/mini-admin/devices/${_id}/config`, _data);
+
+export const getMiniAdminStoreSettings = (_storeId: number) =>
+  request<IObject>('GET', `/api/mini-admin/stores/${_storeId}/settings`);
+
+export const updateMiniAdminStoreSettings = (_storeId: number, _data: IObject) =>
+  request<IObject>('POST', `/api/mini-admin/stores/${_storeId}/settings`, _data);
+
+export const saveMiniAdminStoreCoverImage = (_storeId: number, _coverImage: string) =>
+  request<IObject>('POST', `/api/mini-admin/stores/${_storeId}/cover-image-url`, {
+    coverImage: _coverImage,
+  });
+
+export const uploadMiniAdminStoreImage = (_storeId: number, _filePath: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const path = String(_filePath || '').trim();
+    if (!_storeId || !path) {
+      reject(new Error('store image file path is required'));
+      return;
+    }
+    if (isCloudBaseTransport()) {
+      const extensionMatch = path.match(/\.(jpg|jpeg|png|webp)$/i);
+      const extension = extensionMatch ? `.${extensionMatch[1].toLowerCase()}` : '.jpg';
+      wx.cloud.uploadFile({
+        cloudPath: `store-covers/${_storeId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`,
+        filePath: path,
+        success: async (result) => {
+          const fileId = String(result.fileID || '').trim();
+          if (!fileId) {
+            reject(new Error('cloud file id is empty'));
+            return;
+          }
+          try {
+            await saveMiniAdminStoreCoverImage(_storeId, fileId);
+            resolve(fileId);
+          } catch (error) {
+            reject(error);
+          }
+        },
+        fail: reject,
+      });
+      return;
+    }
+
+    const token = getAdminToken();
+    wx.uploadFile({
+      url: `${LOCAL_REQUEST_URL}/api/mini-admin/stores/${_storeId}/cover-image`,
+      filePath: path,
+      name: 'file',
+      timeout: 10000,
+      header: token ? { 'X-Washer-Admin-Token': token } : {},
+      formData: {
+        wxAppId: BaseEnum.APP_ID,
+      },
+      success({ statusCode, data }) {
+        let response: ResponseData<any> | null = null;
+        try {
+          response =
+            typeof data === 'string'
+              ? (JSON.parse(data) as ResponseData<any>)
+              : (data as ResponseData<any>);
+        } catch (error) {
+          reject(error);
+          return;
+        }
+
+        if (statusCode === 200 && response && response.code === 0) {
+          const payload = response.data;
+          if (typeof payload === 'string') {
+            resolve(payload);
+            return;
+          }
+          if (payload && typeof payload === 'object') {
+            const imageUrl = String(payload.coverImage || payload.url || '').trim();
+            if (imageUrl) {
+              resolve(imageUrl);
+              return;
+            }
+          }
+        }
+
+        reject(response || new Error('upload store image failed'));
+      },
+      fail: reject,
+    });
+  });
+};
+
 export const getMiniAdminOrders = (_params?: IObject) =>
   request<IObject>('GET', '/api/mini-admin/orders', _params);
+
+export const createMiniAdminExchangeVouchers = (_data: IObject) =>
+  request<IObject>('POST', '/api/mini-admin/exchange-vouchers/batches', _data);
+
+export const getMiniAdminExchangeVouchers = (_params?: IObject) =>
+  request<IObject>('GET', '/api/mini-admin/exchange-vouchers', _params);
 
 export const searchMiniAdminUsers = (_params?: IObject) =>
   request<IObject[]>('GET', '/api/mini-admin/users/search', _params);

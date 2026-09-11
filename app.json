@@ -34,6 +34,8 @@
         "orders/index",
         "finance/index",
         "assets/index",
+        "voucher-generate/index",
+        "vouchers/index",
         "features/index",
         "profile/index"
       ]
@@ -49,17 +51,17 @@
   },
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarBackgroundColor": "#F1F6F7",
     "navigationBarTitleText": "自助洗车",
     "navigationBarTextStyle": "black",
     "navigationStyle": "custom"
   },
   "tabBar": {
     "custom": true,
-    "color": "#6B7280",
-    "selectedColor": "#2F9AA5",
-    "backgroundColor": "#FFFFFF",
-    "borderStyle": "white",
+    "color": "#6B7D82",
+    "selectedColor": "#0F7381",
+    "backgroundColor": "#F8FBFB",
+    "borderStyle": "black",
     "list": [
       {
         "pagePath": "pages/home/index",

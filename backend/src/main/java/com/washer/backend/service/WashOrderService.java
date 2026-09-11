@@ -2,6 +2,7 @@ package com.washer.backend.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.washer.backend.dto.admin.AdminRankingDurationItem;
 import com.washer.backend.dto.admin.AdminOrderDetail;
 import com.washer.backend.dto.admin.AdminOrderListItem;
 import com.washer.backend.dto.order.SimpleOrderCreateRequest;
@@ -36,6 +37,10 @@ public interface WashOrderService extends IService<WashOrder> {
     List<WashOrderPaymentDetail> getPaymentDetails(Long orderId);
 
     Map<String, Object> getDurationRanking(String scope, Long userId, int limit);
+
+    List<AdminRankingDurationItem> listAdminDurationRanking(String scope, int limit);
+
+    long sumUserCompletedDurationSeconds(String scope, Long userId);
 
     Page<AdminOrderListItem> pageAdminOrders(
         long page,

@@ -22,3 +22,39 @@ test('自定义底部导航声明了五个可切换页面', () => {
     assert.match(source, new RegExp(page.replaceAll('/', '\\/')));
   }
 });
+
+function assertWxmlStructure(relativePath) {
+  const source = readFileSync(resolve(root, relativePath), 'utf8').replaceAll('wx:', 'data-wx-');
+  const stack = [];
+  const tokens = source.match(/<\/?[A-Za-z][^<>]*>/g) || [];
+
+  for (const token of tokens) {
+    const closing = /^<\//.test(token);
+    const match = token.match(/^<\/?([A-Za-z][\w-]*)/);
+    if (!match) {
+      continue;
+    }
+    const tag = match[1];
+    if (closing) {
+      assert.equal(stack.pop(), tag, `${relativePath} has mismatched closing tag: ${tag}`);
+    } else if (!/\/\s*>$/.test(token)) {
+      stack.push(tag);
+    }
+  }
+
+  assert.deepEqual(stack, [], `${relativePath} has unclosed WXML tags`);
+}
+
+test('首页和底部导航 WXML 结构完整', () => {
+  assertWxmlStructure('pages/home/index.wxml');
+  assertWxmlStructure('custom-tab-bar/index.wxml');
+});
+
+test('首页引用的本地背景资源存在', () => {
+  const source = readFileSync(resolve(root, 'pages/home/index.wxml'), 'utf8');
+  const assetPaths = [...source.matchAll(/src="(\/assets\/[^"']+)"/g)].map((match) => match[1]);
+  assert.ok(assetPaths.length > 0, 'home page should declare a local asset');
+  for (const assetPath of assetPaths) {
+    assert.ok(existsSync(resolve(root, assetPath.slice(1))), `missing home asset: ${assetPath}`);
+  }
+});

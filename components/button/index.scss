@@ -21,6 +21,7 @@
     font-weight: 600;
     line-height: 1;
     box-shadow: $shadow-cta;
+    @include tap-feedback;
   }
 
   .bg {
@@ -30,7 +31,7 @@
     z-index: 9;
     top: 18rpx;
     opacity: 0.18;
-    background: rgba(47, 154, 165, 0.86);
+    background: rgba(21, 152, 168, 0.86);
     filter: blur(24px);
     border-radius: $radius-pill;
     overflow: hidden;

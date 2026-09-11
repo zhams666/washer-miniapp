@@ -1,79 +1,162 @@
 <view class="page">
-  <view class="hero">
-    <image class="hero-image" mode="widthFix" src="/assets/images/home-dolphin-logo.jpg"></image>
+  <view class="hero-visual">
+    <image class="hero-image" mode="aspectFill" src="/assets/images/home-wash-hero-v3.jpg"></image>
+    <view class="hero-shade"></view>
+    <view class="hero-topbar">
+      <view class="brand-block">
+        <view class="brand-mark">
+          <view class="brand-mark__dolphin">
+            <view class="brand-mark__dolphin-body"></view>
+            <view class="brand-mark__dolphin-tail"></view>
+          </view>
+        </view>
+        <view class="brand-copy">
+          <view class="brand-name">海豚奢洗</view>
+          <view class="brand-caption">自助洗车服务</view>
+        </view>
+      </view>
+      <view class="service-badge">24H 自助</view>
+    </view>
+    <view class="hero-copy">
+      <view class="hero-kicker">今天也要洗得漂亮</view>
+      <view class="hero-title">洗净再出发</view>
+      <view class="hero-subtitle">自己选工位，自己掌握每一步</view>
+    </view>
   </view>
 
-  <view class="container">
-    <view class="voucher-card" bindtap="goVoucherRedeem">
-      <image class="voucher-icon" mode="aspectFit" src="/assets/icons/home-voucher.png"></image>
-      <view class="voucher-copy">
-        <view class="voucher-title">团购核销</view>
-        <view class="voucher-desc">输入券号，自助核销</view>
+  <view class="page-content">
+    <view class="login-panel" bindtap="goMine">
+      <view class="login-avatar">
+        <view class="login-avatar__head"></view>
+        <view class="login-avatar__body"></view>
       </view>
-      <view class="voucher-button">立即核销</view>
-    </view>
-
-    <view class="scan-button" bindtap="scan">
-      <image class="scan-icon" mode="aspectFit" src="/assets/icons/home-scan.png"></image>
-      <text>扫码洗车</text>
-    </view>
-
-    <view class="nearest-card" wx:if="{{hasNearbyStore}}">
-      <view class="nearest-head">
-        <view class="nearest-name">{{nearbyStore.name}}</view>
-        <view class="more-link" bindtap="goService">更多门店 </view>
+      <view class="login-copy">
+        <text class="login-title" wx:if="{{isLogin}}">欢迎回来</text>
+        <text class="login-title" wx:else>登录海豚奢洗</text>
+        <text class="login-desc" wx:if="{{isLogin}}">查看订单、余额和会员服务</text>
+        <text class="login-desc" wx:else>登录后查看订单和账户服务</text>
       </view>
-      <view class="nearest-body">
-        <view class="nearest-info">
-          <view class="nearest-line" wx:if="{{nearbyStore.distanceText}}">
-            <image class="line-icon" mode="aspectFit" src="/assets/icons/location-now.png"></image>
-            <text>{{nearbyStore.distanceText}}</text>
-          </view>
-          <view class="nearest-line" wx:if="{{nearbyStore.addressText}}">
-            <image class="line-icon" mode="aspectFit" src="/assets/icons/location-now.png"></image>
-            <text>{{nearbyStore.addressText}}</text>
-          </view>
-        </view>
-        <view class="nav-actions">
-          <view class="nav-pill" bindtap="handleNearbyNav">
-            <image class="nav-icon" mode="aspectFit" src="/assets/icons/home-nav.png"></image>
-            <text>导航</text>
-          </view>
-          <view class="nav-link" bindtap="handleNearbyNav">导航到店</view>
-        </view>
+      <view class="login-button">
+        <text wx:if="{{isLogin}}">查看账户</text>
+        <text wx:else>立即登录</text>
       </view>
     </view>
 
-    <view class="nearest-card nearest-card--empty" wx:else>
-      <view class="nearest-head">
-        <view class="nearest-name">暂无最近门店</view>
-        <view class="more-link" bindtap="goService">更多门店 </view>
-      </view>
-      <view class="nearest-body">
-        <view class="nearest-info">
-          <view class="nearest-line">
-            <image class="line-icon" mode="aspectFit" src="/assets/icons/location-now.png"></image>
-            <text>进入门店列表选择可用门店</text>
-          </view>
+    <view class="action-grid">
+      <view class="action-card action-card--wash" bindtap="scan">
+        <view class="action-card__eyebrow">主操作</view>
+        <view class="action-card__title">开始洗车</view>
+        <view class="action-card__desc">扫描工位二维码，马上开洗</view>
+        <view class="wash-car-icon">
+          <view class="wash-car-icon__roof"></view>
+          <view class="wash-car-icon__body"></view>
+          <view class="wash-car-icon__wheel wash-car-icon__wheel--left"></view>
+          <view class="wash-car-icon__wheel wash-car-icon__wheel--right"></view>
+          <view class="wash-car-icon__bubble wash-car-icon__bubble--one"></view>
+          <view class="wash-car-icon__bubble wash-car-icon__bubble--two"></view>
         </view>
-        <view class="nav-actions">
-          <view class="nav-pill" bindtap="goService">查看门店</view>
+        <view class="action-card__button action-card__button--dark">开始洗车</view>
+      </view>
+
+      <view class="action-card action-card--store" bindtap="goService">
+        <view class="action-card__title">选择门店</view>
+        <view class="action-card__desc">查看附近工位</view>
+        <view class="location-icon">
+          <view class="location-icon__core"></view>
+        </view>
+        <view class="action-card__button action-card__button--light">去看看</view>
+      </view>
+
+      <view class="action-card action-card--voucher" bindtap="goVoucherRedeem">
+        <view class="action-card__title">团购核销</view>
+        <view class="action-card__desc">输入券号直接使用</view>
+        <view class="ticket-icon">
+          <view class="ticket-icon__line"></view>
+        </view>
+        <view class="action-card__button action-card__button--dark">立即核销</view>
+      </view>
+    </view>
+
+    <view class="wash-tools">
+      <view class="section-head">
+        <text class="section-title">洗车工具</text>
+        <text class="section-caption">洗前、洗中、洗后都能用</text>
+      </view>
+      <view class="wash-tools__grid">
+        <view class="wash-tool" bindtap="goWashGuide">
+          <view class="wash-tool__icon wash-tool__icon--guide">
+            <view class="wash-tool__shape"></view>
+          </view>
+          <text class="wash-tool__title">洗车教程</text>
+          <text class="wash-tool__desc">新手快速上手</text>
+        </view>
+        <view class="wash-tool" bindtap="goOrderList">
+          <view class="wash-tool__icon wash-tool__icon--order">
+            <view class="wash-tool__shape"></view>
+          </view>
+          <text class="wash-tool__title">洗车订单</text>
+          <text class="wash-tool__desc">查看历史记录</text>
+        </view>
+        <view class="wash-tool" bindtap="goService">
+          <view class="wash-tool__icon wash-tool__icon--station">
+            <view class="wash-tool__shape"></view>
+          </view>
+          <text class="wash-tool__title">工位状态</text>
+          <text class="wash-tool__desc">到店前先查看</text>
         </view>
       </view>
     </view>
 
-    <view class="quick-panel">
-      <view
-        wx:for="{{quickActions}}"
-        wx:key="key"
-        class="quick-item"
-        data-key="{{item.key}}"
-        bindtap="handleQuickAction"
-      >
-        <view class="quick-icon-wrap">
-          <image class="quick-icon" mode="aspectFit" src="{{item.icon}}"></image>
+    <view class="utility-dock">
+      <view class="section-head">
+        <text class="section-title">更多服务</text>
+        <text class="section-caption">常用功能入口</text>
+      </view>
+      <view class="utility-grid">
+        <view
+          wx:for="{{quickActions}}"
+          wx:key="key"
+          class="utility-item"
+          data-key="{{item.key}}"
+          bindtap="handleQuickAction"
+        >
+          <view class="utility-icon utility-icon--{{item.key}}">
+            <view class="utility-icon__shape"></view>
+          </view>
+          <text class="utility-title">{{item.title}}</text>
         </view>
-        <view class="quick-title">{{item.title}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="recharge-mask" wx:if="{{rechargeModalVisible}}" bindtap="closeRechargeModal">
+    <view class="recharge-modal" catchtap="noop">
+      <view class="recharge-title">余额充值</view>
+      <view class="recharge-desc">请选择充值门店，充值赠送余额仅限所选门店使用。</view>
+
+      <view class="recharge-loading" wx:if="{{rechargeStoresLoading}}">正在加载门店</view>
+      <view class="recharge-store-list" wx:elif="{{rechargeStores.length > 0}}">
+        <view
+          wx:for="{{rechargeStores}}"
+          wx:key="id"
+          class="recharge-store {{selectedRechargeStoreId == item.id ? 'recharge-store--selected' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="selectRechargeStore"
+        >
+          <view class="recharge-radio">
+            <view class="recharge-radio__inner" wx:if="{{selectedRechargeStoreId == item.id}}"></view>
+          </view>
+          <view class="recharge-store__copy">
+            <text class="recharge-store__name">{{item.name}}</text>
+            <text class="recharge-store__meta">{{item.distanceText || '可用充值门店'}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="recharge-empty" wx:else>暂未获取到门店，确认后可在充值页选择。</view>
+
+      <view class="recharge-actions">
+        <view class="recharge-cancel" bindtap="closeRechargeModal">取消</view>
+        <view class="recharge-confirm" bindtap="confirmRechargeStore">确认充值</view>
       </view>
     </view>
   </view>
@@ -81,7 +164,7 @@
   <view class="franchise-mask" wx:if="{{franchiseModalVisible}}" bindtap="closeFranchiseModal">
     <view class="franchise-modal" catchtap="noop">
       <view class="franchise-title">加盟联系</view>
-      <view class="franchise-desc">留下姓名和电话号码，后台会清晰记录你的加盟意向。</view>
+      <view class="franchise-desc">提交后，工作人员会联系你确认加盟信息。</view>
 
       <view class="franchise-field">
         <view class="franchise-label">姓名</view>

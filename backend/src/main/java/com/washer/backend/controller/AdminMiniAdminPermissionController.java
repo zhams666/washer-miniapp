@@ -90,7 +90,7 @@ public class AdminMiniAdminPermissionController {
             new AdminPermissionOption("dashboard:view", "经营看板", "查看手机端管理首页数据"),
             new AdminPermissionOption("activity:view", "业务动态", "查看近期运营动态"),
             new AdminPermissionOption("device:view", "设备查看", "查看设备状态"),
-            new AdminPermissionOption("device:control", "设备控制", "启动或停止设备"),
+            new AdminPermissionOption("device:control", "设备控制", "控制设备开关门、开关电和维护状态"),
             new AdminPermissionOption("order:view", "订单查看", "查看订单列表"),
             new AdminPermissionOption("user:view", "用户查询", "查询用户资产"),
             new AdminPermissionOption("wallet:adjust", "余额调整", "调整用户钱包余额"),

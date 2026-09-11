@@ -36,6 +36,9 @@
       <RouterLink class="nav-link" to="/point-mall" active-class="is-active">
         积分商城
       </RouterLink>
+      <RouterLink class="nav-link" to="/ranking-management" active-class="is-active">
+        排行榜管理
+      </RouterLink>
       <RouterLink class="nav-link" to="/payment-details" active-class="is-active">
         {{ t('layout.menuPaymentDetails') }}
       </RouterLink>
@@ -50,6 +53,9 @@
       </RouterLink>
       <RouterLink class="nav-link" to="/card-usages" active-class="is-active">
         {{ t('layout.menuCardUsages') }}
+      </RouterLink>
+      <RouterLink class="nav-link" to="/exchange-vouchers" active-class="is-active">
+        兑换券核销
       </RouterLink>
     </aside>
 

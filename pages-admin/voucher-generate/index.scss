@@ -1,0 +1,148 @@
+@import "../../styles/theme";
+
+.page {
+  @include page-shell;
+}
+
+.container {
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.panel,
+.code-card {
+  @include card;
+}
+
+.panel {
+  padding: 26rpx;
+}
+
+.picker-row {
+  min-height: 82rpx;
+  padding: 0 22rpx;
+  border-radius: $radius-control;
+  background: $color-primary-soft;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.picker-row text {
+  color: $color-text-primary;
+  font-size: $font-body;
+  font-weight: 800;
+}
+
+.picker-row label {
+  color: $color-primary;
+  font-size: $font-micro;
+}
+
+.form-row {
+  margin-top: 26rpx;
+}
+
+.form-label {
+  color: $color-text-primary;
+  font-size: $font-body;
+  font-weight: 800;
+}
+
+.form-input {
+  height: 88rpx;
+  margin-top: 14rpx;
+  padding: 0 24rpx;
+  border-radius: $radius-control;
+  background: $color-surface;
+  color: $color-text-primary;
+  font-size: 30rpx;
+  box-sizing: border-box;
+}
+
+.submit-button {
+  height: 88rpx;
+  margin-top: 34rpx;
+  border: 0;
+  border-radius: 999rpx;
+  background: #f2b23c;
+  color: #17282d;
+  font-size: 30rpx;
+  font-weight: 900;
+  line-height: 88rpx;
+  box-shadow: 0 12rpx 24rpx rgba(169, 104, 20, 0.2);
+}
+
+.result-section {
+  margin-top: 28rpx;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  color: $color-text-primary;
+  font-size: $font-section-title;
+  font-weight: 900;
+}
+
+.section-subtitle {
+  margin-top: 8rpx;
+  color: $color-text-secondary;
+  font-size: $font-micro;
+}
+
+.copy-button,
+.list-button {
+  @include pill;
+  height: 58rpx;
+  padding: 0 22rpx;
+  background: $color-primary-light;
+  color: $color-primary-deep;
+  font-size: $font-micro;
+  font-weight: 900;
+}
+
+.code-list {
+  margin-top: 18rpx;
+}
+
+.code-card {
+  min-height: 104rpx;
+  margin-bottom: 14rpx;
+  padding: 20rpx 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.code-card__no {
+  color: $color-text-primary;
+  font-size: 29rpx;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.code-card__meta {
+  margin-top: 8rpx;
+  color: $color-text-secondary;
+  font-size: $font-micro;
+}
+
+.code-card__amount {
+  margin-left: 16rpx;
+  color: $color-warning;
+  font-size: $font-body;
+  font-weight: 900;
+}
+
+.list-button {
+  width: 100%;
+  height: 82rpx;
+  margin-top: 18rpx;
+  box-sizing: border-box;
+}
