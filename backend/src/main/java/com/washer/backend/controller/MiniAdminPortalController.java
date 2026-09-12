@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,6 +45,7 @@ public class MiniAdminPortalController {
 
     private static final long MAX_STORE_IMAGE_SIZE = 5L * 1024L * 1024L;
     private static final Set<String> ALLOWED_STORE_IMAGE_EXTENSIONS = Set.of(".jpg", ".jpeg", ".png", ".webp");
+    private static final Logger LOGGER = LoggerFactory.getLogger(MiniAdminPortalController.class);
 
     private final MiniAdminAuthService miniAdminAuthService;
     private final MiniAdminPortalService miniAdminPortalService;
@@ -68,11 +71,42 @@ public class MiniAdminPortalController {
     @GetMapping("/operation/overview")
     public ApiResponse<MiniAdminOperationOverview> operationOverview(
         @RequestHeader(value = "X-Washer-Admin-Token", required = false) String token,
+        @RequestHeader(value = "X-Washer-Trace-Id", required = false) String traceId,
         @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate bizDate,
         @RequestParam(required = false) Long storeId
     ) {
         MiniAdminSessionContext context = miniAdminAuthService.requireContext(token);
-        return ApiResponse.success(miniAdminPortalService.getOperationOverview(context, bizDate, storeId));
+        String safeTraceId = normalizeTraceId(traceId);
+        Long staffId = context.getStaff() != null ? context.getStaff().getId() : null;
+        LOGGER.info(
+            "mini_admin_operation_overview_started traceId={}, staffId={}, storeId={}, bizDate={}",
+            safeTraceId,
+            staffId,
+            storeId,
+            bizDate
+        );
+        try {
+            MiniAdminOperationOverview overview = miniAdminPortalService.getOperationOverview(context, bizDate, storeId);
+            LOGGER.info(
+                "mini_admin_operation_overview_completed traceId={}, staffId={}, storeId={}, bizDate={}",
+                safeTraceId,
+                staffId,
+                storeId,
+                bizDate
+            );
+            return ApiResponse.success(overview);
+        } catch (RuntimeException exception) {
+            LOGGER.error(
+                "mini_admin_operation_overview_failed traceId={}, staffId={}, storeId={}, bizDate={}, reason={}",
+                safeTraceId,
+                staffId,
+                storeId,
+                bizDate,
+                exception.getMessage(),
+                exception
+            );
+            throw exception;
+        }
     }
 
     @GetMapping("/finance/details")
@@ -240,6 +274,14 @@ public class MiniAdminPortalController {
             return ".webp";
         }
         return ".jpg";
+    }
+
+    private String normalizeTraceId(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "missing";
+        }
+        String normalized = value.replaceAll("[^A-Za-z0-9_-]", "");
+        return StringUtils.hasText(normalized) ? normalized.substring(0, Math.min(normalized.length(), 80)) : "invalid";
     }
 
     private String buildPublicUrl(HttpServletRequest request, String path) {

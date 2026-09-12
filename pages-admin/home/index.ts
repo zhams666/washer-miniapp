@@ -73,9 +73,11 @@ Page({
     }
 
     this.setData({ loading: true });
+    let phase = '校验管理端登录';
     try {
       const profile = await getMiniAdminCurrent();
       setAdminProfile(profile);
+      phase = '加载经营数据';
       const overview = await getMiniAdminOperationOverview({
         storeId: this.data.selectedStoreId || undefined,
       });
@@ -94,14 +96,38 @@ Page({
         quickActions: this.buildQuickActions(overview.tierCode),
       });
     } catch (error) {
-      wx.showToast({
-        title: '管理端数据加载失败',
-        icon: 'none',
+      const diagnostic = this.resolveLoadDiagnostic(error, phase);
+      console.error('mini_admin_home_load_failed', {
+        phase,
+        traceId: diagnostic.traceId,
+        selectedStoreId: this.data.selectedStoreId || '',
+        message: diagnostic.message,
+        error,
       });
-      console.error('load mini admin home failed:', error);
+      wx.showModal({
+        title: '管理端数据加载失败',
+        content: `步骤：${phase}\n诊断编号：${diagnostic.traceId}\n原因：${diagnostic.message}\n请在云托管日志搜索该编号。`,
+        showCancel: false,
+        confirmText: '知道了',
+      });
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  resolveLoadDiagnostic(error: unknown, phase: string) {
+    const record = error && typeof error === 'object' ? (error as Record<string, any>) : {};
+    const traceId = String(record.traceId || record.requestId || '未返回追踪编号').trim();
+    const rawMessage = record.message || record.errMsg || record.msg || error || `${phase}失败`;
+    const message = String(rawMessage)
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 160);
+    return {
+      traceId: traceId || '未返回追踪编号',
+      message: message || `${phase}失败`,
+    };
   },
 
   mapWorkspace(overview: any) {

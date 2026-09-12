@@ -7,6 +7,7 @@ export interface ResponseData<T = any> {
   data: T;
   msg?: string;
   message?: string;
+  traceId?: string;
 }
 
 export interface LoginCandidate {
