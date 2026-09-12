@@ -121,11 +121,19 @@ public class RankingDisplayAdjustmentServiceImpl implements RankingDisplayAdjust
         String resolvedScope = normalizeScope(scope);
         return rankingDisplayAdjustmentMapper.selectList(
             new LambdaQueryWrapper<RankingDisplayAdjustment>()
-                .eq(RankingDisplayAdjustment::getScope, resolvedScope)
+                .in(RankingDisplayAdjustment::getScope, scopesIncludedBy(resolvedScope))
                 .ge(fromTime != null, RankingDisplayAdjustment::getOccurredAt, fromTime)
                 .le(toTime != null, RankingDisplayAdjustment::getOccurredAt, toTime)
                 .orderByDesc(RankingDisplayAdjustment::getOccurredAt)
         );
+    }
+
+    private List<String> scopesIncludedBy(String scope) {
+        return switch (scope) {
+            case "day" -> List.of("day");
+            case "month" -> List.of("day", "month");
+            default -> List.of("day", "month", "total");
+        };
     }
 
     private List<Long> findUserIdsByKeyword(String keyword) {
