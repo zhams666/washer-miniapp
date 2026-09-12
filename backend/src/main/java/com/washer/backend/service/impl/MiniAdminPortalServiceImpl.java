@@ -400,6 +400,9 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
     ) {
         ensureDeviceControlPermission(context);
         Device device = getAccessibleDevice(context, deviceId);
+        if (request != null && shouldStopRunningOrders(request.getDeviceStatus())) {
+            washOrderService.cancelRunningOrdersForDevice(device.getId(), "管理端更新设备状态");
+        }
         return deviceService.updateMiniAdminConfig(device.getId(), request);
     }
 
@@ -1038,6 +1041,14 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
         if (context == null || !context.getPermissions().contains(PERMISSION_DEVICE_CONTROL)) {
             throw new IllegalArgumentException("无设备控制权限");
         }
+    }
+
+    private boolean shouldStopRunningOrders(String deviceStatus) {
+        if (!StringUtils.hasText(deviceStatus)) {
+            return false;
+        }
+        String normalizedStatus = deviceStatus.trim().toLowerCase();
+        return !"running".equals(normalizedStatus) && !"online".equals(normalizedStatus);
     }
 
     private void ensureRankingManagementPermission(MiniAdminSessionContext context) {

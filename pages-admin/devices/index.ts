@@ -38,6 +38,7 @@ const actionTitleMap: Record<string, string> = {
 const emptyEditForm = () => ({
   deviceCode: '',
   deviceName: '',
+  deviceStatus: 'offline',
   baseTimeMinutes: '',
   basePrice: '',
   overtimePrice: '',
@@ -70,6 +71,7 @@ Page({
     devices: [] as any[],
     editVisible: false,
     editDeviceId: 0,
+    editStatusIndex: 0,
     editForm: emptyEditForm(),
     createVisible: false,
     creating: false,
@@ -182,12 +184,16 @@ Page({
     const id = Number(e.currentTarget.dataset.id || 0);
     const device = this.data.devices.find((item) => Number(item.id) === id);
     if (!device) return;
+    const deviceStatus = String(device.deviceStatus || device.status || 'offline').toLowerCase();
+    const editStatusIndex = Math.max(0, this.data.deviceStatusOptions.indexOf(deviceStatus));
     this.setData({
       editVisible: true,
       editDeviceId: id,
+      editStatusIndex,
       editForm: {
         deviceCode: device.deviceCode || '',
         deviceName: device.deviceName || '',
+        deviceStatus,
         baseTimeMinutes: device.baseTimeMinutes === undefined || device.baseTimeMinutes === null
           ? ''
           : String(device.baseTimeMinutes),
@@ -207,6 +213,7 @@ Page({
     this.setData({
       editVisible: false,
       editDeviceId: 0,
+      editStatusIndex: 0,
       editForm: emptyEditForm(),
     });
   },
@@ -250,6 +257,15 @@ Page({
     if (!field) return;
     this.setData({
       [`editForm.${field}`]: e.detail.value,
+    });
+  },
+
+  handleEditStatusChange(e: WechatMiniprogram.PickerChange) {
+    const editStatusIndex = Number(e.detail.value || 0);
+    const deviceStatus = this.data.deviceStatusOptions[editStatusIndex] || 'offline';
+    this.setData({
+      editStatusIndex,
+      'editForm.deviceStatus': deviceStatus,
     });
   },
 
@@ -335,6 +351,7 @@ Page({
       await updateMiniAdminDeviceConfig(id, {
         deviceCode: String(form.deviceCode || '').trim(),
         deviceName: String(form.deviceName || '').trim(),
+        deviceStatus: String(form.deviceStatus || 'offline').trim().toLowerCase(),
         baseTimeMinutes: this.toOptionalNumber(form.baseTimeMinutes),
         basePrice: this.toOptionalNumber(form.basePrice),
         overtimePrice: this.toOptionalNumber(form.overtimePrice),

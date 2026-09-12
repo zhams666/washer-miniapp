@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.washer.backend.dto.device.DeviceSimpleItem;
 import com.washer.backend.dto.miniadmin.MiniAdminDeviceCreateRequest;
+import com.washer.backend.dto.miniadmin.MiniAdminDeviceConfigRequest;
 import com.washer.backend.dto.miniadmin.MiniAdminSessionContext;
 import com.washer.backend.dto.miniadmin.MiniAdminStoreOption;
 import com.washer.backend.entity.Device;
@@ -87,6 +88,28 @@ class MiniAdminPortalServiceTest {
         assertThat(result).isSameAs(expected);
         verify(deviceService).createManagedDevice(any(Device.class));
         verify(deviceService).getSimpleDeviceById(88L);
+    }
+
+    @Test
+    void updateDeviceConfig_cancelsRunningOrderWhenStatusBecomesIdle() {
+        MiniAdminSessionContext context = managerContext(10L);
+        Device device = new Device();
+        device.setId(88L);
+        device.setStoreId(10L);
+        device.setDeviceStatus("running");
+        when(deviceMapper.selectById(88L)).thenReturn(device);
+        MiniAdminDeviceConfigRequest request = new MiniAdminDeviceConfigRequest();
+        request.setDeviceCode("D88");
+        request.setDeviceName("测试设备");
+        request.setDeviceStatus("idle");
+        DeviceSimpleItem expected = new DeviceSimpleItem();
+        when(deviceService.updateMiniAdminConfig(88L, request)).thenReturn(expected);
+
+        DeviceSimpleItem result = service.updateDeviceConfig(context, 88L, request);
+
+        assertThat(result).isSameAs(expected);
+        verify(washOrderService).cancelRunningOrdersForDevice(88L, "管理端更新设备状态");
+        verify(deviceService).updateMiniAdminConfig(88L, request);
     }
 
     private MiniAdminSessionContext managerContext(Long storeId) {

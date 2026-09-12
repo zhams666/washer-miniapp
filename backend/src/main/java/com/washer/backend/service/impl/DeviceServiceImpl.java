@@ -186,6 +186,10 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         update.setId(device.getId());
         update.setDeviceCode(deviceCode);
         update.setDeviceName(deviceName);
+        String deviceStatus = normalizeText(request.getDeviceStatus()).toLowerCase();
+        if (StringUtils.hasText(deviceStatus)) {
+            update.setDeviceStatus(normalizeManagedStatus(deviceStatus));
+        }
         update.setFirmwareVersion(limitText(request.getSpeakerVersion(), 50));
         update.setRemark(DeviceManagementRemark.serialize(config));
         if (!this.updateById(update)) {
@@ -265,6 +269,13 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
 
     private String normalizeDeviceStatus(String value) {
         return StringUtils.hasText(value) ? value.trim().toLowerCase() : "";
+    }
+
+    private String normalizeManagedStatus(String value) {
+        return switch (value) {
+            case "offline", "idle", "running", "paused", "fault", "disabled" -> value;
+            default -> throw new IllegalArgumentException("unsupported device status");
+        };
     }
 
     private DeviceSimpleItem toSimpleItem(Device device, Map<Long, Store> storeMap) {

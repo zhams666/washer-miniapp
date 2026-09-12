@@ -90,6 +90,12 @@
           <input class="form-input" value="{{editForm.deviceName}}" data-field="deviceName" bindinput="handleEditInput" placeholder="请输入设备名称" />
         </view>
         <view class="form-row required">
+          <text class="form-label">设备状态</text>
+          <picker class="form-picker" mode="selector" range="{{deviceStatusOptions}}" value="{{editStatusIndex}}" bindchange="handleEditStatusChange">
+            <view class="form-picker__value">{{editForm.deviceStatus}}</view>
+          </picker>
+        </view>
+        <view class="form-row required">
           <text class="form-label">基础时间</text>
           <input class="form-input" type="number" value="{{editForm.baseTimeMinutes}}" data-field="baseTimeMinutes" bindinput="handleEditInput" placeholder="10" />
           <text class="form-unit">分钟</text>

@@ -8,6 +8,7 @@ public class MiniAdminDeviceConfigRequest {
 
     private String deviceCode;
     private String deviceName;
+    private String deviceStatus;
     private Integer baseTimeMinutes;
     private BigDecimal basePrice;
     private BigDecimal overtimePrice;
