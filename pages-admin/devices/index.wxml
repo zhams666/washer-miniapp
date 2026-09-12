@@ -74,7 +74,7 @@
     <view wx:if="{{!devices.length && !loading}}" class="empty-text">暂无设备</view>
   </view>
 
-  <view wx:if="{{editVisible}}" class="drawer-mask" bindtap="closeEdit">
+  <view wx:if="{{editVisible}}" class="drawer-mask" catchtouchmove="noop" bindtap="closeEdit">
     <view class="drawer" catchtap="noop">
       <view class="drawer-head">
         <text>修改</text>
@@ -91,8 +91,8 @@
         </view>
         <view class="form-row required">
           <text class="form-label">设备状态</text>
-          <picker class="form-picker" mode="selector" range="{{deviceStatusOptions}}" value="{{editStatusIndex}}" bindchange="handleEditStatusChange">
-            <view class="form-picker__value">{{editForm.deviceStatus}}</view>
+          <picker class="form-picker" mode="selector" range="{{deviceStatusLabels}}" value="{{editStatusIndex}}" bindchange="handleEditStatusChange">
+            <view class="form-picker__value">{{deviceStatusLabels[editStatusIndex]}}</view>
           </picker>
         </view>
         <view class="form-row required">
@@ -129,7 +129,7 @@
     </view>
   </view>
 
-  <view wx:if="{{createVisible}}" class="drawer-mask" bindtap="closeCreate">
+  <view wx:if="{{createVisible}}" class="drawer-mask" catchtouchmove="noop" bindtap="closeCreate">
     <view class="drawer" catchtap="noop">
       <view class="drawer-head">
         <text>新增设备</text>
@@ -164,8 +164,8 @@
         </view>
         <view class="form-row">
           <text class="form-label">初始状态</text>
-          <picker class="form-picker" mode="selector" range="{{deviceStatusOptions}}" value="{{createStatusIndex}}" data-field="deviceStatus" bindchange="handleCreateSelect">
-            <view class="form-picker__value">{{createForm.deviceStatus}}</view>
+          <picker class="form-picker" mode="selector" range="{{deviceStatusLabels}}" value="{{createStatusIndex}}" data-field="deviceStatus" bindchange="handleCreateSelect">
+            <view class="form-picker__value">{{deviceStatusLabels[createStatusIndex]}}</view>
           </picker>
         </view>
         <view class="form-row">

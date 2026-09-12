@@ -84,6 +84,7 @@ Page({
     deviceTypeOptions: ['washer', 'controller', 'gateway'],
     deviceRoleOptions: ['main', 'assistant'],
     deviceStatusOptions: ['offline', 'idle', 'running', 'paused', 'fault', 'disabled'],
+    deviceStatusLabels: ['离线', '空闲', '运行中', '暂停', '故障', '停用'],
     canCreateDevice: false,
   },
 
