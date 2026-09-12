@@ -490,8 +490,12 @@ public class StoreExchangeVoucherServiceImpl implements StoreExchangeVoucherServ
         Map<Long, WalletTransaction> transactionMap
     ) {
         Store store = storeMap.get(voucher.getStoreId());
-        UserInfo user = userMap.get(voucher.getRedeemedUserId());
-        WalletTransaction transaction = transactionMap.get(voucher.getRedeemedWalletTransactionId());
+        UserInfo user = voucher.getRedeemedUserId() != null
+            ? userMap.get(voucher.getRedeemedUserId())
+            : null;
+        WalletTransaction transaction = voucher.getRedeemedWalletTransactionId() != null
+            ? transactionMap.get(voucher.getRedeemedWalletTransactionId())
+            : null;
         return new MiniAdminExchangeVoucherItem(
             voucher.getId(),
             voucher.getBatchNo(),
