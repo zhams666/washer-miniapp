@@ -2,7 +2,7 @@
   <view class="hero-visual">
     <image class="hero-image" mode="aspectFill" src="/assets/images/home-wash-hero-v3.jpg"></image>
     <view class="hero-shade"></view>
-    <view class="hero-topbar">
+    <view class="hero-topbar" style="top: {{heroTopbarTop}}px;">
       <view class="brand-block">
         <view class="brand-mark">
           <view class="brand-mark__dolphin">

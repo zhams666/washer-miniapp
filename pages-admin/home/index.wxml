@@ -1,5 +1,5 @@
 <view class="page">
-  <view class="admin-return" bindtap="returnToMiniHome">
+  <view class="admin-return" style="top: {{adminReturnTop}}px;" bindtap="returnToMiniHome">
     <image class="admin-return__icon" mode="aspectFit" src="/assets/icons/admin-return-home.png"></image>
     <text>返回洗车首页</text>
   </view>

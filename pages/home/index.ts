@@ -34,6 +34,8 @@ type NearbyStoreInfo = {
 
 Page({
   data: {
+    // Keep the brand row below the device status bar on phones with a notch.
+    heroTopbarTop: 18,
     isLogin: false,
     nearbyStore: null as NearbyStoreInfo | null,
     hasNearbyStore: false,
@@ -56,6 +58,9 @@ Page({
   },
 
   onLoad() {
+    const windowInfo = wx.getWindowInfo();
+    const statusBarHeight = Number(windowInfo.statusBarHeight || 0);
+    this.setData({ heroTopbarTop: statusBarHeight > 0 ? statusBarHeight + 8 : 18 });
     this.syncLoginState();
     this.loadNearbyStore();
   },

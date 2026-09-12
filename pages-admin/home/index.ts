@@ -33,6 +33,8 @@ const emptySettingsForm = () => ({
 
 Page({
   data: {
+    // Keep the return control below the device status bar on phones with a notch.
+    adminReturnTop: 18,
     loading: false,
     profile: null as any,
     workspace: {
@@ -62,6 +64,9 @@ Page({
   },
 
   onLoad() {
+    const windowInfo = wx.getWindowInfo();
+    const statusBarHeight = Number(windowInfo.statusBarHeight || 0);
+    this.setData({ adminReturnTop: statusBarHeight > 0 ? statusBarHeight + 8 : 18 });
     this.loadPage();
   },
 
