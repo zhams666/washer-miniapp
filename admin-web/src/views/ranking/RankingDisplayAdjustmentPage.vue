@@ -266,7 +266,7 @@ const loadRankingRows = async () => {
   try {
     rankingRows.value = await fetchRankingDurationRows({
       scope: activeScope.value,
-      limit: 500,
+      limit: 100,
     });
   } catch (error) {
     ElMessage.error(resolveErrorMessage(error, '排行榜明细加载失败'));

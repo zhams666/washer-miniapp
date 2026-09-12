@@ -45,7 +45,7 @@ public class AdminRankingDisplayAdjustmentController {
     @GetMapping("/rankings")
     public ApiResponse<List<AdminRankingDurationItem>> rankings(
         @RequestParam(defaultValue = "total") String scope,
-        @RequestParam(defaultValue = "500") int limit
+        @RequestParam(defaultValue = "100") int limit
     ) {
         return ApiResponse.success(washOrderService.listAdminDurationRanking(scope, limit));
     }
