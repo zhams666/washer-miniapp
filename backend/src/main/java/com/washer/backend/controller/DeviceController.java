@@ -6,7 +6,6 @@ import com.washer.backend.entity.Device;
 import com.washer.backend.service.DeviceService;
 import com.washer.backend.service.WashOrderService;
 import java.util.List;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
@@ -53,23 +52,7 @@ public class DeviceController {
 
     @PostMapping
     public ApiResponse<Device> create(@RequestBody Device device) {
-        if (!StringUtils.hasText(device.getDeviceCode())) {
-            device.setDeviceCode("D" + UUID.randomUUID().toString().replace("-", "").substring(0, 16));
-        }
-        if (device.getStoreId() == null) {
-            throw new IllegalArgumentException("storeId is required");
-        }
-        if (!StringUtils.hasText(device.getDeviceType())) {
-            device.setDeviceType("washer");
-        }
-        if (!StringUtils.hasText(device.getDeviceRole())) {
-            device.setDeviceRole("main");
-        }
-        if (!StringUtils.hasText(device.getDeviceStatus())) {
-            device.setDeviceStatus("offline");
-        }
-        deviceService.save(device);
-        return ApiResponse.success("created", device);
+        return ApiResponse.success("created", deviceService.createManagedDevice(device));
     }
 
     @PostMapping({"/{id}/start", "/{id}/mock-start"})

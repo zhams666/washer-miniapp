@@ -4,7 +4,7 @@ import type { IObject, ResponseData } from '../typings/interface.d';
 import { getAdminToken } from '../utils/admin-auth';
 import { apiRequest, isCloudBaseTransport } from '../utils/container-request';
 
-type HttpMethod = 'GET' | 'POST';
+type HttpMethod = 'GET' | 'POST' | 'DELETE';
 
 export type MiniAdminLoginResult = {
   bound: boolean;
@@ -98,6 +98,9 @@ export const getMiniAdminFinanceDetails = (_params?: IObject) =>
 export const getMiniAdminDevices = (_params?: IObject) =>
   request<IObject[]>('GET', '/api/mini-admin/devices', _params);
 
+export const createMiniAdminDevice = (_data: IObject) =>
+  request<IObject>('POST', '/api/mini-admin/devices', _data);
+
 export const startMiniAdminDevice = (_id: number) =>
   request<IObject>('POST', `/api/mini-admin/devices/${_id}/start`);
 
@@ -109,6 +112,18 @@ export const operateMiniAdminDevice = (_id: number, _action: string) =>
 
 export const updateMiniAdminDeviceConfig = (_id: number, _data: IObject) =>
   request<IObject>('POST', `/api/mini-admin/devices/${_id}/config`, _data);
+
+export const getMiniAdminRankings = (_params?: IObject) =>
+  request<IObject[]>('GET', '/api/mini-admin/rankings', _params);
+
+export const getMiniAdminRankingAdjustments = (_params?: IObject) =>
+  request<IObject>('GET', '/api/mini-admin/ranking-adjustments', _params);
+
+export const setMiniAdminRankingDisplayDuration = (_data: IObject) =>
+  request<IObject>('POST', '/api/mini-admin/ranking-adjustments/set', _data);
+
+export const deleteMiniAdminRankingDisplayAdjustment = (_id: number) =>
+  request<null>('DELETE', `/api/mini-admin/ranking-adjustments/${_id}`);
 
 export const getMiniAdminStoreSettings = (_storeId: number) =>
   request<IObject>('GET', `/api/mini-admin/stores/${_storeId}/settings`);

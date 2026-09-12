@@ -1,0 +1,43 @@
+@import "../../styles/theme";
+
+.page { @include page-shell; min-height: 100vh; }
+.toolbar { display: flex; align-items: center; gap: 16rpx; padding: 22rpx 24rpx; background: $color-primary-deep; }
+.scope-tabs { flex: 1; white-space: nowrap; }
+.scope-tab { display: inline-flex; align-items: center; justify-content: center; min-width: 150rpx; height: 64rpx; margin-right: 12rpx; border-radius: $radius-pill; background: rgba(255,255,255,.14); color: #e8f8f8; font-size: 25rpx; font-weight: 800; }
+.scope-tab--active { background: #f2b23c; color: #183238; }
+.refresh-button { width: 112rpx; height: 64rpx; margin: 0; padding: 0; border: 0; border-radius: $radius-control; background: #ffffff; color: $color-primary-deep; font-size: 25rpx; font-weight: 800; line-height: 64rpx; }
+.refresh-button::after, .row-button::after, .delete-button::after, .save-button::after { border: 0; }
+.hint-card, .section { margin: 20rpx 24rpx 0; padding: 24rpx; @include card; }
+.hint-title, .section-title { display: block; color: $color-text-primary; font-size: 31rpx; font-weight: 900; }
+.hint-text { display: block; margin-top: 10rpx; color: $color-text-secondary; font-size: 24rpx; line-height: 1.5; }
+.section { padding: 0 24rpx; }
+.section-title { padding: 24rpx 0 16rpx; border-bottom: 1rpx solid $color-border-light; }
+.ranking-row, .adjustment-row { display: flex; align-items: center; gap: 14rpx; min-height: 120rpx; border-bottom: 1rpx solid $color-border-light; }
+.ranking-row:last-child, .adjustment-row:last-child { border-bottom: 0; }
+.ranking-rank { width: 52rpx; height: 52rpx; border-radius: 50%; background: $color-primary-light; color: $color-primary-deep; font-size: 24rpx; font-weight: 900; line-height: 52rpx; text-align: center; }
+.ranking-main, .adjustment-main { flex: 1; min-width: 0; }
+.ranking-name { display: block; overflow: hidden; color: $color-text-primary; font-size: 27rpx; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.ranking-meta, .ranking-adjust { display: block; margin-top: 8rpx; color: $color-text-secondary; font-size: 22rpx; }
+.ranking-side { flex: 0 0 132rpx; text-align: right; }
+.ranking-duration { display: block; color: $color-primary-deep; font-size: 27rpx; font-weight: 900; }
+.row-button, .delete-button { flex: 0 0 92rpx; height: 56rpx; margin: 0; padding: 0; border: 0; border-radius: $radius-control; background: $color-cta; color: #ffffff; font-size: 22rpx; font-weight: 800; line-height: 56rpx; }
+.delete-button { background: $color-danger; }
+.empty-text { padding: 42rpx 0; color: $color-text-tertiary; font-size: 25rpx; text-align: center; }
+.page-controls { display: flex; align-items: center; justify-content: center; gap: 20rpx; padding: 20rpx 0; }
+.page-button { width: 150rpx; height: 58rpx; margin: 0; padding: 0; border: 1rpx solid $color-border; border-radius: $radius-control; background: #ffffff; color: $color-primary-deep; font-size: 23rpx; line-height: 58rpx; }
+.page-button[disabled] { color: $color-text-tertiary; background: $color-surface; }
+.page-label { color: $color-text-secondary; font-size: 23rpx; }
+.drawer-mask { position: fixed; z-index: 20; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: flex-end; background: rgba(0,0,0,.56); }
+.drawer { width: 100%; border-radius: 24rpx 24rpx 0 0; background: #f8fbfb; overflow: hidden; }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; height: 94rpx; padding: 0 30rpx; color: $color-text-primary; font-size: 31rpx; font-weight: 900; }
+.drawer-close { width: 54rpx; height: 54rpx; color: $color-text-secondary; font-size: 28rpx; line-height: 54rpx; text-align: center; }
+.drawer-body { padding: 0 30rpx; }
+.selected-user { padding: 18rpx 0; border-top: 1rpx solid $color-border; border-bottom: 1rpx solid $color-border; color: $color-primary-deep; font-size: 27rpx; font-weight: 800; }
+.form-row { display: flex; align-items: center; min-height: 94rpx; border-bottom: 1rpx solid $color-border; }
+.form-row--textarea { align-items: flex-start; min-height: 170rpx; padding-top: 20rpx; }
+.form-row.required .form-label::before { content: "*"; color: $color-danger; }
+.form-label { width: 210rpx; flex: 0 0 210rpx; color: $color-text-primary; font-size: 28rpx; font-weight: 800; }
+.form-input { flex: 1; min-width: 0; height: 88rpx; color: $color-text-primary; font-size: 29rpx; font-weight: 800; }
+.form-textarea { flex: 1; min-width: 0; height: 130rpx; color: $color-text-primary; font-size: 27rpx; line-height: 1.5; }
+.drawer-footer { padding: 22rpx 30rpx calc(22rpx + env(safe-area-inset-bottom)); }
+.save-button { width: 100%; height: 78rpx; margin: 0; border: 0; border-radius: $radius-pill; background: $color-cta; color: #ffffff; font-size: 28rpx; font-weight: 900; line-height: 78rpx; }

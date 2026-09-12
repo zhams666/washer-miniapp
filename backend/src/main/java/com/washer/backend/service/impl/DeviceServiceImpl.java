@@ -18,6 +18,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -68,6 +69,38 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
             return null;
         }
         return toSimpleItem(device, buildStoreMap(List.of(device)));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Device createManagedDevice(Device device) {
+        if (device == null) {
+            throw new IllegalArgumentException("device is required");
+        }
+        if (device.getStoreId() == null || device.getStoreId() <= 0) {
+            throw new IllegalArgumentException("storeId is required");
+        }
+        if (storeService.getById(device.getStoreId()) == null) {
+            throw new IllegalArgumentException("store not found");
+        }
+
+        String deviceCode = limitText(device.getDeviceCode(), 64);
+        if (!StringUtils.hasText(deviceCode)) {
+            deviceCode = "D" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        }
+        device.setDeviceCode(deviceCode);
+        device.setDeviceName(limitText(device.getDeviceName(), 100));
+        device.setDeviceType(defaultText(device.getDeviceType(), "washer", 40));
+        device.setDeviceRole(defaultText(device.getDeviceRole(), "main", 40));
+        device.setDeviceStatus(defaultText(device.getDeviceStatus(), "offline", 20).toLowerCase());
+        device.setProtocolType(limitText(device.getProtocolType(), 80));
+        device.setFirmwareVersion(limitText(device.getFirmwareVersion(), 80));
+        device.setRemark(limitText(device.getRemark(), 1000));
+
+        if (!this.save(device)) {
+            throw new IllegalStateException("device create failed");
+        }
+        return device;
     }
 
     @Override
@@ -296,6 +329,11 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
     private String limitText(String value, int maxLength) {
         String text = normalizeText(value);
         return text.length() <= maxLength ? text : text.substring(0, maxLength);
+    }
+
+    private String defaultText(String value, String fallback, int maxLength) {
+        String text = limitText(value, maxLength);
+        return StringUtils.hasText(text) ? text : fallback;
     }
 
     private Integer normalizeInteger(Integer value, int min, int max) {

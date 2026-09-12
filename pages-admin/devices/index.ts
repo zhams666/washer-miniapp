@@ -1,10 +1,11 @@
 import {
+  createMiniAdminDevice,
   getMiniAdminDevices,
   getMiniAdminStores,
   operateMiniAdminDevice,
   updateMiniAdminDeviceConfig,
 } from '../../apis/admin';
-import { ensureAdminToken } from '../../utils/admin-auth';
+import { ensureAdminToken, getCachedAdminProfile } from '../../utils/admin-auth';
 
 const statusMap: Record<string, string> = {
   online: '在线',
@@ -45,6 +46,17 @@ const emptyEditForm = () => ({
   cabinetName: '',
 });
 
+const emptyCreateForm = () => ({
+  deviceCode: '',
+  deviceName: '',
+  deviceType: 'washer',
+  deviceRole: 'main',
+  deviceStatus: 'offline',
+  protocolType: '',
+  firmwareVersion: '',
+  remark: '',
+});
+
 Page({
   data: {
     loading: false,
@@ -59,6 +71,18 @@ Page({
     editVisible: false,
     editDeviceId: 0,
     editForm: emptyEditForm(),
+    createVisible: false,
+    creating: false,
+    createStoreIndex: 0,
+    createTypeIndex: 0,
+    createRoleIndex: 0,
+    createStatusIndex: 0,
+    createStorePickerOptions: [] as string[],
+    createForm: emptyCreateForm(),
+    deviceTypeOptions: ['washer', 'controller', 'gateway'],
+    deviceRoleOptions: ['main', 'assistant'],
+    deviceStatusOptions: ['offline', 'idle', 'running', 'paused', 'fault', 'disabled'],
+    canCreateDevice: false,
   },
 
   onLoad() {
@@ -71,8 +95,10 @@ Page({
     } catch (error) {
       return;
     }
+    const profile = getCachedAdminProfile();
     const stores = await getMiniAdminStores().catch(() => []);
     this.setData({
+      canCreateDevice: String(profile && profile.roleCode || '').toLowerCase() === 'store_manager',
       stores,
       storePickerOptions: ['全部门店'].concat(stores.map((store) => store.storeName || `门店${store.id}`)),
     });
@@ -185,6 +211,38 @@ Page({
     });
   },
 
+  openCreate() {
+    const stores = this.data.stores;
+    if (!stores.length) {
+      wx.showToast({ title: '暂无可管理门店', icon: 'none' });
+      return;
+    }
+    const selectedStoreId = Number(this.data.selectedStoreId || 0);
+    const matchedIndex = stores.findIndex((store) => Number(store.id) === selectedStoreId);
+    this.setData({
+      createVisible: true,
+      createStoreIndex: matchedIndex >= 0 ? matchedIndex : 0,
+      createTypeIndex: 0,
+      createRoleIndex: 0,
+      createStatusIndex: 0,
+      createStorePickerOptions: stores.map((store) => store.storeName || `门店${store.id}`),
+      createForm: emptyCreateForm(),
+    });
+  },
+
+  closeCreate() {
+    if (this.data.creating) return;
+    this.setData({
+      createVisible: false,
+      createStoreIndex: 0,
+      createTypeIndex: 0,
+      createRoleIndex: 0,
+      createStatusIndex: 0,
+      createStorePickerOptions: [],
+      createForm: emptyCreateForm(),
+    });
+  },
+
   noop() {},
 
   handleEditInput(e: WechatMiniprogram.Input) {
@@ -193,6 +251,75 @@ Page({
     this.setData({
       [`editForm.${field}`]: e.detail.value,
     });
+  },
+
+  handleCreateInput(e: WechatMiniprogram.Input) {
+    const field = String(e.currentTarget.dataset.field || '');
+    if (!field) return;
+    this.setData({
+      [`createForm.${field}`]: e.detail.value,
+    });
+  },
+
+  handleCreateStoreChange(e: WechatMiniprogram.PickerChange) {
+    this.setData({
+      createStoreIndex: Number(e.detail.value || 0),
+    });
+  },
+
+  handleCreateSelect(e: WechatMiniprogram.PickerChange) {
+    const field = String(e.currentTarget.dataset.field || '');
+    const optionMap: Record<string, string[]> = {
+      deviceType: this.data.deviceTypeOptions,
+      deviceRole: this.data.deviceRoleOptions,
+      deviceStatus: this.data.deviceStatusOptions,
+    };
+    const indexMap: Record<string, string> = {
+      deviceType: 'createTypeIndex',
+      deviceRole: 'createRoleIndex',
+      deviceStatus: 'createStatusIndex',
+    };
+    const index = Number(e.detail.value || 0);
+    const value = optionMap[field] && optionMap[field][index];
+    if (!field || !value) return;
+    this.setData({
+      [`createForm.${field}`]: value,
+      [indexMap[field]]: index,
+    });
+  },
+
+  async handleCreateDevice() {
+    const store = this.data.stores[Number(this.data.createStoreIndex || 0)];
+    const form = this.data.createForm;
+    if (!store || !Number(store.id)) {
+      wx.showToast({ title: '请选择归属门店', icon: 'none' });
+      return;
+    }
+    if (!String(form.deviceName || '').trim()) {
+      wx.showToast({ title: '请填写设备名称', icon: 'none' });
+      return;
+    }
+    this.setData({ creating: true });
+    try {
+      await createMiniAdminDevice({
+        storeId: Number(store.id),
+        deviceCode: String(form.deviceCode || '').trim(),
+        deviceName: String(form.deviceName || '').trim(),
+        deviceType: String(form.deviceType || 'washer'),
+        deviceRole: String(form.deviceRole || 'main'),
+        deviceStatus: String(form.deviceStatus || 'offline'),
+        protocolType: String(form.protocolType || '').trim(),
+        firmwareVersion: String(form.firmwareVersion || '').trim(),
+        remark: String(form.remark || '').trim(),
+      });
+      wx.showToast({ title: '设备已新增', icon: 'success' });
+      this.closeCreate();
+      await this.loadDevices();
+    } catch (error) {
+      console.error('create mini admin device failed:', error);
+    } finally {
+      this.setData({ creating: false });
+    }
   },
 
   async handleSaveEdit() {

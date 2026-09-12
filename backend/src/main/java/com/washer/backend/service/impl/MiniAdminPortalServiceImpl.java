@@ -2,8 +2,12 @@ package com.washer.backend.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.washer.backend.dto.admin.AdminRankingDisplayAdjustmentCreateRequest;
+import com.washer.backend.dto.admin.AdminRankingDisplayAdjustmentItem;
+import com.washer.backend.dto.admin.AdminRankingDurationItem;
 import com.washer.backend.dto.device.DeviceSimpleItem;
 import com.washer.backend.dto.miniadmin.MiniAdminDashboardOverview;
+import com.washer.backend.dto.miniadmin.MiniAdminDeviceCreateRequest;
 import com.washer.backend.dto.miniadmin.MiniAdminDeviceConfigRequest;
 import com.washer.backend.dto.miniadmin.MiniAdminDeviceAlertItem;
 import com.washer.backend.dto.miniadmin.MiniAdminDeviceStatusSummary;
@@ -22,6 +26,7 @@ import com.washer.backend.entity.CardUsageRecord;
 import com.washer.backend.entity.Device;
 import com.washer.backend.entity.Franchisee;
 import com.washer.backend.entity.RechargeOrder;
+import com.washer.backend.entity.RankingDisplayAdjustment;
 import com.washer.backend.entity.Store;
 import com.washer.backend.entity.UserInfo;
 import com.washer.backend.entity.WalletTransaction;
@@ -31,12 +36,15 @@ import com.washer.backend.mapper.DeviceMapper;
 import com.washer.backend.mapper.FranchiseeMapper;
 import com.washer.backend.mapper.MiniAdminStaffMapper;
 import com.washer.backend.mapper.RechargeOrderMapper;
+import com.washer.backend.mapper.RankingDisplayAdjustmentMapper;
 import com.washer.backend.mapper.StoreMapper;
 import com.washer.backend.mapper.UserInfoMapper;
 import com.washer.backend.mapper.WalletTransactionMapper;
 import com.washer.backend.mapper.WashOrderMapper;
 import com.washer.backend.service.DeviceService;
 import com.washer.backend.service.MiniAdminPortalService;
+import com.washer.backend.service.RankingDisplayAdjustmentService;
+import com.washer.backend.service.WashOrderService;
 import com.washer.backend.support.DeviceManagementRemark;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -47,6 +55,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -56,20 +65,26 @@ import org.springframework.util.StringUtils;
 public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
 
     private static final String PERMISSION_DEVICE_CONTROL = "device:control";
+    private static final String PERMISSION_STORE_EDIT = "store:edit";
     private static final String ROLE_PLATFORM_ADMIN = "platform_admin";
     private static final String ROLE_FRANCHISEE_OWNER = "franchisee_owner";
     private static final String ROLE_STORE_MANAGER = "store_manager";
+    private static final int MAX_RANKING_LIMIT = 100;
+    private static final int MAX_RANKING_PAGE_SIZE = 100;
 
     private final StoreMapper storeMapper;
     private final DeviceMapper deviceMapper;
     private final WashOrderMapper washOrderMapper;
     private final WalletTransactionMapper walletTransactionMapper;
     private final RechargeOrderMapper rechargeOrderMapper;
+    private final RankingDisplayAdjustmentMapper rankingDisplayAdjustmentMapper;
     private final CardUsageRecordMapper cardUsageRecordMapper;
     private final MiniAdminStaffMapper miniAdminStaffMapper;
     private final FranchiseeMapper franchiseeMapper;
     private final UserInfoMapper userInfoMapper;
     private final DeviceService deviceService;
+    private final RankingDisplayAdjustmentService rankingDisplayAdjustmentService;
+    private final WashOrderService washOrderService;
 
     public MiniAdminPortalServiceImpl(
         StoreMapper storeMapper,
@@ -77,22 +92,28 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
         WashOrderMapper washOrderMapper,
         WalletTransactionMapper walletTransactionMapper,
         RechargeOrderMapper rechargeOrderMapper,
+        RankingDisplayAdjustmentMapper rankingDisplayAdjustmentMapper,
         CardUsageRecordMapper cardUsageRecordMapper,
         MiniAdminStaffMapper miniAdminStaffMapper,
         FranchiseeMapper franchiseeMapper,
         UserInfoMapper userInfoMapper,
-        DeviceService deviceService
+        DeviceService deviceService,
+        RankingDisplayAdjustmentService rankingDisplayAdjustmentService,
+        WashOrderService washOrderService
     ) {
         this.storeMapper = storeMapper;
         this.deviceMapper = deviceMapper;
         this.washOrderMapper = washOrderMapper;
         this.walletTransactionMapper = walletTransactionMapper;
         this.rechargeOrderMapper = rechargeOrderMapper;
+        this.rankingDisplayAdjustmentMapper = rankingDisplayAdjustmentMapper;
         this.cardUsageRecordMapper = cardUsageRecordMapper;
         this.miniAdminStaffMapper = miniAdminStaffMapper;
         this.franchiseeMapper = franchiseeMapper;
         this.userInfoMapper = userInfoMapper;
         this.deviceService = deviceService;
+        this.rankingDisplayAdjustmentService = rankingDisplayAdjustmentService;
+        this.washOrderService = washOrderService;
     }
 
     @Override
@@ -329,6 +350,28 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
     }
 
     @Override
+    public DeviceSimpleItem createDevice(MiniAdminSessionContext context, MiniAdminDeviceCreateRequest request) {
+        ensureStoreManagerRole(context);
+        ensureDeviceControlPermission(context);
+        if (request == null) {
+            throw new IllegalArgumentException("request is required");
+        }
+        Store store = getAccessibleStore(context, request.getStoreId());
+        Device device = new Device();
+        device.setStoreId(store.getId());
+        device.setDeviceCode(request.getDeviceCode());
+        device.setDeviceName(request.getDeviceName());
+        device.setDeviceType(request.getDeviceType());
+        device.setDeviceRole(request.getDeviceRole());
+        device.setDeviceStatus(request.getDeviceStatus());
+        device.setProtocolType(request.getProtocolType());
+        device.setFirmwareVersion(request.getFirmwareVersion());
+        device.setRemark(request.getRemark());
+        Device created = deviceService.createManagedDevice(device);
+        return deviceService.getSimpleDeviceById(created.getId());
+    }
+
+    @Override
     public DeviceSimpleItem startDevice(MiniAdminSessionContext context, Long deviceId) {
         ensureDeviceControlPermission(context);
         Device device = getAccessibleDevice(context, deviceId);
@@ -358,6 +401,95 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
         ensureDeviceControlPermission(context);
         Device device = getAccessibleDevice(context, deviceId);
         return deviceService.updateMiniAdminConfig(device.getId(), request);
+    }
+
+    @Override
+    public List<AdminRankingDurationItem> listRankingDurations(
+        MiniAdminSessionContext context,
+        String scope,
+        int limit
+    ) {
+        ensureStoreManagerRole(context);
+        ensureRankingManagementPermission(context);
+        String resolvedScope = normalizeRankingScope(scope);
+        Set<Long> accessibleUserIds = resolveAccessibleRankingUserIds(context, resolvedScope);
+        if (accessibleUserIds.isEmpty()) {
+            return List.of();
+        }
+        int rowLimit = Math.max(1, Math.min(limit, MAX_RANKING_LIMIT));
+        return washOrderService.listAdminDurationRanking(resolvedScope, 500).stream()
+            .filter(item -> item.getUserId() != null && accessibleUserIds.contains(item.getUserId()))
+            .limit(rowLimit)
+            .toList();
+    }
+
+    @Override
+    public Page<AdminRankingDisplayAdjustmentItem> pageRankingAdjustments(
+        MiniAdminSessionContext context,
+        long page,
+        long size,
+        String scope,
+        String keyword
+    ) {
+        ensureStoreManagerRole(context);
+        ensureRankingManagementPermission(context);
+        String resolvedScope = normalizeRankingScope(scope);
+        Set<Long> accessibleUserIds = resolveAccessibleRankingUserIds(context, resolvedScope);
+        long currentPage = Math.max(1L, page);
+        long pageSize = Math.max(1L, Math.min(size, MAX_RANKING_PAGE_SIZE));
+        return rankingDisplayAdjustmentService.pageAdjustmentsByUserIds(
+            currentPage,
+            pageSize,
+            resolvedScope,
+            limitText(keyword, 100),
+            accessibleUserIds
+        );
+    }
+
+    @Override
+    public AdminRankingDisplayAdjustmentItem setRankingDisplayDuration(
+        MiniAdminSessionContext context,
+        AdminRankingDisplayAdjustmentCreateRequest request
+    ) {
+        ensureStoreManagerRole(context);
+        ensureRankingManagementPermission(context);
+        if (request == null || request.getUserId() == null || request.getUserId() <= 0) {
+            throw new IllegalArgumentException("userId is required");
+        }
+        if (request.getDurationMinutes() == null || request.getDurationMinutes() < 0 || request.getDurationMinutes() > 100_000L) {
+            throw new IllegalArgumentException("durationMinutes must be between 0 and 100000");
+        }
+        String resolvedScope = normalizeRankingScope(request.getScope());
+        if (!resolveAccessibleRankingUserIds(context, resolvedScope).contains(request.getUserId())) {
+            throw new IllegalArgumentException("无权调整该用户的排行榜时长");
+        }
+
+        AdminRankingDisplayAdjustmentCreateRequest adjustmentRequest = new AdminRankingDisplayAdjustmentCreateRequest();
+        adjustmentRequest.setUserId(request.getUserId());
+        adjustmentRequest.setScope(resolvedScope);
+        adjustmentRequest.setDurationMinutes(request.getDurationMinutes());
+        adjustmentRequest.setRemark(limitText(request.getRemark(), 255));
+        long realSeconds = washOrderService.sumUserCompletedDurationSeconds(resolvedScope, request.getUserId());
+        long targetSeconds = Math.multiplyExact(request.getDurationMinutes(), 60L);
+        adjustmentRequest.setDurationSeconds(targetSeconds - realSeconds);
+        return rankingDisplayAdjustmentService.setAdjustment(adjustmentRequest);
+    }
+
+    @Override
+    public void deleteRankingDisplayAdjustment(MiniAdminSessionContext context, Long adjustmentId) {
+        ensureStoreManagerRole(context);
+        ensureRankingManagementPermission(context);
+        if (adjustmentId == null || adjustmentId <= 0) {
+            throw new IllegalArgumentException("adjustmentId is required");
+        }
+        RankingDisplayAdjustment adjustment = rankingDisplayAdjustmentMapper.selectById(adjustmentId);
+        if (adjustment == null) {
+            throw new IllegalArgumentException("ranking adjustment does not exist");
+        }
+        if (!resolveAccessibleRankingUserIds(context, "total").contains(adjustment.getUserId())) {
+            throw new IllegalArgumentException("无权删除该排行榜调整记录");
+        }
+        rankingDisplayAdjustmentService.deleteAdjustment(adjustmentId);
     }
 
     @Override
@@ -466,6 +598,43 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
             .map(order -> toOrderItem(order, storeMap, deviceMap))
             .toList());
         return result;
+    }
+
+    private Set<Long> resolveAccessibleRankingUserIds(MiniAdminSessionContext context, String scope) {
+        StoreScope storeScope = resolveScope(context, null);
+        if (storeScope.isEmpty()) {
+            return Set.of();
+        }
+        String resolvedScope = normalizeRankingScope(scope);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime fromTime = switch (resolvedScope) {
+            case "day" -> now.minusHours(24);
+            case "month" -> now.minusDays(30);
+            default -> null;
+        };
+        return washOrderMapper.selectList(
+            new LambdaQueryWrapper<WashOrder>()
+                .select(WashOrder::getUserId)
+                .eq(storeScope.singleStoreId() != null, WashOrder::getStoreId, storeScope.singleStoreId())
+                .in(storeScope.needsInScope(), WashOrder::getStoreId, storeScope.storeIds())
+                .eq(WashOrder::getOrderStatus, "completed")
+                .isNotNull(WashOrder::getUserId)
+                .isNotNull(WashOrder::getStartTime)
+                .isNotNull(WashOrder::getEndTime)
+                .ge(fromTime != null, WashOrder::getEndTime, fromTime)
+                .le(WashOrder::getEndTime, now)
+        ).stream()
+            .map(WashOrder::getUserId)
+            .filter(userId -> userId != null && userId > 0)
+            .collect(Collectors.toSet());
+    }
+
+    private String normalizeRankingScope(String value) {
+        String scope = normalizeStatus(value);
+        if ("day".equals(scope) || "month".equals(scope) || "total".equals(scope)) {
+            return scope;
+        }
+        return "day";
     }
 
     private String resolveTierCode(MiniAdminSessionContext context) {
@@ -868,6 +1037,21 @@ public class MiniAdminPortalServiceImpl implements MiniAdminPortalService {
     private void ensureDeviceControlPermission(MiniAdminSessionContext context) {
         if (context == null || !context.getPermissions().contains(PERMISSION_DEVICE_CONTROL)) {
             throw new IllegalArgumentException("无设备控制权限");
+        }
+    }
+
+    private void ensureRankingManagementPermission(MiniAdminSessionContext context) {
+        if (context == null || !context.getPermissions().contains(PERMISSION_STORE_EDIT)) {
+            throw new IllegalArgumentException("无排行榜管理权限");
+        }
+    }
+
+    private void ensureStoreManagerRole(MiniAdminSessionContext context) {
+        String roleCode = context != null && context.getStaff() != null
+            ? normalizeStatus(context.getStaff().getRoleCode())
+            : "";
+        if (!ROLE_STORE_MANAGER.equals(roleCode)) {
+            throw new IllegalArgumentException("仅店长可使用此管理功能");
         }
     }
 

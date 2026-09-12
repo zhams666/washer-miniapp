@@ -1,7 +1,11 @@
 package com.washer.backend.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.washer.backend.dto.admin.AdminRankingDisplayAdjustmentCreateRequest;
+import com.washer.backend.dto.admin.AdminRankingDisplayAdjustmentItem;
+import com.washer.backend.dto.admin.AdminRankingDurationItem;
 import com.washer.backend.dto.miniadmin.MiniAdminDashboardOverview;
+import com.washer.backend.dto.miniadmin.MiniAdminDeviceCreateRequest;
 import com.washer.backend.dto.miniadmin.MiniAdminDeviceConfigRequest;
 import com.washer.backend.dto.miniadmin.MiniAdminMetricDetailItem;
 import com.washer.backend.dto.miniadmin.MiniAdminOrderItem;
@@ -28,6 +32,8 @@ public interface MiniAdminPortalService {
 
     List<DeviceSimpleItem> listDevices(MiniAdminSessionContext context, Long storeId, String keyword);
 
+    DeviceSimpleItem createDevice(MiniAdminSessionContext context, MiniAdminDeviceCreateRequest request);
+
     DeviceSimpleItem startDevice(MiniAdminSessionContext context, Long deviceId);
 
     DeviceSimpleItem stopDevice(MiniAdminSessionContext context, Long deviceId);
@@ -39,6 +45,27 @@ public interface MiniAdminPortalService {
         Long deviceId,
         MiniAdminDeviceConfigRequest request
     );
+
+    List<AdminRankingDurationItem> listRankingDurations(
+        MiniAdminSessionContext context,
+        String scope,
+        int limit
+    );
+
+    Page<AdminRankingDisplayAdjustmentItem> pageRankingAdjustments(
+        MiniAdminSessionContext context,
+        long page,
+        long size,
+        String scope,
+        String keyword
+    );
+
+    AdminRankingDisplayAdjustmentItem setRankingDisplayDuration(
+        MiniAdminSessionContext context,
+        AdminRankingDisplayAdjustmentCreateRequest request
+    );
+
+    void deleteRankingDisplayAdjustment(MiniAdminSessionContext context, Long adjustmentId);
 
     MiniAdminStoreSettingsItem getStoreSettings(MiniAdminSessionContext context, Long storeId);
 

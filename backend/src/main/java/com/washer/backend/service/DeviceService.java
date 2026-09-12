@@ -12,6 +12,8 @@ public interface DeviceService extends IService<Device> {
 
     DeviceSimpleItem getSimpleDeviceById(Long id);
 
+    Device createManagedDevice(Device device);
+
     DeviceSimpleItem mockStartDevice(Long id);
 
     DeviceSimpleItem mockStopDevice(Long id);

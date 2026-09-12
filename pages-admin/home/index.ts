@@ -93,7 +93,7 @@ Page({
         alerts: (overview.deviceStatus && overview.deviceStatus.alerts) || [],
         storeRankings: this.mapStoreRankings(overview.storeRankings || []),
         recentActivities: this.mapRecentActivities(overview.recentActivities || []),
-        quickActions: this.buildQuickActions(overview.tierCode),
+        quickActions: this.buildQuickActions(overview.tierCode, profile.roleCode),
       });
     } catch (error) {
       const diagnostic = this.resolveLoadDiagnostic(error, phase);
@@ -193,7 +193,7 @@ Page({
     }));
   },
 
-  buildQuickActions(tierCode: string) {
+  buildQuickActions(tierCode: string, roleCode?: string) {
     if (tierCode === 'platform') {
       return [
         { key: 'devices', title: '全局设备', desc: '跨门店巡检异常', icon: '/assets/icons/device.png' },
@@ -218,7 +218,7 @@ Page({
         { key: 'profile', title: '加盟权限', desc: '账号与门店范围', icon: '/assets/icons/user.png' },
       ];
     }
-    return [
+    const actions = [
       { key: 'devices', title: '设备管理', desc: '状态、启停、异常', icon: '/assets/icons/device.png' },
       { key: 'orders', title: '订单查询', desc: '本店订单和支付', icon: '/assets/icons/order.png' },
       { key: 'assets', title: '用户资产', desc: '加钱、罚款、次卡', icon: '/assets/icons/wallet.png' },
@@ -228,6 +228,15 @@ Page({
       { key: 'features', title: '功能整理', desc: '需求和接入状态', icon: '/assets/icons/question.png' },
       { key: 'profile', title: '我的权限', desc: '账号、门店、角色', icon: '/assets/icons/user.png' },
     ];
+    if (String(roleCode || '').toLowerCase() === 'store_manager') {
+      actions.splice(1, 0, {
+        key: 'rankingManagement',
+        title: '排行榜管理',
+        desc: '设置本店用户展示时长',
+        icon: '/assets/icons/tab-ranking-active.png',
+      });
+    }
+    return actions;
   },
 
   resolveTierName(tierCode: string) {
@@ -367,6 +376,7 @@ Page({
     const key = e.currentTarget.dataset.key;
     const map: Record<string, string> = {
       devices: '/pages-admin/devices/index',
+      rankingManagement: '/pages-admin/ranking-management/index',
       orders: '/pages-admin/orders/index',
       assets: '/pages-admin/assets/index',
       finance: '/pages-admin/finance/index',

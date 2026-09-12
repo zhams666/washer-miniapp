@@ -14,6 +14,10 @@
     </view>
   </view>
 
+  <view wx:if="{{canCreateDevice}}" class="create-entry">
+    <button class="create-button" bindtap="openCreate">新增设备</button>
+  </view>
+
   <view class="device-list">
     <view wx:for="{{devices}}" wx:key="id" class="device-card">
       <view class="device-info">
@@ -115,6 +119,64 @@
       </scroll-view>
       <view class="drawer-footer">
         <button class="save-button" loading="{{saving}}" bindtap="handleSaveEdit">确认保存</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{createVisible}}" class="drawer-mask" bindtap="closeCreate">
+    <view class="drawer" catchtap="noop">
+      <view class="drawer-head">
+        <text>新增设备</text>
+        <view class="drawer-close" bindtap="closeCreate">X</view>
+      </view>
+      <scroll-view scroll-y class="drawer-body">
+        <view class="form-row required">
+          <text class="form-label">归属门店</text>
+          <picker class="form-picker" mode="selector" range="{{createStorePickerOptions}}" value="{{createStoreIndex}}" bindchange="handleCreateStoreChange">
+            <view class="form-picker__value">{{createStorePickerOptions[createStoreIndex] || '请选择门店'}}</view>
+          </picker>
+        </view>
+        <view class="form-row">
+          <text class="form-label">设备编号</text>
+          <input class="form-input" value="{{createForm.deviceCode}}" data-field="deviceCode" bindinput="handleCreateInput" placeholder="留空自动生成" />
+        </view>
+        <view class="form-row required">
+          <text class="form-label">设备名称</text>
+          <input class="form-input" value="{{createForm.deviceName}}" data-field="deviceName" bindinput="handleCreateInput" placeholder="例如：1号洗车机" />
+        </view>
+        <view class="form-row">
+          <text class="form-label">设备类型</text>
+          <picker class="form-picker" mode="selector" range="{{deviceTypeOptions}}" value="{{createTypeIndex}}" data-field="deviceType" bindchange="handleCreateSelect">
+            <view class="form-picker__value">{{createForm.deviceType}}</view>
+          </picker>
+        </view>
+        <view class="form-row">
+          <text class="form-label">设备角色</text>
+          <picker class="form-picker" mode="selector" range="{{deviceRoleOptions}}" value="{{createRoleIndex}}" data-field="deviceRole" bindchange="handleCreateSelect">
+            <view class="form-picker__value">{{createForm.deviceRole}}</view>
+          </picker>
+        </view>
+        <view class="form-row">
+          <text class="form-label">初始状态</text>
+          <picker class="form-picker" mode="selector" range="{{deviceStatusOptions}}" value="{{createStatusIndex}}" data-field="deviceStatus" bindchange="handleCreateSelect">
+            <view class="form-picker__value">{{createForm.deviceStatus}}</view>
+          </picker>
+        </view>
+        <view class="form-row">
+          <text class="form-label">协议类型</text>
+          <input class="form-input" value="{{createForm.protocolType}}" data-field="protocolType" bindinput="handleCreateInput" placeholder="可选" />
+        </view>
+        <view class="form-row">
+          <text class="form-label">固件版本</text>
+          <input class="form-input" value="{{createForm.firmwareVersion}}" data-field="firmwareVersion" bindinput="handleCreateInput" placeholder="可选" />
+        </view>
+        <view class="form-row form-row--textarea">
+          <text class="form-label">备注</text>
+          <textarea class="form-textarea" value="{{createForm.remark}}" data-field="remark" bindinput="handleCreateInput" placeholder="可选" maxlength="1000" />
+        </view>
+      </scroll-view>
+      <view class="drawer-footer">
+        <button class="save-button" loading="{{creating}}" bindtap="handleCreateDevice">确认新增</button>
       </view>
     </view>
   </view>

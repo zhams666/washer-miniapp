@@ -67,6 +67,30 @@
   background: $color-bg;
 }
 
+.create-entry {
+  padding: 20rpx 28rpx;
+  background: #ffffff;
+  border-bottom: 1rpx solid $color-border;
+}
+
+.create-button {
+  width: 100%;
+  height: 76rpx;
+  margin: 0;
+  border: 0;
+  border-radius: $radius-control;
+  background: $color-cta;
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 800;
+  line-height: 76rpx;
+  box-shadow: $shadow-cta;
+}
+
+.create-button::after {
+  border: 0;
+}
+
 .device-card {
   display: flex;
   align-items: stretch;
@@ -291,6 +315,35 @@
   color: $color-text-primary;
   font-size: 30rpx;
   font-weight: 800;
+}
+
+.form-picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-picker__value {
+  height: 88rpx;
+  color: $color-text-primary;
+  font-size: 30rpx;
+  font-weight: 800;
+  line-height: 88rpx;
+}
+
+.form-row--textarea {
+  align-items: flex-start;
+  min-height: 170rpx;
+  padding: 20rpx 0;
+}
+
+.form-textarea {
+  flex: 1;
+  min-width: 0;
+  height: 130rpx;
+  color: $color-text-primary;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1.45;
 }
 
 .form-unit {

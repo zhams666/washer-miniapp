@@ -2,8 +2,12 @@ package com.washer.backend.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.washer.backend.common.ApiResponse;
+import com.washer.backend.dto.admin.AdminRankingDisplayAdjustmentCreateRequest;
+import com.washer.backend.dto.admin.AdminRankingDisplayAdjustmentItem;
+import com.washer.backend.dto.admin.AdminRankingDurationItem;
 import com.washer.backend.dto.device.DeviceSimpleItem;
 import com.washer.backend.dto.miniadmin.MiniAdminDashboardOverview;
+import com.washer.backend.dto.miniadmin.MiniAdminDeviceCreateRequest;
 import com.washer.backend.dto.miniadmin.MiniAdminDeviceConfigRequest;
 import com.washer.backend.dto.miniadmin.MiniAdminMetricDetailItem;
 import com.washer.backend.dto.miniadmin.MiniAdminOrderItem;
@@ -25,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -132,6 +137,15 @@ public class MiniAdminPortalController {
         return ApiResponse.success(miniAdminPortalService.listDevices(context, storeId, keyword));
     }
 
+    @PostMapping("/devices")
+    public ApiResponse<DeviceSimpleItem> createDevice(
+        @RequestHeader(value = "X-Washer-Admin-Token", required = false) String token,
+        @RequestBody MiniAdminDeviceCreateRequest request
+    ) {
+        MiniAdminSessionContext context = miniAdminAuthService.requireContext(token);
+        return ApiResponse.success("设备已新增", miniAdminPortalService.createDevice(context, request));
+    }
+
     @PostMapping("/devices/{id}/start")
     public ApiResponse<DeviceSimpleItem> startDevice(
         @RequestHeader(value = "X-Washer-Admin-Token", required = false) String token,
@@ -168,6 +182,52 @@ public class MiniAdminPortalController {
     ) {
         MiniAdminSessionContext context = miniAdminAuthService.requireContext(token);
         return ApiResponse.success(miniAdminPortalService.updateDeviceConfig(context, id, request));
+    }
+
+    @GetMapping("/rankings")
+    public ApiResponse<List<AdminRankingDurationItem>> rankingDurations(
+        @RequestHeader(value = "X-Washer-Admin-Token", required = false) String token,
+        @RequestParam(defaultValue = "day") String scope,
+        @RequestParam(defaultValue = "100") int limit
+    ) {
+        MiniAdminSessionContext context = miniAdminAuthService.requireContext(token);
+        return ApiResponse.success(miniAdminPortalService.listRankingDurations(context, scope, limit));
+    }
+
+    @GetMapping("/ranking-adjustments")
+    public ApiResponse<Page<AdminRankingDisplayAdjustmentItem>> rankingAdjustments(
+        @RequestHeader(value = "X-Washer-Admin-Token", required = false) String token,
+        @RequestParam(defaultValue = "1") long page,
+        @RequestParam(defaultValue = "10") long size,
+        @RequestParam(defaultValue = "day") String scope,
+        @RequestParam(required = false) String keyword
+    ) {
+        MiniAdminSessionContext context = miniAdminAuthService.requireContext(token);
+        return ApiResponse.success(
+            miniAdminPortalService.pageRankingAdjustments(context, page, size, scope, keyword)
+        );
+    }
+
+    @PostMapping("/ranking-adjustments/set")
+    public ApiResponse<AdminRankingDisplayAdjustmentItem> setRankingDisplayDuration(
+        @RequestHeader(value = "X-Washer-Admin-Token", required = false) String token,
+        @RequestBody AdminRankingDisplayAdjustmentCreateRequest request
+    ) {
+        MiniAdminSessionContext context = miniAdminAuthService.requireContext(token);
+        return ApiResponse.success(
+            "排行榜展示时长已保存",
+            miniAdminPortalService.setRankingDisplayDuration(context, request)
+        );
+    }
+
+    @DeleteMapping("/ranking-adjustments/{id}")
+    public ApiResponse<Void> deleteRankingDisplayAdjustment(
+        @RequestHeader(value = "X-Washer-Admin-Token", required = false) String token,
+        @PathVariable Long id
+    ) {
+        MiniAdminSessionContext context = miniAdminAuthService.requireContext(token);
+        miniAdminPortalService.deleteRankingDisplayAdjustment(context, id);
+        return ApiResponse.success("排行榜展示时长记录已删除", null);
     }
 
     @GetMapping("/stores/{storeId}/settings")

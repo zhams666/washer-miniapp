@@ -1,0 +1,63 @@
+<view class="page">
+  <Navbar title="排行榜管理" customBackPath="/pages-admin/home/index" customBackPathIsTabbar="{{false}}"></Navbar>
+
+  <view class="toolbar">
+    <scroll-view scroll-x class="scope-tabs">
+      <view wx:for="{{scopeOptions}}" wx:key="value" class="scope-tab {{activeScope === item.value ? 'scope-tab--active' : ''}}" data-scope="{{item.value}}" bindtap="handleScopeChange">{{item.label}}</view>
+    </scroll-view>
+    <button class="refresh-button" bindtap="handleRefresh">刷新</button>
+  </view>
+
+  <view class="hint-card">
+    <text class="hint-title">{{activeScopeLabel}}展示管理</text>
+    <text class="hint-text">榜单时长由真实洗车时长和后台展示调整组成，不会修改订单、设备或结算数据。</text>
+  </view>
+
+  <view class="section">
+    <view class="section-title">本店榜单</view>
+    <view wx:if="{{loading}}" class="empty-text">加载中...</view>
+    <view wx:elif="{{!rankings.length}}" class="empty-text">暂无本店榜单用户</view>
+    <view wx:for="{{rankings}}" wx:key="userId" class="ranking-row">
+      <view class="ranking-rank">{{item.rank}}</view>
+      <view class="ranking-main">
+        <text class="ranking-name">{{item.nickname || '用户' + item.userId}}</text>
+        <text class="ranking-meta">ID {{item.userId}} · 真实 {{item.realDurationText || '--'}}</text>
+      </view>
+      <view class="ranking-side">
+        <text class="ranking-duration">{{item.durationText || '--'}}</text>
+        <text class="ranking-adjust">调整 {{item.displayAdjustmentText || '0分'}}</text>
+      </view>
+      <button class="row-button" data-userid="{{item.userId}}" bindtap="openSetDialog">设置</button>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">调整记录</view>
+    <view wx:if="{{adjustmentLoading}}" class="empty-text">加载中...</view>
+    <view wx:elif="{{!adjustments.length}}" class="empty-text">暂无调整记录</view>
+    <view wx:for="{{adjustments}}" wx:key="id" class="adjustment-row">
+      <view class="adjustment-main">
+        <text class="ranking-name">{{item.nickname || '用户' + item.userId}}</text>
+        <text class="ranking-meta">{{item.durationText || '--'}} · {{item.remark || '无备注'}}</text>
+      </view>
+      <button class="delete-button" loading="{{deletingId === item.id}}" data-id="{{item.id}}" bindtap="handleDelete">删除</button>
+    </view>
+    <view wx:if="{{total > size}}" class="page-controls">
+      <button class="page-button" disabled="{{page <= 1}}" bindtap="handlePrevPage">上一页</button>
+      <text class="page-label">{{page}} / {{pageCount}}</text>
+      <button class="page-button" disabled="{{page >= pageCount}}" bindtap="handleNextPage">下一页</button>
+    </view>
+  </view>
+
+  <view wx:if="{{dialogVisible}}" class="drawer-mask" bindtap="closeDialog">
+    <view class="drawer" catchtap="noop">
+      <view class="drawer-head"><text>设置展示时长</text><view class="drawer-close" bindtap="closeDialog">X</view></view>
+      <view class="drawer-body">
+        <view class="selected-user">{{selectedUser.nickname || '用户' + selectedUser.userId}} · ID {{selectedUser.userId}}</view>
+        <view class="form-row required"><text class="form-label">显示分钟数</text><input class="form-input" type="number" value="{{form.durationMinutes}}" data-field="durationMinutes" bindinput="handleFormInput" placeholder="0-100000" /></view>
+        <view class="form-row form-row--textarea"><text class="form-label">备注</text><textarea class="form-textarea" value="{{form.remark}}" data-field="remark" bindinput="handleFormInput" maxlength="255" placeholder="可选" /></view>
+      </view>
+      <view class="drawer-footer"><button class="save-button" loading="{{saving}}" bindtap="handleSave">确认保存</button></view>
+    </view>
+  </view>
+</view>

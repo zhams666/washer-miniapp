@@ -31,6 +31,7 @@
         "login/index",
         "home/index",
         "devices/index",
+        "ranking-management/index",
         "orders/index",
         "finance/index",
         "assets/index",

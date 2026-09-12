@@ -7,7 +7,7 @@ import {
 import type { IObject, ResponseData } from '../typings/interface.d';
 import { buildQueryPath } from './request-path';
 
-export type ApiRequestMethod = 'GET' | 'POST';
+export type ApiRequestMethod = 'GET' | 'POST' | 'DELETE';
 
 type TraceableError = Error & {
   traceId?: string;

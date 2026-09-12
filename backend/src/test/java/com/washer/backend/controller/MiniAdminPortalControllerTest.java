@@ -6,7 +6,9 @@ import static org.mockito.Mockito.when;
 
 import com.washer.backend.common.ApiResponse;
 import com.washer.backend.dto.miniadmin.MiniAdminOperationOverview;
+import com.washer.backend.dto.miniadmin.MiniAdminDeviceCreateRequest;
 import com.washer.backend.dto.miniadmin.MiniAdminSessionContext;
+import com.washer.backend.dto.device.DeviceSimpleItem;
 import com.washer.backend.entity.MiniAdminStaff;
 import com.washer.backend.service.MiniAdminAuthService;
 import com.washer.backend.service.MiniAdminPortalService;
@@ -50,5 +52,20 @@ class MiniAdminPortalControllerTest {
         assertThat(result.getData()).isSameAs(expected);
         verify(miniAdminAuthService).requireContext("admin-token");
         verify(miniAdminPortalService).getOperationOverview(context, bizDate, 1L);
+    }
+
+    @Test
+    void createDevice_delegatesToScopedPortalService() {
+        MiniAdminSessionContext context = new MiniAdminSessionContext(new MiniAdminStaff(), true, List.of(), List.of());
+        MiniAdminDeviceCreateRequest request = new MiniAdminDeviceCreateRequest();
+        request.setStoreId(7L);
+        DeviceSimpleItem expected = new DeviceSimpleItem();
+        when(miniAdminAuthService.requireContext("admin-token")).thenReturn(context);
+        when(miniAdminPortalService.createDevice(context, request)).thenReturn(expected);
+
+        ApiResponse<DeviceSimpleItem> result = controller.createDevice("admin-token", request);
+
+        assertThat(result.getData()).isSameAs(expected);
+        verify(miniAdminPortalService).createDevice(context, request);
     }
 }

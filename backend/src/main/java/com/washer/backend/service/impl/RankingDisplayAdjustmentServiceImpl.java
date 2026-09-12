@@ -10,6 +10,7 @@ import com.washer.backend.mapper.RankingDisplayAdjustmentMapper;
 import com.washer.backend.mapper.UserInfoMapper;
 import com.washer.backend.service.RankingDisplayAdjustmentService;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -37,20 +38,44 @@ public class RankingDisplayAdjustmentServiceImpl implements RankingDisplayAdjust
 
     @Override
     public Page<AdminRankingDisplayAdjustmentItem> pageAdjustments(long page, long size, String scope, String keyword) {
+        return pageAdjustmentsByUserIds(page, size, scope, keyword, null);
+    }
+
+    @Override
+    public Page<AdminRankingDisplayAdjustmentItem> pageAdjustmentsByUserIds(
+        long page,
+        long size,
+        String scope,
+        String keyword,
+        Collection<Long> userIds
+    ) {
         long currentPage = Math.max(1L, page);
         long pageSize = Math.max(1L, Math.min(size, MAX_PAGE_SIZE));
+        List<Long> permittedUserIds = userIds == null
+            ? null
+            : userIds.stream().filter(id -> id != null && id > 0).distinct().toList();
+        if (permittedUserIds != null && permittedUserIds.isEmpty()) {
+            return new Page<>(currentPage, pageSize, 0L);
+        }
         String resolvedScope = normalizeScope(scope);
         LambdaQueryWrapper<RankingDisplayAdjustment> wrapper = new LambdaQueryWrapper<RankingDisplayAdjustment>()
             .eq(StringUtils.hasText(resolvedScope), RankingDisplayAdjustment::getScope, resolvedScope)
             .orderByDesc(RankingDisplayAdjustment::getOccurredAt)
             .orderByDesc(RankingDisplayAdjustment::getId);
 
+        if (permittedUserIds != null) {
+            wrapper.in(RankingDisplayAdjustment::getUserId, permittedUserIds);
+        }
+
         if (StringUtils.hasText(keyword)) {
-            List<Long> userIds = findUserIdsByKeyword(keyword.trim());
-            if (userIds.isEmpty()) {
+            List<Long> keywordUserIds = findUserIdsByKeyword(keyword.trim());
+            if (permittedUserIds != null) {
+                keywordUserIds = keywordUserIds.stream().filter(permittedUserIds::contains).toList();
+            }
+            if (keywordUserIds.isEmpty()) {
                 return new Page<>(currentPage, pageSize, 0L);
             }
-            wrapper.in(RankingDisplayAdjustment::getUserId, userIds);
+            wrapper.in(RankingDisplayAdjustment::getUserId, keywordUserIds);
         }
 
         Page<RankingDisplayAdjustment> adjustmentPage = new Page<>(currentPage, pageSize);
