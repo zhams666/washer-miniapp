@@ -492,7 +492,11 @@ Page({
       return;
     }
 
-    this.setData({ avatarUploading: true });
+    const previousAvatarUrl = this.data.userInfo.avatarUrl;
+    this.setData({
+      avatarUploading: true,
+      'userInfo.avatarUrl': avatarUrl,
+    });
     wx.showLoading({
       title: '上传头像',
       mask: true,
@@ -519,16 +523,21 @@ Page({
         return;
       }
 
-      wx.showToast({
-        title: '头像上传失败',
-        icon: 'none',
-      });
+      throw new Error('用户资料保存失败');
     } catch (error) {
-      wx.showToast({
-        title: '头像上传失败',
-        icon: 'none',
+      const message = this.getErrorMessage(error);
+      console.error('miniapp_avatar_update_failed', {
+        stage: 'upload_or_save_profile',
+        message,
+        error,
       });
-      console.error('onLoggedInAvatarChoose error:', error);
+      this.setData({ 'userInfo.avatarUrl': previousAvatarUrl });
+      wx.showModal({
+        title: '头像更新失败',
+        content: `原因：${message.slice(0, 160)}\n请截图此提示或在调试器搜索 miniapp_avatar_update_failed。`,
+        showCancel: false,
+        confirmText: '知道了',
+      });
     } finally {
       wx.hideLoading();
       this.setData({ avatarUploading: false });
@@ -662,6 +671,14 @@ Page({
       return url;
     }
     return uploadAvatar(url);
+  },
+
+  getErrorMessage(error: unknown) {
+    if (error && typeof error === 'object') {
+      const record = error as Record<string, any>;
+      return String(record.errMsg || record.message || record.msg || 'unknown error');
+    }
+    return String(error || 'unknown error');
   },
 
   async handleRegisterSubmit() {

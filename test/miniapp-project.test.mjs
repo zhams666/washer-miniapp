@@ -58,3 +58,16 @@ test('首页引用的本地背景资源存在', () => {
     assert.ok(existsSync(resolve(root, assetPath.slice(1))), `missing home asset: ${assetPath}`);
   }
 });
+
+test('云托管模式下头像使用云存储上传', () => {
+  const source = readFileSync(resolve(root, 'apis/costomer.ts'), 'utf8');
+  assert.match(source, /isCloudBaseTransport\(\)[\s\S]*?wx\.cloud\.uploadFile/);
+  assert.doesNotMatch(source, /Avatar upload is unavailable in the CloudBase test transport/);
+});
+
+test('头像选择后立即预览并展示上传失败原因', () => {
+  const source = readFileSync(resolve(root, 'pages/mine/index.ts'), 'utf8');
+  assert.match(source, /'userInfo\.avatarUrl': avatarUrl/);
+  assert.match(source, /title: '头像更新失败'/);
+  assert.match(source, /miniapp_avatar_update_failed/);
+});

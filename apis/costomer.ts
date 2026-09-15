@@ -210,7 +210,24 @@ export const uploadAvatar = (filePath: string): Promise<string> => {
       return;
     }
     if (isCloudBaseTransport()) {
-      reject(new Error('Avatar upload is unavailable in the CloudBase test transport'));
+      const extensionMatch = path.match(/\.(jpg|jpeg|png|webp)$/i);
+      const extension = extensionMatch ? `.${extensionMatch[1].toLowerCase()}` : '.jpg';
+      wx.cloud.uploadFile({
+        cloudPath: `avatars/avatar-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`,
+        filePath: path,
+        success(result) {
+          const fileId = String(result.fileID || '').trim();
+          if (!fileId) {
+            reject(new Error('cloud avatar file id is empty'));
+            return;
+          }
+          resolve(fileId);
+        },
+        fail(error) {
+          console.error('miniapp_avatar_cloud_upload_failed', { error });
+          reject(error);
+        },
+      });
       return;
     }
 
