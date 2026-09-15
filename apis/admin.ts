@@ -1,10 +1,31 @@
 import { BaseEnum } from '../config/enums';
 import { LOCAL_REQUEST_URL } from '../config/url';
 import type { IObject, ResponseData } from '../typings/interface.d';
-import { getAdminToken } from '../utils/admin-auth';
+import { getAdminToken, redirectToAdminLogin } from '../utils/admin-auth';
 import { apiRequest, isCloudBaseTransport } from '../utils/container-request';
 
 type HttpMethod = 'GET' | 'POST' | 'DELETE';
+
+type AdminRequestError = Error & {
+  adminSessionExpired?: boolean;
+  response?: ResponseData<unknown>;
+};
+
+const isAdminSessionExpiredMessage = (message: string): boolean => {
+  const normalized = String(message || '').trim().toLowerCase();
+  return normalized.includes('管理端登录已失效')
+    || normalized.includes('admin token is required')
+    || normalized.includes('admin session expired');
+};
+
+export const isAdminSessionExpiredError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+  const record = error as AdminRequestError & Record<string, unknown>;
+  return Boolean(record.adminSessionExpired)
+    || isAdminSessionExpiredMessage(String(record.message || record.msg || ''));
+};
 
 export type MiniAdminLoginResult = {
   bound: boolean;
@@ -35,7 +56,15 @@ const request = <T>(_method: HttpMethod, _url: string, _data?: IObject): Promise
     if (response.code === 0) {
       return response.data;
     }
-    wx.showToast({ title: response.message || response.msg || '请求失败', icon: 'none' });
+    const message = String(response.message || response.msg || '请求失败');
+    if (isAdminSessionExpiredMessage(message)) {
+      const error = new Error(message) as AdminRequestError;
+      error.adminSessionExpired = true;
+      error.response = response;
+      redirectToAdminLogin();
+      return Promise.reject(error);
+    }
+    wx.showToast({ title: message, icon: 'none' });
     return Promise.reject(response);
   });
 };

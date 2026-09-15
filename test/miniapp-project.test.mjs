@@ -71,3 +71,13 @@ test('头像选择后立即预览并展示上传失败原因', () => {
   assert.match(source, /title: '头像更新失败'/);
   assert.match(source, /miniapp_avatar_update_failed/);
 });
+
+test('管理端登录失效时清理会话并回到登录页', () => {
+  const authSource = readFileSync(resolve(root, 'utils/admin-auth.ts'), 'utf8');
+  const apiSource = readFileSync(resolve(root, 'apis/admin.ts'), 'utf8');
+  const homeSource = readFileSync(resolve(root, 'pages-admin/home/index.ts'), 'utf8');
+  assert.match(authSource, /redirectToAdminLogin/);
+  assert.match(apiSource, /管理端登录已失效/);
+  assert.match(apiSource, /redirectToAdminLogin\(\)/);
+  assert.match(homeSource, /isAdminSessionExpiredError\(error\)/);
+});

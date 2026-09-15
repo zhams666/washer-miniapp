@@ -2,6 +2,7 @@ import {
   getMiniAdminCurrent,
   getMiniAdminOperationOverview,
   getMiniAdminStoreSettings,
+  isAdminSessionExpiredError,
   updateMiniAdminStoreSettings,
   uploadMiniAdminStoreImage,
 } from '../../apis/admin';
@@ -101,6 +102,9 @@ Page({
         quickActions: this.buildQuickActions(overview.tierCode, profile.roleCode),
       });
     } catch (error) {
+      if (isAdminSessionExpiredError(error)) {
+        return;
+      }
       const diagnostic = this.resolveLoadDiagnostic(error, phase);
       console.error('mini_admin_home_load_failed', {
         phase,
